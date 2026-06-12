@@ -1,0 +1,47 @@
+{
+  "name": "besa",
+  "version": "0.1.0",
+  "description": "Signed trust infrastructure for AI-agent tools.",
+  "type": "module",
+  "main": "./dist/sdk.js",
+  "types": "./dist/sdk.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/sdk.d.ts",
+      "default": "./dist/sdk.js"
+    }
+  },
+  "bin": {
+    "besa": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "examples"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "npm run build && node --test dist/tests/*.test.js"
+  },
+  "keywords": [
+    "mcp",
+    "ai-agents",
+    "trust",
+    "ed25519",
+    "signing",
+    "manifest",
+    "receipt"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dorigjo/besa.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "yaml": "^2.5.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.6.2"
+  }
+}

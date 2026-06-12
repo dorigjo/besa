@@ -141,3 +141,7 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Besa local trust artifacts — NEVER commit (contains Ed25519 private key)
+.besa/
+examples/manifest.signed.json

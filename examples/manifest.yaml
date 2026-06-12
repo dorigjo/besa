@@ -1,0 +1,34 @@
+serverName: acme-crm
+serverVersion: 1.0.0
+serverUrl: https://tools.acme.example/mcp
+createdAt: 2026-06-12T00:00:00Z
+tools:
+  - name: crm.lookup
+    description: Look up a customer record by id or email.
+    capability: read
+    risk: low
+    scopes:
+      - crm:read
+    budgetLimit: 100
+    inputSchema:
+      type: object
+      properties:
+        query:
+          type: string
+      required:
+        - query
+  - name: crm.delete
+    description: Permanently delete a customer record.
+    capability: destructive
+    risk: high
+    scopes:
+      - crm:write
+      - crm:admin
+    budgetLimit: 5
+    inputSchema:
+      type: object
+      properties:
+        id:
+          type: string
+      required:
+        - id
