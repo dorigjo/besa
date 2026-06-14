@@ -213,8 +213,8 @@ console.log(
 "  besa load examples/manifest.yaml",
 "  besa sign examples/manifest.yaml",
 "  besa verify examples/manifest.signed.json",
-"  besa admit examples/manifest.signed.json read_customer",
-"  besa receipt read_customer examples/manifest.signed.json"
+"  besa admit examples/manifest.signed.json crm.lookup",
+"  besa receipt crm.lookup examples/manifest.signed.json"
 ].join("\n")
 );
 }

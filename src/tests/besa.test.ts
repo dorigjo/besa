@@ -189,3 +189,77 @@ receipt.decision = "deny";
 
 assert.equal(verifyReceipt(receipt, keypair.publicKeyDer), false);
 });
+test("validateManifest rejects an invalid serverUrl", () => {
+  const manifest = sampleManifest();
+  manifest.serverUrl = "not-a-url";
+
+  const result = validateManifest(manifest);
+
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.some((error) => error.includes("serverUrl")));
+});
+
+test("validateManifest rejects an invalid createdAt", () => {
+  const manifest = sampleManifest();
+  manifest.createdAt = "June 14 2026";
+
+  const result = validateManifest(manifest);
+
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.some((error) => error.includes("createdAt")));
+});
+
+test("validateManifest rejects duplicate tool names", () => {
+  const manifest = sampleManifest();
+  manifest.tools[1].name = manifest.tools[0].name;
+
+  const result = validateManifest(manifest);
+
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.some((error) => error.includes("duplicate")));
+});
+
+test("validateManifest rejects empty scope strings", () => {
+  const manifest = sampleManifest();
+  manifest.tools[0].scopes = ["crm:read", ""];
+
+  const result = validateManifest(manifest);
+
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.some((error) => error.includes("scopes")));
+});
+
+test("validateManifest rejects an unsafe budgetLimit", () => {
+  const manifest = sampleManifest();
+  manifest.tools[0].budgetLimit = Number.MAX_SAFE_INTEGER + 1;
+
+  const result = validateManifest(manifest);
+
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.some((error) => error.includes("budgetLimit")));
+});
+
+test("verifySignedManifest fails on publicKeyId mismatch", () => {
+  const keypair = generateKeyPair();
+  const signed = signManifest(sampleManifest(), keypair);
+  signed.publicKeyId = "00badkeyid";
+
+  const result = verifySignedManifest(signed);
+
+  assert.equal(result.valid, false);
+  assert.equal(result.reasonCode, "E_PUBLIC_KEY_ID_MISMATCH");
+});
+
+test("verifySignedManifest fails on unsupported algorithm", () => {
+  const keypair = generateKeyPair();
+  const signed = signManifest(sampleManifest(), keypair);
+  const tampered = {
+    ...signed,
+    algorithm: "rsa" as unknown as "ed25519",
+  };
+
+  const result = verifySignedManifest(tampered);
+
+  assert.equal(result.valid, false);
+  assert.equal(result.reasonCode, "E_ALGORITHM_UNSUPPORTED");
+});
