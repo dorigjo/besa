@@ -116,6 +116,29 @@ Expected behavior:
 * `crm.lookup` -> allow / `ALLOWED`
 * `crm.delete` -> deny / `RISK_BLOCKED`
 
+### Grant-aware admission (optional)
+
+Besa can scope a tool call to a specific agent. Add a `grants.yaml` listing which `agentId` may use which tools:
+
+```
+grants:
+  - agentId: agent-alpha
+    tools:
+      - crm.lookup
+```
+
+Then pass `--agent` and `--grants` to `admit` or `receipt`:
+
+```
+node dist/index.js admit examples/manifest.signed.json crm.lookup --agent agent-alpha --grants examples/grants.yaml
+```
+
+- `--agent <id>`: the id of the calling agent.
+- `--grants <file>`: the grants file to check against.
+- If the agent is not granted the tool, admission is denied (`TOOL_NOT_GRANTED`, or `AGENT_NOT_FOUND` for an unknown agent), and the receipt records `agentId` and `grantReasonCode`.
+
+Grants are **optional and backward-compatible**: without `--grants`, admission behaves exactly as before.
+
 ## Core concepts
 
 ### Tool Manifest

@@ -1,6 +1,6 @@
 {
   "name": "besa",
-  "version": "0.1.0-alpha.0",
+  "version": "0.1.0-alpha.1",
   "description": "Signed trust infrastructure for AI-agent tools.",
   "type": "module",
   "main": "./dist/sdk.js",
@@ -47,6 +47,7 @@
   "files": [
     "dist/*.js",
     "dist/*.d.ts",
-    "examples/manifest.yaml"
+    "examples/manifest.yaml",
+    "examples/grants.yaml"
   ]
 }

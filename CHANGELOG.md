@@ -4,6 +4,24 @@ All notable changes to this project are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-alpha.1] - 2026-06-15
+
+Added a minimal grant / permission layer so admission can be scoped per agent.
+
+### Added
+
+* `agentId` support across admission decisions and receipts.
+* Grant sets via `grants.yaml` (`examples/grants.yaml`), with `loadGrants` / `validateGrantSet`.
+* `checkGrant` with reason codes `GRANT_OK`, `TOOL_NOT_GRANTED`, and `AGENT_NOT_FOUND`.
+* Grant-aware admission: `admit` and `receipt` accept `--agent` and `--grants` (opt-in, backward-compatible).
+* Receipts now carry `agentId` and `grantReasonCode` (signed; omitted when unused).
+* Grant unit tests (`src/tests/grant.test.ts`) and grant-aware smoke steps.
+
+### Changed
+
+* Version bumped to `0.1.0-alpha.1`.
+* npm `files` allowlist now includes `examples/grants.yaml`.
+
 ## [0.1.0-alpha.0] - 2026-06-14
 
 Initial alpha / developer preview of Besa — signed trust infrastructure for AI-agent tools.
@@ -75,3 +93,4 @@ Initial alpha / developer preview of Besa — signed trust infrastructure for AI
 * No formal compliance certification.
 
 [0.1.0-alpha.0]: https://github.com/dorigjo/besa/releases/tag/v0.1.0-alpha.0
+[0.1.0-alpha.1]: https://github.com/dorigjo/besa/releases/tag/v0.1.0-alpha.1
