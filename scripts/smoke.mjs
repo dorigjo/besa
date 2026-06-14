@@ -46,6 +46,9 @@ const steps = [
 ["admit crm.lookup", ["dist/index.js", "admit", signedManifest, "crm.lookup"], 0],
 ["admit crm.delete deny", ["dist/index.js", "admit", signedManifest, "crm.delete"], 1],
 ["receipt crm.lookup", ["dist/index.js", "receipt", "crm.lookup"], 0],
+["grant admit allow agent-alpha/crm.lookup", ["dist/index.js", "admit", signedManifest, "crm.lookup", "--agent", "agent-alpha", "--grants", "examples/grants.yaml"], 0],
+["grant admit deny agent-alpha/crm.delete", ["dist/index.js", "admit", signedManifest, "crm.delete", "--agent", "agent-alpha", "--grants", "examples/grants.yaml"], 1],
+["grant receipt agent-alpha/crm.lookup", ["dist/index.js", "receipt", "crm.lookup", signedManifest, "--agent", "agent-alpha", "--grants", "examples/grants.yaml"], 0],
 ];
 
 let ok = true;

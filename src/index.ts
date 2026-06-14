@@ -7,6 +7,7 @@ import { generateKeyPair, type KeyPair } from "./crypto.js";
 import { loadManifest } from "./manifest.js";
 import { createReceipt, signManifest, verifySignedManifest } from "./signing.js";
 import { admit, getCount, increment, loadMeter, saveMeter } from "./admit.js";
+import { checkGrant, loadGrants } from "./grant.js";
 
 const BESA_DIR = ".besa";
 const KEY_PATH = join(BESA_DIR, "key.json");
@@ -60,12 +61,38 @@ return manifestPath.slice(0, -5) + ".signed.json";
 return manifestPath + ".signed.json";
 }
 
+function flagValue(name: string): string | undefined {
+const index = process.argv.indexOf(name);
+return index >= 0 ? process.argv[index + 1] : undefined;
+}
+
+function positionals(args: string[]): string[] {
+const values: string[] = [];
+const flagsWithValues = new Set(["--agent", "--grants"]);
+
+for (let index = 0; index < args.length; index += 1) {
+const value = args[index];
+
+if (value && flagsWithValues.has(value)) {
+  index += 1;
+  continue;
+}
+
+if (value) {
+  values.push(value);
+}
+
+}
+
+return values;
+}
+
 function cmdKeys(): void {
 const keypair = loadOrCreateKeyPair();
 
 printJson("keypair", {
 publicKeyDer: keypair.publicKeyDer,
-privateKeyDerPath: KEY_PATH
+privateKeyDerPath: KEY_PATH,
 });
 
 console.log("");
@@ -111,12 +138,35 @@ console.log("");
 console.log("OK: " + result.detail);
 }
 
-function denyFromVerification(toolName: string, reasonCode: string, detail: string): AdmissionDecision {
+function denyFromVerification(
+toolName: string,
+reasonCode: string,
+detail: string,
+): AdmissionDecision {
 return {
 decision: "deny",
 reasonCode,
 toolName,
-detail
+detail,
+};
+}
+
+export function grantGate(toolName: string): AdmissionDecision | undefined {
+const grantsPath = flagValue("--grants");
+
+if (!grantsPath) {
+return undefined;
+}
+
+const agentId = flagValue("--agent") ?? "";
+const grant = checkGrant(loadGrants(grantsPath), agentId, toolName);
+
+return {
+decision: grant.granted ? "allow" : "deny",
+reasonCode: grant.reasonCode,
+toolName,
+detail: grant.detail,
+agentId,
 };
 }
 
@@ -131,9 +181,21 @@ process.exitCode = 1;
 return;
 }
 
+const grantDecision = grantGate(toolName);
+
+if (grantDecision && grantDecision.decision === "deny") {
+printJson("admission", grantDecision);
+process.exitCode = 1;
+return;
+}
+
 const meter = loadMeter(METER_PATH);
 const count = getCount(meter, toolName);
 const decision = admit(signed.manifest, toolName, count);
+
+if (grantDecision?.agentId) {
+decision.agentId = grantDecision.agentId;
+}
 
 printJson("admission", decision);
 
@@ -154,15 +216,27 @@ const keypair = loadOrCreateKeyPair();
 const verified = verifySignedManifest(signed);
 
 let decision: AdmissionDecision;
+let grantReasonCode: string | undefined;
 
 if (!verified.valid) {
 decision = denyFromVerification(toolName, verified.reasonCode, verified.detail);
 } else {
-const meter = loadMeter(METER_PATH);
-decision = admit(signed.manifest, toolName, getCount(meter, toolName));
+const grantDecision = grantGate(toolName);
+grantReasonCode = grantDecision?.reasonCode;
 
-if (decision.decision === "allow") {
-  saveMeter(METER_PATH, increment(meter, toolName));
+if (grantDecision && grantDecision.decision === "deny") {
+  decision = grantDecision;
+} else {
+  const meter = loadMeter(METER_PATH);
+  decision = admit(signed.manifest, toolName, getCount(meter, toolName));
+
+  if (grantDecision?.agentId) {
+    decision.agentId = grantDecision.agentId;
+  }
+
+  if (decision.decision === "allow") {
+    saveMeter(METER_PATH, increment(meter, toolName));
+  }
 }
 
 }
@@ -175,10 +249,12 @@ decision: decision.decision,
 reasonCode: decision.reasonCode,
 request: {
 toolName,
-signedManifest: signedPath
-}
+signedManifest: signedPath,
 },
-keypair
+agentId: decision.agentId,
+grantReasonCode,
+},
+keypair,
 );
 
 mkdirSync(RECEIPTS_DIR, { recursive: true });
@@ -205,8 +281,8 @@ console.log(
 "  besa load    <manifest.yaml>",
 "  besa sign    <manifest.yaml>",
 "  besa verify  <manifest.signed.json>",
-"  besa admit   <manifest.signed.json> <tool-name>",
-"  besa receipt <tool-name> [manifest.signed.json]",
+"  besa admit   <manifest.signed.json> <tool-name> [--agent <agent-id> --grants <grants.yaml>]",
+"  besa receipt <tool-name> [manifest.signed.json] [--agent <agent-id> --grants <grants.yaml>]",
 "",
 "Examples:",
 "  besa keys",
@@ -214,8 +290,11 @@ console.log(
 "  besa sign examples/manifest.yaml",
 "  besa verify examples/manifest.signed.json",
 "  besa admit examples/manifest.signed.json crm.lookup",
-"  besa receipt crm.lookup examples/manifest.signed.json"
-].join("\n")
+"  besa admit examples/manifest.signed.json crm.lookup --agent agent-alpha --grants examples/grants.yaml",
+"  besa admit examples/manifest.signed.json crm.delete --agent agent-alpha --grants examples/grants.yaml",
+"  besa receipt crm.lookup examples/manifest.signed.json",
+"  besa receipt crm.lookup examples/manifest.signed.json --agent agent-alpha --grants examples/grants.yaml",
+].join("\n"),
 );
 }
 
@@ -227,7 +306,7 @@ throw new Error(command + " requires " + String(expected) + " argument(s)");
 
 function main(argv: string[]): void {
 const command = argv[0] ?? "";
-const args = argv.slice(1);
+const args = positionals(argv.slice(1));
 
 try {
 switch (command) {

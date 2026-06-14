@@ -25,6 +25,8 @@ toolName: string;
 decision: Decision;
 reasonCode: string;
 request: unknown;
+agentId?: string;
+grantReasonCode?: string;
 }
 
 export function hashManifest(manifest: Manifest): string {
@@ -118,6 +120,8 @@ decision: input.decision,
 reasonCode: input.reasonCode,
 timestamp: new Date().toISOString(),
 requestHash: hashObject(input.request ?? {}),
+agentId: input.agentId,
+grantReasonCode: input.grantReasonCode,
 publicKeyId: publicKeyId(keypair.publicKeyDer),
 algorithm: "ed25519"
 };

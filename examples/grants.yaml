@@ -1,0 +1,4 @@
+grants:
+  - agentId: agent-alpha
+    tools:
+      - crm.lookup
