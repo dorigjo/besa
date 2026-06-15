@@ -1,5 +1,5 @@
 {
-  "name": "besa",
+  "name": "@dorigjo/besa",
   "version": "0.1.0-alpha.1",
   "description": "Signed trust infrastructure for AI-agent tools.",
   "type": "module",
@@ -49,5 +49,9 @@
     "dist/*.d.ts",
     "examples/manifest.yaml",
     "examples/grants.yaml"
-  ]
+  ],
+  "bugs": {
+    "url": "https://github.com/dorigjo/besa/issues"
+  },
+  "homepage": "https://github.com/dorigjo/besa#readme"
 }
