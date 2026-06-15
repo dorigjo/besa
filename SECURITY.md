@@ -99,9 +99,9 @@ This is a pre-release project.
 
 If you find a security issue, do not open a public issue with sensitive details.
 
-Use GitHub's private vulnerability reporting if enabled, or contact the maintainer privately.
+Please report vulnerabilities privately using GitHub Private Vulnerability Reporting for this repository: open the Security tab and choose "Report a vulnerability".
 
-A dedicated security contact should be added before any public production release.
+Maintainers should enable Private Vulnerability Reporting in the repository Security settings before making the repository public.
 
 ## Threat model
 
