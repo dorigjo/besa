@@ -32,8 +32,8 @@
     "type": "git",
     "url": "git+https://github.com/dorigjo/besa.git"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "dorigjo",
+  "license": "MIT",
   "dependencies": {
     "yaml": "^2.5.1"
   },
