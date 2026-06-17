@@ -1,0 +1,144 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: ui-monospace, "Cascadia Code", Menlo, Consolas, monospace;
+  background: #F5F1E6;
+  color: #111111;
+  line-height: 1.65;
+}
+
+.lang-nav {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 1rem 2rem 0;
+}
+
+.lang-nav button {
+  background: #ffffff;
+  border: 1px solid #cccccc;
+  color: #777777;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  padding: 0.25rem 0.6rem;
+}
+
+.lang-nav button.active {
+  border-color: #111111;
+  color: #111111;
+  font-weight: 700;
+}
+
+main {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 4rem 2rem;
+}
+
+section {
+  border-top: 1px solid #e5e5e5;
+  padding-top: 2rem;
+  margin-bottom: 3rem;
+}
+
+.hero {
+  border-top: 0;
+  padding-top: 0;
+  margin-bottom: 4rem;
+}
+
+.eyebrow {
+  color: #777777;
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+}
+
+h1 {
+  font-size: clamp(3rem, 10vw, 6rem);
+  letter-spacing: -0.08em;
+  line-height: 0.9;
+  margin-bottom: 1rem;
+}
+
+h2 {
+  color: #777777;
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  margin-bottom: 0.8rem;
+  text-transform: uppercase;
+}
+
+p {
+  color: #333333;
+  max-width: 640px;
+}
+
+.tagline {
+  color: #111111;
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+.sub {
+  color: #555555;
+  margin-bottom: 1.5rem;
+}
+
+pre {
+  background: #f6f6f6;
+  border: 1px solid #dddddd;
+  color: #111111;
+  font-family: inherit;
+  font-size: 0.875rem;
+  overflow-x: auto;
+  padding: 1rem;
+  white-space: pre;
+}
+
+.cta {
+  display: inline-block;
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  main {
+    padding: 3rem 1.25rem;
+  }
+
+  .lang-nav {
+    padding: 1rem 1.25rem 0;
+  }
+
+.brand {
+  align-items: center;
+  display: flex;
+  gap: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.brand-mark {
+  display: block;
+  height: 40px;
+  width: 44px;
+}
+
+.brand-word {
+  color: #1F2933;
+  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  font-size: clamp(3rem, 10vw, 6rem);
+  font-weight: 700;
+  letter-spacing: -0.06em;
+  line-height: 0.9;
+}
+}
