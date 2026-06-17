@@ -4,41 +4,63 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Besa — Agent Action Receipts</title>
-  <meta name="description" content="Besa is the receipt layer for AI-agent actions. Signed admission control and tamper-evident receipts for every tool call." />
-  <meta name="theme-color" content="#F5F1E6" />
+  <meta name="description" content="Besa is the receipt layer for AI-agent actions. Signed admission decisions and tamper-evident receipts for every tool call." />
+  <meta name="theme-color" content="#FDF0D5" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 
   <header class="site-header">
-    <div class="lang-toggle">
-      <button id="btn-en" type="button" class="lang-btn active" onclick="setLang('en')">EN</button>
-      <button id="btn-de" type="button" class="lang-btn" onclick="setLang('de')">DE</button>
-    </div>
+    <nav class="nav">
+      <div class="nav-brand">
+        <img src="logo.svg" alt="Besa" class="nav-mark" width="44" height="40" loading="eager" />
+        <span class="nav-word">Besa</span>
+      </div>
+      <div class="lang-toggle">
+        <button id="btn-en" type="button" class="lang-btn active" onclick="setLang('en')">EN</button>
+        <button id="btn-de" type="button" class="lang-btn" onclick="setLang('de')">DE</button>
+      </div>
+    </nav>
   </header>
 
   <main>
 
     <section class="hero">
-      <p class="eyebrow">Agent Action Receipts</p>
-      <div class="brand">
-        <img src="logo.svg" alt="Besa mark" class="brand-mark" />
-        <span class="brand-word">Besa</span>
-      </div>
-      <h1 class="hero-claim"
-          data-en="The receipt layer for AI-agent actions."
-          data-de="Die Receipt-Schicht für KI-Agenten-Aktionen.">
+      <span class="category-eyebrow"
+            data-en="Agent Action Receipts"
+            data-de="Agent-Aktions-Receipts">Agent Action Receipts</span>
+      <div class="hero-rule" aria-hidden="true"></div>
+      <h1 class="hero-brand">Besa</h1>
+      <p class="hero-claim"
+         data-en="The receipt layer for AI-agent actions."
+         data-de="Die Receipt-Schicht für KI-Agenten-Aktionen.">
         The receipt layer for AI-agent actions.
-      </h1>
-      <p class="hero-sub"
-         data-en="AI agents are calling real systems: CRMs, payment APIs, databases, deployment tools. The missing primitive is not another chatbot. It is proof — what was allowed, what was denied, what was executed, and under which signed grant."
-         data-de="KI-Agenten rufen echte Systeme auf: CRMs, Zahlungs-APIs, Datenbanken, Deployment-Tools. Das fehlende Primitive ist kein weiterer Chatbot. Es ist Beweis — was erlaubt, was abgelehnt, was ausgeführt wurde und unter welchem signierten Grant.">
-        AI agents are calling real systems: CRMs, payment APIs, databases, deployment tools. The missing primitive is not another chatbot. It is proof — what was allowed, what was denied, what was executed, and under which signed grant.
       </p>
+      <p class="hero-sub"
+         data-en="AI agents call real systems — CRMs, payment APIs, deployment tools, databases. Every call is an action. Besa signs the admission decision and issues a tamper-evident receipt for every one."
+         data-de="KI-Agenten rufen echte Systeme auf — CRMs, Zahlungs-APIs, Deployment-Tools, Datenbanken. Jeder Aufruf ist eine Aktion. Besa signiert die Zulassungsentscheidung und stellt für jeden Aufruf einen fälschungssicheren Receipt aus.">
+        AI agents call real systems — CRMs, payment APIs, deployment tools, databases. Every call is an action. Besa signs the admission decision and issues a tamper-evident receipt for every one.
+      </p>
+      <div class="pipeline-card">
+        <pre class="pipeline-flow">manifest.yaml
+  ↓  besa sign         →  signed-manifest.json
+  ↓  besa verify
+  ↓  besa admit crm.lookup   →  ✓ admitted
+  ↓  besa receipt crm.lookup →  receipt.json</pre>
+      </div>
       <div class="hero-cta">
-        <pre class="install-cmd">npm install @dorigjo/besa@alpha</pre>
-        <a class="github-link" href="https://github.com/dorigjo/besa">github.com/dorigjo/besa</a>
+        <pre class="install-cmd"
+             id="install-cmd"
+             role="button"
+             tabindex="0"
+             aria-label="Copy install command"
+             onclick="copyInstall(this)"
+             onkeydown="if(event.key==='Enter'||event.key===' ')copyInstall(this)">npm install @dorigjo/besa@alpha</pre>
+        <a class="spec-link"
+           href="https://github.com/dorigjo/besa"
+           data-en="Read the spec →"
+           data-de="Spezifikation lesen →">Read the spec →</a>
       </div>
     </section>
 
@@ -47,26 +69,23 @@
             data-en="The problem"
             data-de="Das Problem">The problem</span>
       <p class="problem-copy"
-         data-en="AI agents are getting permissions to touch real systems. Most teams cannot prove what was decided — or why."
-         data-de="KI-Agenten erhalten Berechtigungen, echte Systeme zu berühren. Die meisten Teams können nicht beweisen, was entschieden wurde — oder warum.">
-        AI agents are getting permissions to touch real systems. Most teams cannot prove what was decided — or why.
+         data-en="AI agents are acting in real systems. Most teams cannot prove what was admitted, what was denied, or what was executed. There is no receipt."
+         data-de="KI-Agenten agieren in echten Systemen. Die meisten Teams können nicht beweisen, was zugelassen, was abgelehnt oder was ausgeführt wurde. Es gibt keinen Receipt.">
+        AI agents are acting in real systems. Most teams cannot prove what was admitted, what was denied, or what was executed. There is no receipt.
       </p>
     </section>
 
-    <section class="primitive reveal">
+    <section class="category reveal">
       <span class="section-label"
-            data-en="The primitive"
-            data-de="Das Primitive">The primitive</span>
-      <p class="category-name">Agent Action Receipts.</p>
+            data-en="The category"
+            data-de="Die Kategorie">The category</span>
+      <h2 class="category-name"
+          data-en="Agent Action Receipts."
+          data-de="Agent-Aktions-Receipts.">Agent Action Receipts.</h2>
       <p class="category-desc"
-         data-en="Besa signs tool manifests, evaluates admission, and issues a tamper-evident receipt for every decision — allow or deny."
-         data-de="Besa signiert Tool-Manifests, bewertet die Zulassung und stellt für jede Entscheidung — Erlaubnis oder Ablehnung — einen fälschungssicheren Receipt aus.">
-        Besa signs tool manifests, evaluates admission, and issues a tamper-evident receipt for every decision — allow or deny.
-      </p>
-      <p class="positioning-line"
-         data-en="Besa is the receipt layer for AI-agent actions."
-         data-de="Besa ist die Receipt-Schicht für KI-Agenten-Aktionen.">
-        Besa is the receipt layer for AI-agent actions.
+         data-en="A signed, tamper-evident record of an AI-agent tool call. It encodes the admission decision, the manifest hash, the request fingerprint, and a cryptographic signature. Not a log. Proof."
+         data-de="Ein signierter, fälschungssicherer Nachweis eines KI-Agenten-Tool-Aufrufs. Er kodiert die Zulassungsentscheidung, den Manifest-Hash, den Request-Fingerabdruck und eine kryptografische Signatur. Kein Log. Beweis.">
+        A signed, tamper-evident record of an AI-agent tool call. It encodes the admission decision, the manifest hash, the request fingerprint, and a cryptographic signature. Not a log. Proof.
       </p>
     </section>
 
@@ -75,17 +94,22 @@
             data-en="What a receipt proves"
             data-de="Was ein Receipt beweist">What a receipt proves</span>
       <ul class="proof-list">
-        <li data-en="which tool was called" data-de="welches Tool aufgerufen wurde">which tool was called</li>
-        <li data-en="by which agent" data-de="von welchem Agenten">by which agent</li>
-        <li data-en="under which grant" data-de="unter welchem Grant">under which grant</li>
-        <li data-en="whether it was allowed or denied" data-de="ob es erlaubt oder abgelehnt wurde">whether it was allowed or denied</li>
-        <li data-en="with a cryptographic signature" data-de="mit einer kryptografischen Signatur">with a cryptographic signature</li>
+        <li data-en="Which tool manifest was signed and by whom"
+            data-de="Welches Tool-Manifest signiert wurde und von wem">Which tool manifest was signed and by whom</li>
+        <li data-en="Whether the tool call was admitted or denied"
+            data-de="Ob der Tool-Aufruf zugelassen oder abgelehnt wurde">Whether the tool call was admitted or denied</li>
+        <li data-en="Which capability and risk level were declared"
+            data-de="Welche Fähigkeit und welches Risikoniveau deklariert wurden">Which capability and risk level were declared</li>
+        <li data-en="The cryptographic fingerprint of the request"
+            data-de="Der kryptografische Fingerabdruck des Requests">The cryptographic fingerprint of the request</li>
+        <li data-en="The public key that signed the decision"
+            data-de="Der öffentliche Schlüssel, der die Entscheidung signiert hat">The public key that signed the decision</li>
       </ul>
     </section>
 
     <section class="cli reveal">
       <span class="section-label">CLI</span>
-      <div class="terminal">
+      <div class="terminal-card">
         <pre>npm install @dorigjo/besa@alpha
 
 npm exec --yes --package="@dorigjo/besa@alpha" -- besa --help
@@ -99,14 +123,39 @@ besa receipt crm.lookup examples/manifest.signed.json</pre>
       </div>
     </section>
 
+    <section class="artifact reveal">
+      <span class="section-label"
+            data-en="The artifact"
+            data-de="Das Artefakt">The artifact</span>
+      <p class="artifact-desc"
+         data-en="Every admitted tool call produces a signed receipt."
+         data-de="Jeder zugelassene Tool-Aufruf erzeugt einen signierten Receipt.">
+        Every admitted tool call produces a signed receipt.
+      </p>
+      <div class="receipt-card">
+        <pre>{
+  "receipt_id":    "rcpt_01J2K5N8P3QR4S6T7U8V9W0X",
+  "manifest_hash": "sha256:4a8f2c1d9e3b7f6a0d4c8e2b5f9a1d3e",
+  "tool_name":     "crm.lookup",
+  "decision":      "allow",
+  "reason_code":   "CAPABILITY_DECLARED_SCOPE_MATCHED",
+  "timestamp":     "2026-06-17T14:32:07.443Z",
+  "request_hash":  "sha256:9f1e3c5a7d2b4f8e0c6a2d4b6f8e0c2a",
+  "public_key_id": "besa-key-2026-a1b2c3d4",
+  "signature":     "MEYCIQDkv2mN8rT..."
+}</pre>
+      </div>
+    </section>
+
     <section class="status reveal">
       <span class="section-label">Status</span>
       <p class="status-copy"
-         data-en="Public alpha. Local-first. No hosted backend yet. Not production-stable."
+         data-en="Public alpha. Local-first. No hosted backend. Not production-stable."
          data-de="Öffentliche Alpha. Local-first. Noch kein gehostetes Backend. Nicht produktionsreif.">
-        Public alpha. Local-first. No hosted backend yet. Not production-stable.
+        Public alpha. Local-first. No hosted backend. Not production-stable.
       </p>
-      <a class="source-link" href="https://github.com/dorigjo/besa"
+      <a class="source-link"
+         href="https://github.com/dorigjo/besa"
          data-en="Source: github.com/dorigjo/besa"
          data-de="Quellcode: github.com/dorigjo/besa">
         Source: github.com/dorigjo/besa
@@ -114,6 +163,15 @@ besa receipt crm.lookup examples/manifest.signed.json</pre>
     </section>
 
   </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <img src="logo.svg" alt="" class="footer-mark" width="22" height="20" aria-hidden="true" decoding="async" />
+      <span class="footer-copy"
+            data-en="© 2026 Besa. MIT License."
+            data-de="© 2026 Besa. MIT-Lizenz.">© 2026 Besa. MIT License.</span>
+    </div>
+  </footer>
 
   <script>
     function setLang(lang) {
@@ -123,6 +181,13 @@ besa receipt crm.lookup examples/manifest.signed.json</pre>
       });
       document.getElementById('btn-en').classList.toggle('active', lang === 'en');
       document.getElementById('btn-de').classList.toggle('active', lang === 'de');
+    }
+
+    function copyInstall(el) {
+      navigator.clipboard.writeText('npm install @dorigjo/besa@alpha').then(function () {
+        el.classList.add('copied');
+        setTimeout(function () { el.classList.remove('copied'); }, 1800);
+      }).catch(function () {});
     }
 
     var preferred = navigator.language && navigator.language.startsWith('de') ? 'de' : 'en';
@@ -135,7 +200,7 @@ besa receipt crm.lookup examples/manifest.signed.json</pre>
           observer.unobserve(entry.target);
         }
       });
-    }, { threshold: 0.1 });
+    }, { threshold: 0.08 });
 
     document.querySelectorAll('.reveal').forEach(function (el) {
       observer.observe(el);
