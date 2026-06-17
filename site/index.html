@@ -3,67 +3,92 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Besa — Signed receipts for AI-agent tool calls</title>
-  <link rel="stylesheet" href="styles.css" />
+  <title>Besa — Agent Action Receipts</title>
+  <meta name="description" content="Besa is the receipt layer for AI-agent actions. Signed admission control and tamper-evident receipts for every tool call." />
+  <meta name="theme-color" content="#F5F1E6" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <nav class="lang-nav">
-    <button id="btn-en" type="button" onclick="setLang('en')">EN</button>
-    <button id="btn-de" type="button" onclick="setLang('de')">DE</button>
-  </nav>
+
+  <header class="site-header">
+    <div class="lang-toggle">
+      <button id="btn-en" type="button" class="lang-btn active" onclick="setLang('en')">EN</button>
+      <button id="btn-de" type="button" class="lang-btn" onclick="setLang('de')">DE</button>
+    </div>
+  </header>
 
   <main>
+
     <section class="hero">
-      <p class="eyebrow" data-en="Agent Action Receipts" data-de="Agent Action Receipts">Agent Action Receipts</p>
+      <p class="eyebrow">Agent Action Receipts</p>
       <div class="brand">
-        <img src="logo.svg" alt="Besa logo mark" class="brand-mark" />
+        <img src="logo.svg" alt="Besa mark" class="brand-mark" />
         <span class="brand-word">Besa</span>
       </div>
-
-      <p class="tagline"
-        data-en="Signed receipts for AI-agent tool calls."
-        data-de="Signierte Receipts für KI-Agenten-Toolaufrufe.">
-        Signed receipts for AI-agent tool calls.
+      <h1 class="hero-claim"
+          data-en="The receipt layer for AI-agent actions."
+          data-de="Die Receipt-Schicht für KI-Agenten-Aktionen.">
+        The receipt layer for AI-agent actions.
+      </h1>
+      <p class="hero-sub"
+         data-en="AI agents are calling real systems: CRMs, payment APIs, databases, deployment tools. The missing primitive is not another chatbot. It is proof — what was allowed, what was denied, what was executed, and under which signed grant."
+         data-de="KI-Agenten rufen echte Systeme auf: CRMs, Zahlungs-APIs, Datenbanken, Deployment-Tools. Das fehlende Primitive ist kein weiterer Chatbot. Es ist Beweis — was erlaubt, was abgelehnt, was ausgeführt wurde und unter welchem signierten Grant.">
+        AI agents are calling real systems: CRMs, payment APIs, databases, deployment tools. The missing primitive is not another chatbot. It is proof — what was allowed, what was denied, what was executed, and under which signed grant.
       </p>
-
-      <p class="sub"
-        data-en="Before an AI agent touches a real tool, Besa verifies the manifest, checks the grant, decides admission, and emits a signed receipt."
-        data-de="Bevor ein KI-Agent ein echtes Tool aufruft, prüft Besa das Manifest, überprüft die Berechtigung, entscheidet über die Zulassung und erzeugt einen signierten Receipt.">
-        Before an AI agent touches a real tool, Besa verifies the manifest, checks the grant, decides admission, and emits a signed receipt.
-      </p>
-
-      <pre class="cta">npm install @dorigjo/besa@alpha</pre>
+      <div class="hero-cta">
+        <pre class="install-cmd">npm install @dorigjo/besa@alpha</pre>
+        <a class="github-link" href="https://github.com/dorigjo/besa">github.com/dorigjo/besa</a>
+      </div>
     </section>
 
-    <section>
-      <h2 data-en="The problem" data-de="Das Problem">The problem</h2>
-      <p
-        data-en="AI agents are getting permission to call real systems: CRMs, databases, payment systems, deployment APIs. Most teams cannot prove what was allowed, denied, or executed."
-        data-de="KI-Agenten bekommen Zugriff auf echte Systeme: CRMs, Datenbanken, Zahlungssysteme und Deployment-APIs. Die meisten Teams können nicht beweisen, was erlaubt, abgelehnt oder ausgeführt wurde.">
-        AI agents are getting permission to call real systems: CRMs, databases, payment systems, deployment APIs. Most teams cannot prove what was allowed, denied, or executed.
-      </p>
-    </section>
-
-    <section>
-      <h2 data-en="The wedge" data-de="Der Ansatz">The wedge</h2>
-      <p
-        data-en="Besa signs manifests, checks grants, controls admission, and produces verifiable receipts."
-        data-de="Besa signiert Manifeste, prüft Grants, kontrolliert Zulassung und erzeugt verifizierbare Receipts.">
-        Besa signs manifests, checks grants, controls admission, and produces verifiable receipts.
+    <section class="problem">
+      <span class="section-label"
+            data-en="The problem"
+            data-de="Das Problem">The problem</span>
+      <p class="problem-copy"
+         data-en="AI agents are getting permissions to touch real systems. Most teams cannot prove what was decided — or why."
+         data-de="KI-Agenten erhalten Berechtigungen, echte Systeme zu berühren. Die meisten Teams können nicht beweisen, was entschieden wurde — oder warum.">
+        AI agents are getting permissions to touch real systems. Most teams cannot prove what was decided — or why.
       </p>
     </section>
 
-    <section>
-      <h2 data-en="The primitive" data-de="Das Primitive">The primitive</h2>
-      <p data-en="Besa is the receipt layer for AI-agent actions." data-de="Besa ist die Receipt-Schicht für KI-Agenten-Aktionen.">
+    <section class="primitive reveal">
+      <span class="section-label"
+            data-en="The primitive"
+            data-de="Das Primitive">The primitive</span>
+      <p class="category-name">Agent Action Receipts.</p>
+      <p class="category-desc"
+         data-en="Besa signs tool manifests, evaluates admission, and issues a tamper-evident receipt for every decision — allow or deny."
+         data-de="Besa signiert Tool-Manifests, bewertet die Zulassung und stellt für jede Entscheidung — Erlaubnis oder Ablehnung — einen fälschungssicheren Receipt aus.">
+        Besa signs tool manifests, evaluates admission, and issues a tamper-evident receipt for every decision — allow or deny.
+      </p>
+      <p class="positioning-line"
+         data-en="Besa is the receipt layer for AI-agent actions."
+         data-de="Besa ist die Receipt-Schicht für KI-Agenten-Aktionen.">
         Besa is the receipt layer for AI-agent actions.
       </p>
     </section>
 
-    <section>
-      <h2>CLI</h2>
-      <pre>npm exec --yes --package="@dorigjo/besa@alpha" -- besa --help
+    <section class="proof reveal">
+      <span class="section-label"
+            data-en="What a receipt proves"
+            data-de="Was ein Receipt beweist">What a receipt proves</span>
+      <ul class="proof-list">
+        <li data-en="which tool was called" data-de="welches Tool aufgerufen wurde">which tool was called</li>
+        <li data-en="by which agent" data-de="von welchem Agenten">by which agent</li>
+        <li data-en="under which grant" data-de="unter welchem Grant">under which grant</li>
+        <li data-en="whether it was allowed or denied" data-de="ob es erlaubt oder abgelehnt wurde">whether it was allowed or denied</li>
+        <li data-en="with a cryptographic signature" data-de="mit einer kryptografischen Signatur">with a cryptographic signature</li>
+      </ul>
+    </section>
+
+    <section class="cli reveal">
+      <span class="section-label">CLI</span>
+      <div class="terminal">
+        <pre>npm install @dorigjo/besa@alpha
+
+npm exec --yes --package="@dorigjo/besa@alpha" -- besa --help
 
 besa keys
 besa sign examples/manifest.yaml
@@ -71,32 +96,51 @@ besa verify examples/manifest.signed.json
 besa admit examples/manifest.signed.json crm.lookup
 besa admit examples/manifest.signed.json crm.delete
 besa receipt crm.lookup examples/manifest.signed.json</pre>
+      </div>
     </section>
 
-    <section>
-      <h2>Status</h2>
-      <p
-        data-en="Public alpha. Local-first. No hosted backend yet. Not production-stable."
-        data-de="Öffentliche Alpha. Local-first. Noch kein gehostetes Backend. Nicht produktionsstabil.">
+    <section class="status reveal">
+      <span class="section-label">Status</span>
+      <p class="status-copy"
+         data-en="Public alpha. Local-first. No hosted backend yet. Not production-stable."
+         data-de="Öffentliche Alpha. Local-first. Noch kein gehostetes Backend. Nicht produktionsreif.">
         Public alpha. Local-first. No hosted backend yet. Not production-stable.
       </p>
+      <a class="source-link" href="https://github.com/dorigjo/besa"
+         data-en="Source: github.com/dorigjo/besa"
+         data-de="Quellcode: github.com/dorigjo/besa">
+        Source: github.com/dorigjo/besa
+      </a>
     </section>
+
   </main>
 
   <script>
     function setLang(lang) {
       document.documentElement.lang = lang;
-
-      document.querySelectorAll("[data-en]").forEach(function (el) {
-        el.textContent = lang === "de" ? el.dataset.de : el.dataset.en;
+      document.querySelectorAll('[data-en]').forEach(function (el) {
+        el.textContent = lang === 'de' ? el.dataset.de : el.dataset.en;
       });
-
-      document.getElementById("btn-en").classList.toggle("active", lang === "en");
-      document.getElementById("btn-de").classList.toggle("active", lang === "de");
+      document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+      document.getElementById('btn-de').classList.toggle('active', lang === 'de');
     }
 
-    var preferred = navigator.language && navigator.language.startsWith("de") ? "de" : "en";
+    var preferred = navigator.language && navigator.language.startsWith('de') ? 'de' : 'en';
     setLang(preferred);
+
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.reveal').forEach(function (el) {
+      observer.observe(el);
+    });
   </script>
+
 </body>
 </html>
