@@ -1,304 +1,507 @@
-﻿*, *::before, *::after {
+/* ─── Reset ──────────────────────────────────────────────────────────────── */
+
+*, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
+/* ─── Design Tokens: Primitive ───────────────────────────────────────────── */
+
 :root {
-  --ivory: #F5F1E6;
-  --slate: #1F2933;
-  --forest: #0F3D2E;
-  --sage: #A7B59B;
+  /* Primitive */
+  --red-600:      #C1121F;
+  --parchment-50: #FDF0D5;
+  --navy-900:     #003049;
+
+  /* Semantic */
+  --color-accent:        var(--red-600);
+  --color-base:          var(--parchment-50);
+  --color-authority:     var(--navy-900);
+  --color-text:          var(--navy-900);
+  --color-text-mid:      rgba(0, 48, 73, 0.62);
+  --color-text-muted:    rgba(0, 48, 73, 0.38);
+  --color-border:        rgba(0, 48, 73, 0.14);
+  --color-border-strong: rgba(0, 48, 73, 0.28);
+
+  /* Typography */
+  --font-serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --font-sans:  system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono:  ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+
+  /* Motion — Apple-calibrated */
+  --ease-apple:  cubic-bezier(0.25, 0.1, 0, 1);
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast:    160ms;
+  --dur-base:    500ms;
+  --dur-reveal:  700ms;
+  --dur-slow:    900ms;
+}
+
+/* ─── Base ────────────────────────────────────────────────────────────────── */
+
+html {
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  background-color: var(--ivory);
-  background-image: radial-gradient(
-    ellipse at 65% 0%,
-    rgba(167, 181, 155, 0.16) 0%,
-    rgba(245, 241, 230, 0) 56%
-  );
-  color: var(--slate);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background-color: var(--color-base);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 1rem;
   line-height: 1.65;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* ─── Animations ──────────────────────────────────────────────────────────── */
+
+@keyframes drawRule {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
 }
 
 @keyframes fadeUp {
   from {
     opacity: 0;
-    transform: translateY(16px);
+    transform: translateY(18px);
   }
-
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
+/* ─── Header / Nav ────────────────────────────────────────────────────────── */
+
 .site-header {
-  display: flex;
-  justify-content: flex-end;
   margin: 0 auto;
   max-width: 760px;
   padding: 1.5rem 2rem 0;
 }
 
-.lang-toggle {
-  display: flex;
-  gap: 0.4rem;
-}
-
-.lang-btn {
-  background: transparent;
-  border: 1px solid var(--sage);
-  color: var(--slate);
-  cursor: pointer;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-  font-size: 0.7rem;
-  letter-spacing: 0.1em;
-  min-height: 44px;
-  min-width: 44px;
-  padding: 0 0.75rem;
-  transition: border-color 0.2s ease, color 0.2s ease, background-color 0.2s ease;
-}
-
-.lang-btn.active {
-  background: rgba(15, 61, 46, 0.06);
-  border-color: var(--forest);
-  color: var(--forest);
-  font-weight: 700;
-}
-
-.lang-btn:hover:not(.active) {
-  border-color: var(--slate);
-  color: var(--slate);
-}
-
-.lang-btn:focus-visible,
-.github-link:focus-visible,
-.source-link:focus-visible {
-  outline: 2px solid var(--forest);
-  outline-offset: 3px;
-}
-
-main {
-  margin: 0 auto;
-  max-width: 760px;
-  padding: 0 2rem 6rem;
-}
-
-.hero {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-height: 88vh;
-  padding: 5rem 0;
-}
-
-.eyebrow,
-.section-label {
-  color: var(--sage);
-  display: block;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-  font-size: 0.68rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-}
-
-.eyebrow {
-  animation: fadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.05s both;
-  margin-bottom: 2.5rem;
-}
-
-.brand {
+.nav {
   align-items: center;
   display: flex;
-  gap: 1rem;
-  margin-bottom: 2.75rem;
+  justify-content: space-between;
 }
 
-.brand-mark {
-  animation: fadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
+.nav-brand {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  text-decoration: none;
+}
+
+.nav-mark {
   display: block;
   height: 40px;
   width: 44px;
 }
 
-.brand-word {
-  animation: fadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.28s both;
-  color: var(--slate);
-  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
-  font-size: clamp(3rem, 9vw, 6rem);
+.nav-word {
+  color: var(--color-authority);
+  font-family: var(--font-serif);
+  font-feature-settings: "kern" 1, "liga" 1;
+  font-size: 1.3rem;
   font-weight: 700;
-  letter-spacing: -0.06em;
+  letter-spacing: -0.03em;
   line-height: 1;
 }
 
-.hero-claim {
-  animation: fadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.45s both;
-  color: var(--forest);
-  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
-  font-size: clamp(1.7rem, 4vw, 2.5rem);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.18;
-  margin-bottom: 1.5rem;
-  max-width: 640px;
+/* ─── Language Toggle ─────────────────────────────────────────────────────── */
+
+.lang-toggle {
+  display: flex;
+  gap: 0.35rem;
 }
 
-.hero-sub {
-  animation: fadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.55s both;
-  color: rgba(31, 41, 51, 0.72);
-  font-size: 1.05rem;
-  line-height: 1.75;
-  margin-bottom: 2.75rem;
+.lang-btn {
+  background: transparent;
+  border: 1px solid var(--color-border-strong);
+  color: var(--color-text-mid);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 0.7rem;
+  transition:
+    border-color var(--dur-fast) ease,
+    color var(--dur-fast) ease,
+    background-color var(--dur-fast) ease;
+}
+
+.lang-btn.active {
+  background: rgba(0, 48, 73, 0.07);
+  border-color: var(--color-authority);
+  color: var(--color-authority);
+  font-weight: 700;
+}
+
+.lang-btn:hover:not(.active) {
+  border-color: var(--color-text-mid);
+  color: var(--color-text);
+}
+
+.lang-btn:focus-visible,
+.spec-link:focus-visible,
+.source-link:focus-visible,
+.install-cmd:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+/* ─── Main Layout ─────────────────────────────────────────────────────────── */
+
+main {
+  margin: 0 auto;
+  max-width: 760px;
+  padding: 0 2rem 8rem;
+}
+
+/* ─── Hero ────────────────────────────────────────────────────────────────── */
+
+.hero {
+  padding: 5.5rem 0 5rem;
+}
+
+.category-eyebrow {
+  animation: fadeUp var(--dur-reveal) var(--ease-apple) 0.08s both;
+  color: var(--color-accent);
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.hero-rule {
+  animation: drawRule var(--dur-base) var(--ease-apple) 0.34s both;
+  background-color: var(--color-accent);
+  height: 2px;
+  margin: 1.5rem 0 2.4rem;
+  transform-origin: left center;
+}
+
+.hero-brand {
+  animation: fadeUp var(--dur-slow) var(--ease-apple) 0.56s both;
+  color: var(--color-authority);
+  font-family: var(--font-serif);
+  font-feature-settings: "kern" 1, "liga" 1;
+  font-size: clamp(4rem, 12vw, 7.5rem);
+  font-weight: 700;
+  letter-spacing: -0.055em;
+  line-height: 1;
+  margin-bottom: 1.5rem;
+}
+
+.hero-claim {
+  animation: fadeUp var(--dur-slow) var(--ease-apple) 0.72s both;
+  color: var(--color-authority);
+  font-family: var(--font-serif);
+  font-feature-settings: "kern" 1, "liga" 1;
+  font-size: clamp(1.5rem, 3.5vw, 2.15rem);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.22;
+  margin-bottom: 1.25rem;
   max-width: 580px;
 }
 
+.hero-sub {
+  animation: fadeUp var(--dur-slow) var(--ease-apple) 0.88s both;
+  color: var(--color-text-mid);
+  font-size: 1.05rem;
+  line-height: 1.78;
+  margin-bottom: 2.75rem;
+  max-width: 560px;
+}
+
+/* ─── Pipeline Card ───────────────────────────────────────────────────────── */
+
+.pipeline-card {
+  animation: fadeUp var(--dur-slow) var(--ease-apple) 1.04s both;
+  border: 1px solid var(--color-border-strong);
+  border-left: 3px solid var(--color-accent);
+  margin-bottom: 2.75rem;
+  overflow-x: auto;
+  padding: 1.6rem 1.8rem;
+}
+
+.pipeline-flow {
+  color: var(--color-authority);
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+  line-height: 1.95;
+  min-width: max-content;
+  white-space: pre;
+}
+
+/* ─── Hero CTA ────────────────────────────────────────────────────────────── */
+
 .hero-cta {
   align-items: center;
-  animation: fadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.7s both;
+  animation: fadeUp var(--dur-slow) var(--ease-apple) 1.2s both;
   display: flex;
   flex-wrap: wrap;
   gap: 1.5rem;
 }
 
 .install-cmd {
-  background: rgba(255, 255, 255, 0.42);
-  border: 1px solid var(--forest);
-  color: var(--forest);
+  background: rgba(0, 48, 73, 0.04);
+  border: 1px solid var(--color-authority);
+  color: var(--color-authority);
+  cursor: pointer;
   display: inline-block;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-family: var(--font-mono);
   font-size: 0.9rem;
   font-weight: 600;
   padding: 0.8rem 1.2rem;
+  transition:
+    border-color var(--dur-fast) ease,
+    color var(--dur-fast) ease,
+    background-color var(--dur-fast) ease;
+  user-select: none;
   white-space: pre;
 }
 
-.github-link,
-.source-link {
-  color: var(--sage);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-  font-size: 0.8rem;
-  text-decoration: none;
-  transition: color 0.2s ease;
+.install-cmd:hover {
+  background: rgba(0, 48, 73, 0.08);
+  border-color: var(--color-accent);
 }
 
-.github-link:hover,
-.source-link:hover {
-  color: var(--forest);
+.install-cmd.copied {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
+
+.install-cmd.copied::after {
+  content: "  \2713";
+}
+
+.spec-link {
+  color: var(--color-accent);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color var(--dur-fast) ease;
+}
+
+.spec-link:hover {
+  color: var(--color-authority);
+}
+
+/* ─── Section Label (shared) ──────────────────────────────────────────────── */
+
+.section-label {
+  color: var(--color-accent);
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  margin-bottom: 1.4rem;
+  text-transform: uppercase;
+}
+
+/* ─── Problem (full-bleed navy band) ─────────────────────────────────────── */
 
 .problem {
-  background: var(--slate);
+  background: var(--color-authority);
   margin-left: -2rem;
   margin-right: -2rem;
   padding: 5rem 2rem;
 }
 
 .problem .section-label {
-  margin-bottom: 1.5rem;
+  color: rgba(253, 240, 213, 0.45);
 }
 
 .problem-copy {
-  color: var(--ivory);
-  font-size: clamp(1.25rem, 3vw, 1.55rem);
+  color: var(--color-base);
+  font-family: var(--font-serif);
+  font-feature-settings: "kern" 1, "liga" 1;
+  font-size: clamp(1.2rem, 2.8vw, 1.55rem);
   font-weight: 500;
   line-height: 1.55;
   max-width: 560px;
 }
 
-.primitive,
+/* ─── Sections: shared border rhythm ─────────────────────────────────────── */
+
+.category,
 .proof,
 .cli,
+.artifact,
 .status {
-  border-top: 1px solid rgba(31, 41, 51, 0.12);
+  border-top: 1px solid var(--color-border);
   padding: 4.5rem 0;
 }
 
+/* ─── Category ────────────────────────────────────────────────────────────── */
+
 .category-name {
-  color: var(--slate);
-  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
-  font-size: clamp(1.9rem, 5vw, 3.2rem);
+  color: var(--color-authority);
+  font-family: var(--font-serif);
+  font-feature-settings: "kern" 1, "liga" 1;
+  font-size: clamp(1.9rem, 4.5vw, 3.1rem);
   font-weight: 700;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.03em;
   line-height: 1.1;
-  margin: 1.4rem 0 1.5rem;
+  margin-bottom: 1.25rem;
 }
 
 .category-desc {
-  color: rgba(31, 41, 51, 0.72);
-  font-size: 1rem;
-  line-height: 1.75;
-  margin-bottom: 1.1rem;
-  max-width: 580px;
+  color: var(--color-text-mid);
+  font-size: 1.05rem;
+  line-height: 1.78;
+  max-width: 560px;
 }
 
-.positioning-line {
-  color: var(--forest);
-  font-size: 1rem;
-  font-weight: 650;
-}
+/* ─── Proof List ──────────────────────────────────────────────────────────── */
 
 .proof-list {
   list-style: none;
-  margin-top: 1.4rem;
+  margin-top: 0.25rem;
 }
 
 .proof-list li {
-  border-bottom: 1px solid rgba(31, 41, 51, 0.12);
-  color: var(--slate);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
   font-size: 1rem;
+  line-height: 1.6;
   padding: 0.9rem 0;
 }
 
+.proof-list li:first-child {
+  border-top: 1px solid var(--color-border);
+}
+
 .proof-list li::before {
-  color: var(--sage);
-  content: "— ";
+  color: var(--color-accent);
+  content: "\2192\00a0\00a0";
+  font-family: var(--font-mono);
 }
 
-.terminal {
-  background: var(--slate);
-  border: 1px solid rgba(167, 181, 155, 0.34);
-  border-radius: 8px;
-  margin-top: 1.4rem;
+/* ─── Terminal Card (CLI section) ─────────────────────────────────────────── */
+
+.terminal-card {
+  background: var(--color-authority);
+  border-left: 3px solid var(--color-accent);
+  margin-top: 0.5rem;
   overflow-x: auto;
-  padding: 1.75rem 2rem;
+  padding: 1.8rem 2rem;
 }
 
-.terminal pre {
-  color: var(--ivory);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+.terminal-card pre {
+  color: var(--color-base);
+  font-family: var(--font-mono);
   font-size: 0.85rem;
-  line-height: 1.8;
+  line-height: 1.9;
   min-width: max-content;
   white-space: pre;
 }
+
+/* ─── Artifact / Receipt Card ─────────────────────────────────────────────── */
+
+.artifact-desc {
+  color: var(--color-text-mid);
+  font-size: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.receipt-card {
+  background: var(--color-authority);
+  border-left: 3px solid var(--color-accent);
+  overflow-x: auto;
+  padding: 1.8rem 2rem;
+}
+
+.receipt-card pre {
+  color: var(--color-base);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.9;
+  min-width: max-content;
+  white-space: pre;
+}
+
+/* ─── Status ──────────────────────────────────────────────────────────────── */
 
 .status {
   padding-bottom: 0;
 }
 
 .status-copy {
-  color: rgba(31, 41, 51, 0.62);
+  color: var(--color-text-mid);
   font-size: 0.95rem;
-  margin: 1.25rem 0 0.85rem;
+  margin-bottom: 0.9rem;
 }
+
+.source-link {
+  color: var(--color-accent);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  text-decoration: none;
+  transition: color var(--dur-fast) ease;
+}
+
+.source-link:hover {
+  color: var(--color-authority);
+}
+
+/* ─── Footer ──────────────────────────────────────────────────────────────── */
+
+.site-footer {
+  border-top: 1px solid var(--color-border);
+  margin-top: 5rem;
+  padding: 2rem;
+}
+
+.footer-inner {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  margin: 0 auto;
+  max-width: 760px;
+}
+
+.footer-mark {
+  display: block;
+  height: 20px;
+  opacity: 0.35;
+  width: 22px;
+}
+
+.footer-copy {
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+}
+
+/* ─── Scroll Reveal ───────────────────────────────────────────────────────── */
 
 .reveal {
   opacity: 0;
-  transform: translateY(18px);
+  transform: translateY(20px);
   transition:
-    opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    opacity var(--dur-reveal) var(--ease-apple),
+    transform var(--dur-reveal) var(--ease-apple);
+  will-change: transform, opacity;
 }
 
 .reveal.visible {
   opacity: 1;
   transform: translateY(0);
 }
+
+/* ─── Reduced Motion ──────────────────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -307,11 +510,18 @@ main {
     transition-duration: 0.01ms !important;
   }
 
+  .hero-rule {
+    transform: scaleX(1);
+  }
+
   .reveal {
     opacity: 1;
     transform: none;
+    will-change: auto;
   }
 }
+
+/* ─── Mobile ≤640px ───────────────────────────────────────────────────────── */
 
 @media (max-width: 640px) {
   .site-header {
@@ -319,29 +529,34 @@ main {
   }
 
   main {
-    padding: 0 1.25rem 4rem;
+    padding: 0 1.25rem 5rem;
   }
 
   .hero {
-    min-height: auto;
-    padding: 3.5rem 0 3rem;
+    padding: 3.5rem 0 3.5rem;
   }
 
-  .brand {
-    gap: 0.8rem;
-    margin-bottom: 2.1rem;
-  }
-
-  .brand-word {
-    font-size: clamp(2.4rem, 18vw, 4rem);
+  .hero-brand {
+    font-size: clamp(3.2rem, 19vw, 5rem);
   }
 
   .hero-claim {
-    font-size: clamp(1.45rem, 8vw, 2.25rem);
+    font-size: clamp(1.35rem, 7.5vw, 1.9rem);
   }
 
   .hero-sub {
     font-size: 0.98rem;
+    margin-bottom: 2.25rem;
+  }
+
+  .pipeline-card {
+    margin-left: -0.25rem;
+    margin-right: -0.25rem;
+    padding: 1.2rem 1.25rem;
+  }
+
+  .pipeline-flow {
+    font-size: 0.78rem;
   }
 
   .hero-cta {
@@ -360,24 +575,26 @@ main {
   .problem {
     margin-left: -1.25rem;
     margin-right: -1.25rem;
-    padding: 3.5rem 1.25rem;
+    padding: 4rem 1.25rem;
   }
 
-  .primitive,
+  .category,
   .proof,
   .cli,
+  .artifact,
   .status {
     padding: 3.25rem 0;
   }
 
-  .terminal {
-    border-radius: 6px;
+  .terminal-card,
+  .receipt-card {
     margin-left: -0.25rem;
     margin-right: -0.25rem;
     padding: 1.25rem;
   }
 
-  .terminal pre {
+  .terminal-card pre,
+  .receipt-card pre {
     font-size: 0.78rem;
   }
 }
