@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Besa — Signed receipts for AI-agent tool calls</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+</head>
+<body>
+  <nav class="lang-nav">
+    <button id="btn-en" type="button" onclick="setLang('en')">EN</button>
+    <button id="btn-de" type="button" onclick="setLang('de')">DE</button>
+  </nav>
+
+  <main>
+    <section class="hero">
+      <p class="eyebrow" data-en="Agent Action Receipts" data-de="Agent Action Receipts">Agent Action Receipts</p>
+      <div class="brand">
+        <img src="logo.svg" alt="Besa logo mark" class="brand-mark" />
+        <span class="brand-word">Besa</span>
+      </div>
+
+      <p class="tagline"
+        data-en="Signed receipts for AI-agent tool calls."
+        data-de="Signierte Receipts für KI-Agenten-Toolaufrufe.">
+        Signed receipts for AI-agent tool calls.
+      </p>
+
+      <p class="sub"
+        data-en="Before an AI agent touches a real tool, Besa verifies the manifest, checks the grant, decides admission, and emits a signed receipt."
+        data-de="Bevor ein KI-Agent ein echtes Tool aufruft, prüft Besa das Manifest, überprüft die Berechtigung, entscheidet über die Zulassung und erzeugt einen signierten Receipt.">
+        Before an AI agent touches a real tool, Besa verifies the manifest, checks the grant, decides admission, and emits a signed receipt.
+      </p>
+
+      <pre class="cta">npm install @dorigjo/besa@alpha</pre>
+    </section>
+
+    <section>
+      <h2 data-en="The problem" data-de="Das Problem">The problem</h2>
+      <p
+        data-en="AI agents are getting permission to call real systems: CRMs, databases, payment systems, deployment APIs. Most teams cannot prove what was allowed, denied, or executed."
+        data-de="KI-Agenten bekommen Zugriff auf echte Systeme: CRMs, Datenbanken, Zahlungssysteme und Deployment-APIs. Die meisten Teams können nicht beweisen, was erlaubt, abgelehnt oder ausgeführt wurde.">
+        AI agents are getting permission to call real systems: CRMs, databases, payment systems, deployment APIs. Most teams cannot prove what was allowed, denied, or executed.
+      </p>
+    </section>
+
+    <section>
+      <h2 data-en="The wedge" data-de="Der Ansatz">The wedge</h2>
+      <p
+        data-en="Besa signs manifests, checks grants, controls admission, and produces verifiable receipts."
+        data-de="Besa signiert Manifeste, prüft Grants, kontrolliert Zulassung und erzeugt verifizierbare Receipts.">
+        Besa signs manifests, checks grants, controls admission, and produces verifiable receipts.
+      </p>
+    </section>
+
+    <section>
+      <h2 data-en="The primitive" data-de="Das Primitive">The primitive</h2>
+      <p data-en="Besa is the receipt layer for AI-agent actions." data-de="Besa ist die Receipt-Schicht für KI-Agenten-Aktionen.">
+        Besa is the receipt layer for AI-agent actions.
+      </p>
+    </section>
+
+    <section>
+      <h2>CLI</h2>
+      <pre>npm exec --yes --package="@dorigjo/besa@alpha" -- besa --help
+
+besa keys
+besa sign examples/manifest.yaml
+besa verify examples/manifest.signed.json
+besa admit examples/manifest.signed.json crm.lookup
+besa admit examples/manifest.signed.json crm.delete
+besa receipt crm.lookup examples/manifest.signed.json</pre>
+    </section>
+
+    <section>
+      <h2>Status</h2>
+      <p
+        data-en="Public alpha. Local-first. No hosted backend yet. Not production-stable."
+        data-de="Öffentliche Alpha. Local-first. Noch kein gehostetes Backend. Nicht produktionsstabil.">
+        Public alpha. Local-first. No hosted backend yet. Not production-stable.
+      </p>
+    </section>
+  </main>
+
+  <script>
+    function setLang(lang) {
+      document.documentElement.lang = lang;
+
+      document.querySelectorAll("[data-en]").forEach(function (el) {
+        el.textContent = lang === "de" ? el.dataset.de : el.dataset.en;
+      });
+
+      document.getElementById("btn-en").classList.toggle("active", lang === "en");
+      document.getElementById("btn-de").classList.toggle("active", lang === "de");
+    }
+
+    var preferred = navigator.language && navigator.language.startsWith("de") ? "de" : "en";
+    setLang(preferred);
+  </script>
+</body>
+</html>
