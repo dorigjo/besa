@@ -1,345 +1,141 @@
-# Besa
+<p align="center">
+  <img src="site/logo.svg" alt="" width="44" height="40" />
+</p>
 
-Signed trust infrastructure for AI-agent tools.
+<h1 align="center">Besa</h1>
 
-> **Alpha / developer preview — not production-ready.**
->
-> Besa is currently an early alpha (`0.1.0-alpha.0`). APIs, file formats, receipt formats, and behavior may change without notice.
->
-> Do not use Besa to protect production systems, production secrets, customer data, or real signing keys yet.
->
-> The key under `.besa/` is a local demo key.
+<p align="center"><strong>Agent Action Receipts</strong></p>
 
-Besa signs MCP-style tool manifests, verifies them before use, admits or denies tool calls against policy, and issues signed tamper-evident receipts.
+<p align="center">Besa is the receipt layer for AI-agent actions.</p>
 
-Besa is the trust layer for AI-agent tools.
+---
 
-## What it does
+AI agents call real tools — CRMs, payment APIs, deployment pipelines, databases. Every call is a real action. Most teams cannot prove what was admitted, what was denied, or what was executed.
 
-* Signs tool manifests with Ed25519.
-* Verifies signed manifests before runtime use.
-* Allows or denies tool calls with reason codes.
-* Blocks destructive high-risk tools by default.
-* Tracks local per-tool usage with a mini ActionMeter.
-* Creates signed receipts for admission decisions.
+Besa signs the admission decision and issues a tamper-evident receipt for every tool call.
 
-Flow:
+> **Alpha.** `0.1.0-alpha.2` — not production-ready. APIs and file formats may change without notice.
+
+## The flow
 
 ```text
-manifest.yaml -> sign -> verify -> admit -> receipt
+manifest.yaml
+  ↓  besa sign         →  signed-manifest.json
+  ↓  besa verify
+  ↓  besa admit crm.lookup   →  ✓ admitted
+  ↓  besa receipt crm.lookup →  receipt.json
 ```
 
-## Why it matters
+The receipt is the artifact. Everything before it makes the receipt trustworthy.
 
-AI agents increasingly call external tools, APIs, MCP servers, and internal systems.
+## Why
 
-The important question is not only whether an agent can call a tool.
+When an AI agent calls a tool, three questions carry operational weight:
 
-The important questions are:
+1. Was the tool manifest signed by someone you trust?
+2. Was this call admitted or denied, and on what grounds?
+3. Is there a tamper-evident record proving the decision?
 
-* Which tool is the agent allowed to call?
-* Who signed the declared capability?
-* Has the manifest changed?
-* Was the call allowed or denied?
-* Is there a receipt proving the decision?
+Today, the answer is usually: no.
 
-Besa turns those answers into signed artifacts.
+## What Besa does
 
-## Quickstart
+- Signs MCP-style tool manifests with Ed25519
+- Verifies manifest integrity before runtime
+- Admits or denies tool calls against declared capability, risk level, and scope
+- Issues a signed, tamper-evident receipt for every admission decision
+- Tracks per-tool call counts against declared budget limits
 
-Install dependencies:
+## Install
 
 ```bash
+npm install @dorigjo/besa@alpha
+```
+
+Clone and build locally:
+
+```bash
+git clone https://github.com/dorigjo/besa
+cd besa
 npm install
-```
-
-Build:
-
-```bash
 npm run build
 ```
 
-Run tests:
+## Quickstart
 
 ```bash
-npm test
+node dist/index.js keys
+node dist/index.js sign examples/manifest.yaml
+node dist/index.js verify examples/manifest.signed.json
+node dist/index.js admit examples/manifest.signed.json crm.lookup
+node dist/index.js admit examples/manifest.signed.json crm.delete
+node dist/index.js receipt crm.lookup examples/manifest.signed.json
 ```
 
-Run the smoke test:
+`crm.lookup` returns `ALLOWED`. `crm.delete` returns `RISK_BLOCKED`.
+
+Run the full smoke test:
 
 ```bash
 npm run smoke
 ```
 
-The smoke test runs the full CLI flow: build, load, sign, verify, admit allow, admit deny, and receipt creation.
+## What a receipt proves
 
-## CLI commands
-
-Load a manifest:
-
-```bash
-node dist/index.js load examples/manifest.yaml
-```
-
-Sign a manifest:
-
-```bash
-node dist/index.js sign examples/manifest.yaml
-```
-
-Verify a signed manifest:
-
-```bash
-node dist/index.js verify examples/manifest.signed.json
-```
-
-Admit a safe tool:
-
-```bash
-node dist/index.js admit examples/manifest.signed.json crm.lookup
-```
-
-Deny a dangerous tool:
-
-```bash
-node dist/index.js admit examples/manifest.signed.json crm.delete
-```
-
-Create a signed receipt:
-
-```bash
-node dist/index.js receipt crm.lookup
-```
-
-Expected behavior:
-
-* `crm.lookup` -> allow / `ALLOWED`
-* `crm.delete` -> deny / `RISK_BLOCKED`
-
-### Grant-aware admission (optional)
-
-Besa can scope a tool call to a specific agent. Add a `grants.yaml` listing which `agentId` may use which tools:
-
-```
-grants:
-  - agentId: agent-alpha
-    tools:
-      - crm.lookup
-```
-
-Then pass `--agent` and `--grants` to `admit` or `receipt`:
-
-```
-node dist/index.js admit examples/manifest.signed.json crm.lookup --agent agent-alpha --grants examples/grants.yaml
-```
-
-- `--agent <id>`: the id of the calling agent.
-- `--grants <file>`: the grants file to check against.
-- If the agent is not granted the tool, admission is denied (`TOOL_NOT_GRANTED`, or `AGENT_NOT_FOUND` for an unknown agent), and the receipt records `agentId` and `grantReasonCode`.
-
-Grants are **optional and backward-compatible**: without `--grants`, admission behaves exactly as before.
-
-## Core concepts
-
-### Tool Manifest
-
-A YAML or JSON file that declares a tool server and its tools.
-
-Each tool has:
-
-* name
-* description
-* capability
-* risk
-* scopes
-* budgetLimit
-* inputSchema
-
-Capabilities:
-
-* read
-* write
-* destructive
-
-Risk levels:
-
-* low
-* medium
-* high
-
-### Signed Manifest
-
-A manifest signed with Ed25519.
-
-The signed manifest includes:
-
-* manifest
-* manifestHash
-* algorithm
-* publicKey
-* publicKeyId
-* signature
-* signedAt
-
-### Admission Decision
-
-Besa evaluates whether a tool call should be allowed or denied.
-
-Reason codes include:
-
-* `ALLOWED`
-* `TOOL_NOT_FOUND`
-* `RISK_BLOCKED`
-* `BUDGET_EXCEEDED`
-
-### Mini ActionMeter
-
-Besa tracks local call counts per tool.
-
-This allows simple budget enforcement through `budgetLimit`.
-
-### Signed Receipt
-
-A receipt proves what decision was made.
-
-A receipt includes:
-
-* receiptId
-* manifestHash
-* toolName
-* decision
-* reasonCode
-* timestamp
-* requestHash
-* publicKeyId
-* algorithm
-* signature
-
-## SDK usage
-
-Import Besa from the SDK:
-
-```ts
-import {
-  loadManifest,
-  generateKeyPair,
-  signManifest,
-  verifySignedManifest,
-  admit,
-  createReceipt,
-  verifyReceipt,
-} from "besa";
-```
-
-Basic flow:
-
-```ts
-const manifest = loadManifest("examples/manifest.yaml");
-
-const keypair = generateKeyPair();
-
-const signed = signManifest(manifest, keypair);
-
-const verified = verifySignedManifest(signed);
-
-if (!verified.valid) {
-  throw new Error(verified.reasonCode);
-}
-
-const decision = admit(signed, "crm.lookup");
-
-const receipt = createReceipt(signed, decision, keypair);
-
-const receiptResult = verifyReceipt(receipt);
-
-if (!receiptResult.valid) {
-  throw new Error(receiptResult.reasonCode);
+```json
+{
+  "receipt_id": "rcpt_01J2K5N8P3QR4S6T7U8V9W0X",
+  "manifest_hash": "sha256:4a8f2c1d9e3b7f6a0d4c8e2b5f9a1d3e",
+  "tool_name": "crm.lookup",
+  "decision": "allow",
+  "reason_code": "CAPABILITY_DECLARED_SCOPE_MATCHED",
+  "timestamp": "2026-06-17T14:32:07.443Z",
+  "request_hash": "sha256:9f1e3c5a7d2b4f8e0c6a2d4b6f8e0c2a",
+  "public_key_id": "besa-key-2026-a1b2c3d4",
+  "signature": "MEYCIQDkv2mN8rT..."
 }
 ```
+
+The receipt encodes which manifest was signed, whether the call was admitted, the cryptographic request fingerprint, and an Ed25519 signature over the canonical receipt body. Altering any field after signing causes verification to fail.
+
+## Commands
+
+- `besa keys` — generate a local Ed25519 key pair
+- `besa sign <manifest>` — sign a manifest YAML or JSON file
+- `besa verify <signed>` — verify a signed manifest
+- `besa admit <signed> <tool>` — admit or deny a tool call
+- `besa receipt <tool> <signed>` — issue a signed receipt
+
+Reason codes: `ALLOWED` · `TOOL_NOT_FOUND` · `RISK_BLOCKED` · `BUDGET_EXCEEDED` · `TOOL_NOT_GRANTED`
 
 ## Security
 
-Never commit `.besa/`.
+`.besa/` contains local trust artifacts including the Ed25519 private key. Do not commit it.
 
-The `.besa/` folder contains local trust artifacts, including the Ed25519 private key.
+```
+.besa/
+examples/manifest.signed.json
+```
 
-Ignored local artifacts:
+The demo key is for local development only. Rotate before real use.
 
-* `.besa/`
-* `.besa/key.json`
-* `.besa/meter.json`
-* `.besa/receipts/`
-* `examples/manifest.signed.json`
-
-The local key generated by this MVP is a demo key. Rotate keys before real usage.
-
-See:
-
-* [SECURITY.md](SECURITY.md)
-* [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md)
-
-## MVP limitations
-
-This is an MVP and alpha developer preview.
-
-Current limitations:
-
-* local key storage only
-* local JSON meter only
-* no hosted registry
-* no SaaS backend
-* no dashboard
-* no remote verifier API
-* no hosted receipts API
-* no distributed replay protection
-* no key rotation
-* no key revocation
-* one default policy
-
-Default policy:
-
-* destructive + high risk = denied
+See [SECURITY.md](SECURITY.md) and [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md).
 
 ## What Besa is not
 
-Besa is currently an alpha trust layer for AI-agent tool control and evidence.
+- A hosted SaaS or dashboard
+- Production key management
+- A compliance certification
+- A replacement for identity, authorization, audit storage, or security monitoring
 
-It is not:
+## Status
 
-* a hosted SaaS
-* a dashboard or UI
-* a full MCP gateway
-* production key management
-* a compliance certification product
-* a replacement for identity, authorization, audit storage, or security monitoring
-* ready for production secrets or production systems
+Alpha. `0.1.0-alpha.2`. Local-first. No hosted backend. Not production-stable.
 
-## Release docs
+Working: manifest signing, admission with reason codes, signed receipts, mini ActionMeter, agent-scoped grants, TypeScript SDK exports, full CLI.
 
-* [SECURITY.md](SECURITY.md) — security policy, key handling, and vulnerability reporting
-* [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) — assets, threats, mitigations, and current MVP limitations
-* [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md) — pre-release gates before tagging or publishing
-* [CHANGELOG.md](CHANGELOG.md) — notable changes by version
+Not yet: hosted key management, remote verifier, key rotation, replay protection.
 
-## Roadmap
+## License
 
-Planned next layers:
-
-* hosted key management
-* remote verifier API
-* policy packs
-* MCP gateway integration
-* enterprise audit export
-* receipts API
-* usage-based ActionMeter
-* organization-level trust registry
-
-## Positioning
-
-Besa is signed trust infrastructure for AI-agent tools.
-
-It is not another chatbot.
-
-It is not another dashboard.
-
-It is a trust layer for agentic execution.
+[MIT](LICENSE)
