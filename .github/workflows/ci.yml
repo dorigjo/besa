@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [20, 22]
+        node-version: [20, 22, 24]
     steps:
       - uses: actions/checkout@v4
 
@@ -19,3 +19,5 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
+      - run: npm run smoke
+      - run: npm pack --dry-run

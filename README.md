@@ -6,135 +6,168 @@
 
 <p align="center"><strong>Agent Action Receipts</strong></p>
 
-<p align="center">Besa is the receipt layer for AI-agent actions.</p>
+<p align="center">Signed trust infrastructure for AI-agent tools.</p>
 
 ---
 
-AI agents call real tools — CRMs, payment APIs, deployment pipelines, databases. Every call is a real action. Most teams cannot prove what was admitted, what was denied, or what was executed.
+AI agents call real systems: CRMs, payment APIs, deployment pipelines, and
+databases. Besa makes those calls verifiable.
 
-Besa signs the admission decision and issues a tamper-evident receipt for every tool call.
+Besa validates and signs an MCP-style tool manifest, verifies it before use,
+admits or denies a tool call, and issues a signed receipt for the decision.
 
-> **Alpha.** `0.1.0-alpha.2` — not production-ready. APIs and file formats may change without notice.
+> **Beta.** `0.1.0-beta.0` is a local developer beta. It is not production key
+> management, authorization, or audit storage.
 
-## The flow
+## Trust flow
 
 ```text
 manifest.yaml
-  ↓  besa sign         →  signed-manifest.json
-  ↓  besa verify
-  ↓  besa admit crm.lookup   →  ✓ admitted
-  ↓  besa receipt crm.lookup →  receipt.json
+  -> besa sign
+  -> manifest.signed.json
+  -> besa verify
+  -> besa admit crm.lookup
+  -> besa receipt crm.lookup
+  -> besa verify-receipt receipt.json
 ```
 
-The receipt is the artifact. Everything before it makes the receipt trustworthy.
+The durable artifacts are the signed manifest, public key ID, manifest hash,
+admission decision, request hash, and signed execution receipt.
 
-## Why
+## What works
 
-When an AI agent calls a tool, three questions carry operational weight:
-
-1. Was the tool manifest signed by someone you trust?
-2. Was this call admitted or denied, and on what grounds?
-3. Is there a tamper-evident record proving the decision?
-
-Today, the answer is usually: no.
-
-## What Besa does
-
-- Signs MCP-style tool manifests with Ed25519
-- Verifies manifest integrity before runtime
-- Admits or denies tool calls against declared capability, risk level, and scope
-- Issues a signed, tamper-evident receipt for every admission decision
-- Tracks per-tool call counts against declared budget limits
+- YAML and JSON manifest loading with runtime schema validation
+- Ed25519 key generation, manifest signing, and verification
+- Stable canonical manifest hashing with SHA-256
+- Allow/deny decisions with explicit reason codes
+- Destructive high-risk tool blocking
+- Manifest-scoped local call budgets
+- Optional agent grants
+- Signed receipts bound to the manifest signing key
+- Receipt trust-chain verification
+- TypeScript SDK exports
 
 ## Install
 
-```bash
-npm install @dorigjo/besa@alpha
+```powershell
+npm install @dorigjo/besa@beta
 ```
 
-Clone and build locally:
+Or build the repository locally:
 
-```bash
+```powershell
 git clone https://github.com/dorigjo/besa
-cd besa
-npm install
+Set-Location .\besa
+npm ci
 npm run build
 ```
 
-## Quickstart
+## PowerShell quickstart
 
-```bash
-node dist/index.js keys
-node dist/index.js sign examples/manifest.yaml
-node dist/index.js verify examples/manifest.signed.json
-node dist/index.js admit examples/manifest.signed.json crm.lookup
-node dist/index.js admit examples/manifest.signed.json crm.delete
-node dist/index.js receipt crm.lookup examples/manifest.signed.json
+```powershell
+node .\dist\index.js keys
+node .\dist\index.js load .\examples\manifest.yaml
+node .\dist\index.js sign .\examples\manifest.yaml
+node .\dist\index.js verify .\examples\manifest.signed.json
+node .\dist\index.js admit .\examples\manifest.signed.json crm.lookup
+node .\dist\index.js admit .\examples\manifest.signed.json crm.delete
+node .\dist\index.js receipt crm.lookup .\examples\manifest.signed.json --request .\examples\request.json
+
+$receipt = Get-ChildItem .\.besa\receipts\*.json |
+  Sort-Object LastWriteTime -Descending |
+  Select-Object -First 1
+
+node .\dist\index.js verify-receipt $receipt.FullName .\examples\manifest.signed.json
 ```
 
-`crm.lookup` returns `ALLOWED`. `crm.delete` returns `RISK_BLOCKED`.
+`crm.lookup` is allowed. `crm.delete` is denied with `RISK_BLOCKED` and exits
+with code `1`.
 
-Run the full smoke test:
+Agent-scoped admission is opt-in:
 
-```bash
-npm run smoke
+```powershell
+node .\dist\index.js admit .\examples\manifest.signed.json crm.lookup `
+  --agent agent-alpha `
+  --grants .\examples\grants.yaml
 ```
-
-## What a receipt proves
-
-```json
-{
-  "receipt_id": "rcpt_01J2K5N8P3QR4S6T7U8V9W0X",
-  "manifest_hash": "sha256:4a8f2c1d9e3b7f6a0d4c8e2b5f9a1d3e",
-  "tool_name": "crm.lookup",
-  "decision": "allow",
-  "reason_code": "CAPABILITY_DECLARED_SCOPE_MATCHED",
-  "timestamp": "2026-06-17T14:32:07.443Z",
-  "request_hash": "sha256:9f1e3c5a7d2b4f8e0c6a2d4b6f8e0c2a",
-  "public_key_id": "besa-key-2026-a1b2c3d4",
-  "signature": "MEYCIQDkv2mN8rT..."
-}
-```
-
-The receipt encodes which manifest was signed, whether the call was admitted, the cryptographic request fingerprint, and an Ed25519 signature over the canonical receipt body. Altering any field after signing causes verification to fail.
 
 ## Commands
 
-- `besa keys` — generate a local Ed25519 key pair
-- `besa sign <manifest>` — sign a manifest YAML or JSON file
-- `besa verify <signed>` — verify a signed manifest
-- `besa admit <signed> <tool>` — admit or deny a tool call
-- `besa receipt <tool> <signed>` — issue a signed receipt
+- `besa keys`
+- `besa load <manifest>`
+- `besa sign <manifest>`
+- `besa verify <signed-manifest>`
+- `besa admit <signed-manifest> <tool-name>`
+- `besa receipt <tool-name> [signed-manifest] [--request <request.json>]`
+- `besa verify-receipt <receipt> [signed-manifest]`
 
-Reason codes: `ALLOWED` · `TOOL_NOT_FOUND` · `RISK_BLOCKED` · `BUDGET_EXCEEDED` · `TOOL_NOT_GRANTED`
+Admission and receipt commands also accept
+`--agent <agent-id> --grants <grants.yaml>`.
+
+Reason codes include `ALLOWED`, `TOOL_NOT_FOUND`, `RISK_BLOCKED`,
+`BUDGET_EXCEEDED`, `TOOL_NOT_GRANTED`, and `AGENT_NOT_FOUND`.
+
+## Receipt artifact
+
+```json
+{
+  "receiptId": "rcpt_2d7942c7-8f70-4984-9c3f-24876acfd860",
+  "manifestHash": "ea7e9ca22d199f40281cdf9e5d6145440c6c7d6bfbe94157c4b1da5527054410",
+  "toolName": "crm.lookup",
+  "decision": "allow",
+  "reasonCode": "ALLOWED",
+  "timestamp": "2026-06-18T10:00:00.000Z",
+  "requestHash": "b27b80d1227c167a6fca199778645daa77d20a8087782fc48802d11d6281c920",
+  "publicKeyId": "89f17bbd1da3fae8",
+  "algorithm": "ed25519",
+  "signature": "..."
+}
+```
+
+Changing any signed receipt field causes verification to fail. The
+`verify-receipt` command also verifies the signed manifest and confirms that
+the receipt references its manifest hash and signing key.
+
+## SDK
+
+```typescript
+import {
+  admit,
+  generateKeyPair,
+  signManifest,
+  verifySignedManifest,
+} from "@dorigjo/besa";
+```
+
+The package exports the manifest, signing, admission, grant, receipt, and
+cryptographic helper APIs from `dist/sdk.js`.
+
+## Release gates
+
+```powershell
+npm ci
+npm run build
+npm test
+npm run smoke
+npm pack --dry-run
+```
 
 ## Security
 
-`.besa/` contains local trust artifacts including the Ed25519 private key. Do not commit it.
+`.besa/` contains the local Ed25519 private key, budget meter, active manifest,
+and receipts. It is ignored by Git and must never be committed.
 
-```
-.besa/
-examples/manifest.signed.json
-```
+See [SECURITY.md](SECURITY.md) and
+[docs/THREAT_MODEL.md](docs/THREAT_MODEL.md).
 
-The demo key is for local development only. Rotate before real use.
+## Beta limitations
 
-See [SECURITY.md](SECURITY.md) and [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md).
-
-## What Besa is not
-
-- A hosted SaaS or dashboard
-- Production key management
-- A compliance certification
-- A replacement for identity, authorization, audit storage, or security monitoring
-
-## Status
-
-Alpha. `0.1.0-alpha.2`. Local-first. No hosted backend. Not production-stable.
-
-Working: manifest signing, admission with reason codes, signed receipts, mini ActionMeter, agent-scoped grants, TypeScript SDK exports, full CLI.
-
-Not yet: hosted key management, remote verifier, key rotation, replay protection.
+- Local unencrypted key storage
+- Local JSON meter state
+- No key rotation or revocation
+- No distributed replay protection
+- No hosted verifier or receipt retention
+- No production identity or authorization integration
 
 ## License
 

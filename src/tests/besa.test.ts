@@ -1,15 +1,26 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import {
 REASON,
 admit,
 createReceipt,
 generateKeyPair,
 hashManifest,
 loadManifest,
+loadMeter,
+meterKey,
 signManifest,
+validateKeyPair,
 validateManifest,
 verifyReceipt,
+verifyReceiptDetailed,
 verifySignedManifest,
 type Manifest
 } from "../sdk.js";
@@ -169,7 +180,7 @@ const keypair = generateKeyPair();
 
 const receipt = createReceipt(
 {
-manifestHash: "abc123",
+manifestHash: "a".repeat(64),
 toolName: "crm.lookup",
 decision: "allow",
 reasonCode: REASON.ALLOWED,
@@ -188,6 +199,65 @@ assert.equal(verifyReceipt(receipt, keypair.publicKeyDer), true);
 receipt.decision = "deny";
 
 assert.equal(verifyReceipt(receipt, keypair.publicKeyDer), false);
+});
+
+test("verifySignedManifest rejects malformed input without throwing", () => {
+  const result = verifySignedManifest({
+    algorithm: "ed25519",
+    manifest: null,
+  });
+
+  assert.equal(result.valid, false);
+  assert.equal(result.reasonCode, "E_SIGNED_MANIFEST_INVALID");
+});
+
+test("signManifest rejects an invalid runtime manifest", () => {
+  const keypair = generateKeyPair();
+  const manifest = sampleManifest();
+  manifest.tools = [];
+
+  assert.throws(() => signManifest(manifest, keypair), /Invalid manifest/);
+});
+
+test("key pair validation rejects mismatched Ed25519 keys", () => {
+  const first = generateKeyPair();
+  const second = generateKeyPair();
+
+  assert.equal(validateKeyPair(first), true);
+  assert.equal(
+    validateKeyPair({
+      publicKeyDer: first.publicKeyDer,
+      privateKeyDer: second.privateKeyDer,
+    }),
+    false,
+  );
+});
+
+test("receipt verification returns a reason code for malformed input", () => {
+  const keypair = generateKeyPair();
+  const result = verifyReceiptDetailed({ algorithm: "ed25519" }, keypair.publicKeyDer);
+
+  assert.equal(result.valid, false);
+  assert.equal(result.reasonCode, "E_RECEIPT_INVALID");
+});
+
+test("meter keys isolate usage by manifest hash", () => {
+  assert.notEqual(
+    meterKey("a".repeat(64), "crm.lookup"),
+    meterKey("b".repeat(64), "crm.lookup"),
+  );
+});
+
+test("loadMeter fails closed on corrupt state", () => {
+  const directory = mkdtempSync(join(tmpdir(), "besa-meter-"));
+  const path = join(directory, "meter.json");
+
+  try {
+    writeFileSync(path, "{not-json", "utf8");
+    assert.throws(() => loadMeter(path), /invalid meter state/);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 test("validateManifest rejects an invalid serverUrl", () => {
   const manifest = sampleManifest();
@@ -242,7 +312,7 @@ test("validateManifest rejects an unsafe budgetLimit", () => {
 test("verifySignedManifest fails on publicKeyId mismatch", () => {
   const keypair = generateKeyPair();
   const signed = signManifest(sampleManifest(), keypair);
-  signed.publicKeyId = "00badkeyid";
+  signed.publicKeyId = "0000000000000000";
 
   const result = verifySignedManifest(signed);
 

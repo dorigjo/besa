@@ -1,6 +1,6 @@
 {
   "name": "@dorigjo/besa",
-  "version": "0.1.0-alpha.2",
+  "version": "0.1.0-beta.0",
   "description": "Signed trust infrastructure for AI-agent tools.",
   "type": "module",
   "main": "./dist/sdk.js",
@@ -16,8 +16,9 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "npm run build && node --test dist/tests/*.test.js",
-    "smoke": "node scripts/smoke.mjs"
+    "test": "npm run build && node dist/tests/run.js",
+    "smoke": "node scripts/smoke.mjs",
+    "prepack": "npm run build"
   },
   "keywords": [
     "mcp",
@@ -48,7 +49,8 @@
     "dist/*.js",
     "dist/*.d.ts",
     "examples/manifest.yaml",
-    "examples/grants.yaml"
+    "examples/grants.yaml",
+    "examples/request.json"
   ],
   "bugs": {
     "url": "https://github.com/dorigjo/besa/issues"

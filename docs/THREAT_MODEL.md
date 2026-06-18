@@ -1,6 +1,6 @@
 # Besa Threat Model
 
-Status: alpha (`0.1.0-alpha.0`).
+Status: beta (`0.1.0-beta.0`).
 
 This document explains what Besa protects against today, what it does not protect against yet, and which risks still exist in the current MVP.
 
@@ -136,7 +136,7 @@ This creates a tamper-evident record of what Besa allowed or denied.
 
 ## Current MVP limitations
 
-The current alpha has important limitations:
+The current beta has important limitations:
 
 * local unencrypted key storage
 * no hosted verifier service
@@ -182,7 +182,7 @@ Receipts include timestamps, but there is no shared nonce store, no global recei
 
 The local meter helps with local budget tracking, but it does not prevent replay across machines, processes, environments, or after local state reset.
 
-## Out of scope for the current alpha
+## Out of scope for the current beta
 
 Besa does not currently provide:
 
@@ -235,6 +235,7 @@ It helps answer questions such as:
 * Was the requested tool too risky?
 * Was the local budget exceeded?
 
-The current alpha is useful for development, demos, early review, and architecture validation.
+The current beta is useful for development, integration testing, security
+review, and architecture validation.
 
 It is not yet production security infrastructure.
