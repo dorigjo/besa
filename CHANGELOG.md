@@ -4,6 +4,30 @@ All notable changes to this project are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-beta.1] - 2026-06-18
+
+### Added
+
+* Explicit, versioned public-key trust stores.
+* Signed Ed25519 key-rotation proofs with active, retired, and revoked states.
+* `trust add`, `trust apply`, `trust revoke`, `trust list`, and `keys rotate`
+  CLI commands.
+* Parallel ActionMeter coverage using Node.js worker threads.
+
+### Changed
+
+* Verification, admission, and receipt verification now require a trusted key.
+* Signing anchors the local publisher key in `.besa/trust.json`.
+* Meter budget checks and increments now run under a cross-process file lock.
+* Meter and CLI JSON writes use atomic temporary-file replacement.
+
+### Security
+
+* New admission under retired keys is denied while pre-rotation artifacts remain
+  verifiable.
+* Revoked keys are rejected for both current and historical artifacts.
+* Stale meter locks can be recovered without silently resetting budget state.
+
 ## [0.1.0-beta.0] - 2026-06-18
 
 ### Added
@@ -119,3 +143,4 @@ Initial alpha / developer preview of Besa — signed trust infrastructure for AI
 [0.1.0-alpha.0]: https://github.com/dorigjo/besa/releases/tag/v0.1.0-alpha.0
 [0.1.0-alpha.1]: https://github.com/dorigjo/besa/releases/tag/v0.1.0-alpha.1
 [0.1.0-beta.0]: https://github.com/dorigjo/besa/releases/tag/v0.1.0-beta.0
+[0.1.0-beta.1]: https://github.com/dorigjo/besa/releases/tag/v0.1.0-beta.1

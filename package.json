@@ -1,6 +1,6 @@
 {
   "name": "@dorigjo/besa",
-  "version": "0.1.0-beta.0",
+  "version": "0.1.0-beta.1",
   "description": "Signed trust infrastructure for AI-agent tools.",
   "type": "module",
   "main": "./dist/sdk.js",

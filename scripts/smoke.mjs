@@ -6,6 +6,7 @@ import {
   mkdtempSync,
   readdirSync,
   rmSync,
+  writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -51,6 +52,20 @@ function latestReceiptPath() {
   return join(receiptsDirectory, receipt);
 }
 
+function latestRotationPath() {
+  const rotationsDirectory = join(workspace, ".besa", "rotations");
+  const rotation = readdirSync(rotationsDirectory)
+    .filter((name) => name.endsWith(".json"))
+    .sort()
+    .at(-1);
+
+  if (!rotation) {
+    throw new Error("keys rotate did not create a rotation artifact");
+  }
+
+  return join(rotationsDirectory, rotation);
+}
+
 console.log("Besa smoke test");
 
 if (!existsSync(tsc)) {
@@ -80,11 +95,34 @@ try {
   const signedManifest = join("examples", "manifest.signed.json");
   const grants = join("examples", "grants.yaml");
   const request = join("examples", "request.json");
+  const historicalManifest = join("examples", "manifest.old.signed.json");
+  const consumerTrust = "consumer-trust.json";
 
-  const steps = [
+  writeFileSync(
+    join(workspace, consumerTrust),
+    JSON.stringify({ version: 1, keys: [] }, null, 2) + "\n",
+    "utf8",
+  );
+
+  const initialSteps = [
     ["load manifest", [cli, "load", manifest], 0],
     ["sign manifest", [cli, "sign", manifest], 0],
     ["verify signed manifest", [cli, "verify", signedManifest], 0],
+    [
+      "deny consumer without trust anchor",
+      [cli, "verify", signedManifest, "--trust", consumerTrust],
+      1,
+    ],
+    [
+      "pin consumer trust anchor",
+      [cli, "trust", "add", signedManifest, "--trust", consumerTrust],
+      0,
+    ],
+    [
+      "verify with consumer trust anchor",
+      [cli, "verify", signedManifest, "--trust", consumerTrust],
+      0,
+    ],
     ["admit crm.lookup", [cli, "admit", signedManifest, "crm.lookup"], 0],
     ["admit crm.delete deny", [cli, "admit", signedManifest, "crm.delete"], 1],
     [
@@ -94,11 +132,16 @@ try {
     ],
   ];
 
-  for (const [label, args, expectedCode] of steps) {
+  for (const [label, args, expectedCode] of initialSteps) {
     if (!run(label, args, expectedCode)) {
       ok = false;
     }
   }
+
+  copyFileSync(
+    join(workspace, signedManifest),
+    join(workspace, historicalManifest),
+  );
 
   if (ok) {
     const receiptPath = latestReceiptPath();
@@ -146,6 +189,63 @@ try {
   ];
 
   for (const [label, args, expectedCode] of grantSteps) {
+    if (!run(label, args, expectedCode)) {
+      ok = false;
+    }
+  }
+
+  if (!run("rotate signing key", [cli, "keys", "rotate"], 0)) {
+    ok = false;
+  }
+
+  const rotationPath = latestRotationPath();
+  const rotationSteps = [
+    [
+      "apply rotation to consumer trust store",
+      [cli, "trust", "apply", rotationPath, "--trust", consumerTrust],
+      0,
+    ],
+    [
+      "verify historical manifest after rotation",
+      [cli, "verify", historicalManifest, "--trust", consumerTrust],
+      0,
+    ],
+    [
+      "deny new admission under retired key",
+      [cli, "admit", historicalManifest, "crm.lookup", "--trust", consumerTrust],
+      1,
+    ],
+  ];
+
+  for (const [label, args, expectedCode] of rotationSteps) {
+    if (!run(label, args, expectedCode)) {
+      ok = false;
+    }
+  }
+
+  if (ok) {
+    const receiptPath = latestReceiptPath();
+    if (
+      !run(
+        "verify historical receipt after rotation",
+        [cli, "verify-receipt", receiptPath, historicalManifest],
+        0,
+      )
+    ) {
+      ok = false;
+    }
+  }
+
+  const resignSteps = [
+    ["re-sign manifest with rotated key", [cli, "sign", manifest], 0],
+    [
+      "verify rotated manifest with consumer trust store",
+      [cli, "verify", signedManifest, "--trust", consumerTrust],
+      0,
+    ],
+  ];
+
+  for (const [label, args, expectedCode] of resignSteps) {
     if (!run(label, args, expectedCode)) {
       ok = false;
     }

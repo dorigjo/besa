@@ -2,7 +2,7 @@
 
 ## Status: beta
 
-Besa is a local **developer beta** (`0.1.0-beta.0`).
+Besa is a local **developer beta** (`0.1.0-beta.1`).
 
 The project is intended for local development, security review, and early integration feedback.
 
@@ -20,15 +20,21 @@ APIs, file formats, receipt formats, policy behavior, and CLI commands may chang
 
 This key is for local development only.
 
+`besa keys rotate` archives the previous private key under `.besa/keys/`,
+creates a signed public rotation proof under `.besa/rotations/`, and updates
+`.besa/trust.json`. Archived private keys remain sensitive.
+
 Important rules:
 
 * Never commit `.besa/`.
 * Never commit `.besa/key.json`.
 * Never reuse a demo key across environments.
-* Rotate or replace demo keys before real use.
+* Delete archived demo keys when historical receipt signing is no longer needed.
 * Do not treat the local MVP key store as production key management.
 
-The current MVP does not include hosted key management, hardware-backed keys, key rotation, multi-user access control, or enterprise secret storage.
+The current MVP does not include hosted key management, hardware-backed keys,
+multi-user access control, or enterprise secret storage. Its rotation mechanism
+provides signed key continuity, not secure custody.
 
 ## Files that must never be committed
 
@@ -37,6 +43,9 @@ The following files and folders must stay out of Git:
 ```text
 .besa/
 .besa/key.json
+.besa/keys/
+.besa/trust.json
+.besa/rotations/
 .besa/meter.json
 .besa/receipts/
 examples/manifest.signed.json
@@ -68,6 +77,8 @@ Besa currently checks:
 * manifest hash integrity
 * Ed25519 signature validity
 * public key ID consistency
+* explicit public-key trust status
+* signed key-rotation continuity
 * supported signing algorithm
 * declared tool capability
 * declared risk level
@@ -80,14 +91,14 @@ Besa currently checks:
 The current beta has important limitations:
 
 * local unencrypted key storage
-* local JSON-based meter state
+* local JSON-based meter state with single-host file locking
 * no hosted verifier API
 * no centralized receipt retention
 * no multi-user access control
 * no SSO
 * no hardware-backed key storage
 * no replay protection across distributed systems
-* no production-grade key rotation
+* no hardware-backed or centrally governed key rotation
 * no formal compliance certification
 * no guarantee of regulatory compliance
 

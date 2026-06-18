@@ -16,7 +16,7 @@ databases. Besa makes those calls verifiable.
 Besa validates and signs an MCP-style tool manifest, verifies it before use,
 admits or denies a tool call, and issues a signed receipt for the decision.
 
-> **Beta.** `0.1.0-beta.0` is a local developer beta. It is not production key
+> **Beta.** `0.1.0-beta.1` is a local developer beta. It is not production key
 > management, authorization, or audit storage.
 
 ## Trust flow
@@ -25,6 +25,7 @@ admits or denies a tool call, and issues a signed receipt for the decision.
 manifest.yaml
   -> besa sign
   -> manifest.signed.json
+  -> besa trust add
   -> besa verify
   -> besa admit crm.lookup
   -> besa receipt crm.lookup
@@ -38,10 +39,12 @@ admission decision, request hash, and signed execution receipt.
 
 - YAML and JSON manifest loading with runtime schema validation
 - Ed25519 key generation, manifest signing, and verification
+- Explicit public-key trust anchors with active, retired, and revoked states
+- Old-key-signed rotation proofs and local private-key archival
 - Stable canonical manifest hashing with SHA-256
 - Allow/deny decisions with explicit reason codes
 - Destructive high-risk tool blocking
-- Manifest-scoped local call budgets
+- Manifest-scoped call budgets with cross-process file locking
 - Optional agent grants
 - Signed receipts bound to the manifest signing key
 - Receipt trust-chain verification
@@ -91,21 +94,56 @@ node .\dist\index.js admit .\examples\manifest.signed.json crm.lookup `
   --grants .\examples\grants.yaml
 ```
 
+To verify as a separate consumer, pin the publisher key explicitly:
+
+```powershell
+node .\dist\index.js trust add .\examples\manifest.signed.json `
+  --trust .\consumer-trust.json
+
+node .\dist\index.js verify .\examples\manifest.signed.json `
+  --trust .\consumer-trust.json
+```
+
+Rotate the publisher key and propagate the signed transition:
+
+```powershell
+node .\dist\index.js keys rotate
+
+$rotation = Get-ChildItem .\.besa\rotations\*.json |
+  Sort-Object LastWriteTime -Descending |
+  Select-Object -First 1
+
+node .\dist\index.js trust apply $rotation.FullName `
+  --trust .\consumer-trust.json
+
+node .\dist\index.js sign .\examples\manifest.yaml
+```
+
+The previous key becomes `retired`: artifacts signed before rotation remain
+verifiable, but new admissions under that key are denied. `trust revoke`
+invalidates a key for both historical verification and new admission.
+
 ## Commands
 
 - `besa keys`
+- `besa keys rotate [--trust <trust.json>]`
+- `besa trust add <signed-manifest> [--trust <trust.json>]`
+- `besa trust apply <rotation> [--trust <trust.json>]`
+- `besa trust revoke <public-key-id> [--trust <trust.json>]`
+- `besa trust list [--trust <trust.json>]`
 - `besa load <manifest>`
-- `besa sign <manifest>`
-- `besa verify <signed-manifest>`
-- `besa admit <signed-manifest> <tool-name>`
-- `besa receipt <tool-name> [signed-manifest] [--request <request.json>]`
-- `besa verify-receipt <receipt> [signed-manifest]`
+- `besa sign <manifest> [--trust <trust.json>]`
+- `besa verify <signed-manifest> [--trust <trust.json>]`
+- `besa admit <signed-manifest> <tool-name> [--trust <trust.json>]`
+- `besa receipt <tool-name> [signed-manifest] [--trust <trust.json>] [--request <request.json>]`
+- `besa verify-receipt <receipt> [signed-manifest] [--trust <trust.json>]`
 
 Admission and receipt commands also accept
 `--agent <agent-id> --grants <grants.yaml>`.
 
 Reason codes include `ALLOWED`, `TOOL_NOT_FOUND`, `RISK_BLOCKED`,
-`BUDGET_EXCEEDED`, `TOOL_NOT_GRANTED`, and `AGENT_NOT_FOUND`.
+`BUDGET_EXCEEDED`, `TOOL_NOT_GRANTED`, `AGENT_NOT_FOUND`, `E_KEY_UNTRUSTED`,
+`E_KEY_RETIRED`, and `E_KEY_REVOKED`.
 
 ## Receipt artifact
 
@@ -133,9 +171,12 @@ the receipt references its manifest hash and signing key.
 ```typescript
 import {
   admit,
+  addTrustAnchor,
+  applyKeyRotation,
+  createKeyRotation,
   generateKeyPair,
   signManifest,
-  verifySignedManifest,
+  verifyTrustedSignedManifest,
 } from "@dorigjo/besa";
 ```
 
@@ -154,8 +195,9 @@ npm pack --dry-run
 
 ## Security
 
-`.besa/` contains the local Ed25519 private key, budget meter, active manifest,
-and receipts. It is ignored by Git and must never be committed.
+`.besa/` contains active and archived Ed25519 private keys, the trust store,
+rotation proofs, budget meter, active manifest, and receipts. It is ignored by
+Git and must never be committed.
 
 See [SECURITY.md](SECURITY.md) and
 [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md).
@@ -163,8 +205,8 @@ See [SECURITY.md](SECURITY.md) and
 ## Beta limitations
 
 - Local unencrypted key storage
-- Local JSON meter state
-- No key rotation or revocation
+- File-based trust and meter state, intended for one host
+- No hardware-backed or remote key custody
 - No distributed replay protection
 - No hosted verifier or receipt retention
 - No production identity or authorization integration
