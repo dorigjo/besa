@@ -1,8 +1,8 @@
 # Security Policy
 
-## Status: alpha
+## Status: beta
 
-Besa is an early **alpha / developer preview** (`0.1.0-alpha.0`).
+Besa is a local **developer beta** (`0.1.0-beta.0`).
 
 The project is intended for local development, security review, and early integration feedback.
 
@@ -77,7 +77,7 @@ Besa currently checks:
 
 ## Current MVP limitations
 
-The current alpha has important limitations:
+The current beta has important limitations:
 
 * local unencrypted key storage
 * local JSON-based meter state
@@ -91,7 +91,7 @@ The current alpha has important limitations:
 * no formal compliance certification
 * no guarantee of regulatory compliance
 
-Do not represent this alpha as SOC 2, ISO 27001, DORA, AI Act, or GDPR compliant.
+Do not represent this beta as SOC 2, ISO 27001, DORA, AI Act, or GDPR compliant.
 
 ## Reporting a vulnerability
 
@@ -115,4 +115,5 @@ The short version:
 
 Besa is designed to help teams prove what an AI agent was allowed to do, what was blocked, and whether tool definitions or receipts were tampered with.
 
-Besa does not yet replace production identity, authorization, key management, audit storage, or compliance systems.
+Besa does not yet replace production identity, authorization, key management,
+audit storage, or compliance systems.

@@ -4,6 +4,30 @@ All notable changes to this project are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-beta.0] - 2026-06-18
+
+### Added
+
+* `verify-receipt` CLI command for end-to-end receipt trust-chain validation.
+* Optional `--request <request.json>` input for receipt request hashing.
+* Runtime validators for signed manifests, receipts, and local key pairs.
+* Node.js 24 to the CI compatibility matrix.
+
+### Changed
+
+* Receipt signing now requires the local key to match the signed manifest key.
+* ActionMeter keys are scoped by manifest hash and tool name.
+* The smoke test now runs in an isolated temporary workspace.
+* The test runner executes in-process for reliable Windows and sandbox support.
+* Release documentation and package metadata now identify the beta consistently.
+
+### Security
+
+* Malformed signed manifests and receipts fail closed with explicit reason codes.
+* Corrupt meter state fails closed instead of silently resetting call counts.
+* Existing local key files are validated and restricted to mode `0600` where
+  the operating system supports POSIX file permissions.
+
 ## [0.1.0-alpha.1] - 2026-06-15
 
 Added a minimal grant / permission layer so admission can be scoped per agent.
@@ -94,3 +118,4 @@ Initial alpha / developer preview of Besa — signed trust infrastructure for AI
 
 [0.1.0-alpha.0]: https://github.com/dorigjo/besa/releases/tag/v0.1.0-alpha.0
 [0.1.0-alpha.1]: https://github.com/dorigjo/besa/releases/tag/v0.1.0-alpha.1
+[0.1.0-beta.0]: https://github.com/dorigjo/besa/releases/tag/v0.1.0-beta.0

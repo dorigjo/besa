@@ -56,7 +56,7 @@
              tabindex="0"
              aria-label="Copy install command"
              onclick="copyInstall(this)"
-             onkeydown="if(event.key==='Enter'||event.key===' ')copyInstall(this)">npm install @dorigjo/besa@alpha</pre>
+             onkeydown="if(event.key==='Enter'||event.key===' ')copyInstall(this)">npm install @dorigjo/besa@beta</pre>
         <a class="spec-link"
            href="https://github.com/dorigjo/besa"
            data-en="Read the spec →"
@@ -110,16 +110,17 @@
     <section class="cli reveal">
       <span class="section-label">CLI</span>
       <div class="terminal-card">
-        <pre>npm install @dorigjo/besa@alpha
+        <pre>npm install @dorigjo/besa@beta
 
-npm exec --yes --package="@dorigjo/besa@alpha" -- besa --help
+npm exec --yes --package="@dorigjo/besa@beta" -- besa --help
 
 besa keys
 besa sign examples/manifest.yaml
 besa verify examples/manifest.signed.json
 besa admit examples/manifest.signed.json crm.lookup
 besa admit examples/manifest.signed.json crm.delete
-besa receipt crm.lookup examples/manifest.signed.json</pre>
+besa receipt crm.lookup examples/manifest.signed.json
+besa verify-receipt .besa/receipts/receipt.json examples/manifest.signed.json</pre>
       </div>
     </section>
 
@@ -134,15 +135,16 @@ besa receipt crm.lookup examples/manifest.signed.json</pre>
       </p>
       <div class="receipt-card">
         <pre>{
-  "receipt_id":    "rcpt_01J2K5N8P3QR4S6T7U8V9W0X",
-  "manifest_hash": "sha256:4a8f2c1d9e3b7f6a0d4c8e2b5f9a1d3e",
-  "tool_name":     "crm.lookup",
-  "decision":      "allow",
-  "reason_code":   "CAPABILITY_DECLARED_SCOPE_MATCHED",
-  "timestamp":     "2026-06-17T14:32:07.443Z",
-  "request_hash":  "sha256:9f1e3c5a7d2b4f8e0c6a2d4b6f8e0c2a",
-  "public_key_id": "besa-key-2026-a1b2c3d4",
-  "signature":     "MEYCIQDkv2mN8rT..."
+  "receiptId":    "rcpt_2d7942c7-8f70-4984-9c3f-24876acfd860",
+  "manifestHash": "ea7e9ca22d199f40281cdf9e5d6145440c6c7d6bfbe94157c4b1da5527054410",
+  "toolName":     "crm.lookup",
+  "decision":     "allow",
+  "reasonCode":   "ALLOWED",
+  "timestamp":    "2026-06-18T10:00:00.000Z",
+  "requestHash":  "b27b80d1227c167a6fca199778645daa77d20a8087782fc48802d11d6281c920",
+  "publicKeyId":  "89f17bbd1da3fae8",
+  "algorithm":    "ed25519",
+  "signature":    "MEYCIQDkv2mN8rT..."
 }</pre>
       </div>
     </section>
@@ -150,9 +152,9 @@ besa receipt crm.lookup examples/manifest.signed.json</pre>
     <section class="status reveal">
       <span class="section-label">Status</span>
       <p class="status-copy"
-         data-en="Public alpha. Local-first. No hosted backend. Not production-stable."
-         data-de="Öffentliche Alpha. Local-first. Noch kein gehostetes Backend. Nicht produktionsreif.">
-        Public alpha. Local-first. No hosted backend. Not production-stable.
+         data-en="Public beta. Local-first. No hosted backend. Not production-stable."
+         data-de="Öffentliche Beta. Local-first. Noch kein gehostetes Backend. Nicht produktionsreif.">
+        Public beta. Local-first. No hosted backend. Not production-stable.
       </p>
       <a class="source-link"
          href="https://github.com/dorigjo/besa"
@@ -184,7 +186,7 @@ besa receipt crm.lookup examples/manifest.signed.json</pre>
     }
 
     function copyInstall(el) {
-      navigator.clipboard.writeText('npm install @dorigjo/besa@alpha').then(function () {
+      navigator.clipboard.writeText('npm install @dorigjo/besa@beta').then(function () {
         el.classList.add('copied');
         setTimeout(function () { el.classList.remove('copied'); }, 1800);
       }).catch(function () {});
