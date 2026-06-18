@@ -1,12 +1,15 @@
 # Besa Threat Model
 
-Status: beta (`0.1.0-beta.0`).
+Status: beta (`0.1.0-beta.1`).
 
 This document explains what Besa protects against today, what it does not protect against yet, and which risks still exist in the current MVP.
 
 ## Assets
 
 Besa currently protects or records the following assets:
+
+* **Trust anchors** - pinned public keys and their lifecycle status.
+* **Rotation proofs** - old-key-signed transitions to replacement keys.
 
 * **Tool manifests** — declared tools, capabilities, risks, scopes, budgets, and server metadata.
 * **Signing keys** — the local Ed25519 key pair stored at `.besa/key.json`.
@@ -37,6 +40,7 @@ The current MVP assumes the following local components are trusted:
 * the machine running the CLI
 * the operator running the CLI
 * the local `.besa/key.json` file
+* the local `.besa/trust.json` file
 * the local `.besa/meter.json` file
 * the local filesystem
 
@@ -56,6 +60,8 @@ A realistic attacker may try to:
 8. Reuse old receipts or signed manifests.
 9. Steal the local signing key.
 10. Commit private keys or generated artifacts by mistake.
+11. Present a valid signature under an attacker-controlled, untrusted key.
+12. Continue new admissions after a signing key is retired or revoked.
 
 ## Current mitigations
 
@@ -93,6 +99,15 @@ E_PUBLIC_KEY_ID_MISMATCH
 
 This helps detect key swapping.
 
+### Trust anchors and key continuity
+
+A cryptographically valid signature is accepted only when its public key is in
+the selected trust store. A rotation proof must be signed by the previously
+trusted key before a consumer can promote the replacement key.
+
+Retired keys remain valid only for artifacts timestamped before retirement and
+cannot authorize new admissions. Revoked keys are rejected for all artifacts.
+
 ### Unsupported algorithms
 
 The current MVP only supports Ed25519.
@@ -124,7 +139,11 @@ If a requested tool does not exist in the signed manifest, Besa denies the reque
 
 Besa can deny a tool request when the configured local usage budget is exceeded.
 
-This is currently local-only and should not be treated as production-grade distributed rate limiting.
+Budget checks and increments are serialized with a local file lock. Meter
+updates use atomic replacement so concurrent local processes cannot spend the
+same remaining call.
+
+This remains local-only and is not production-grade distributed rate limiting.
 
 ### Receipt tampering
 
@@ -141,8 +160,7 @@ The current beta has important limitations:
 * local unencrypted key storage
 * no hosted verifier service
 * no hardware-backed keys
-* no key rotation
-* no key revocation
+* no hardware-backed or centrally governed key lifecycle
 * no multi-user access control
 * no caller identity binding
 * no authentication layer
@@ -161,18 +179,21 @@ The private key is stored locally at:
 .besa/key.json
 ```
 
-If this key leaks, an attacker may be able to sign malicious manifests or receipts.
+If an active key leaks, an attacker may be able to sign malicious manifests or
+receipts until consumers apply a revocation or trusted rotation.
 
 Current protections:
 
 * `.besa/` is ignored by Git.
 * demo keys are local-only
 * generated private keys should never be committed
-* demo keys should be replaced before any real use
+* local rotation proofs preserve public-key continuity
+* consumers can mark compromised public keys as revoked
 
 This is not production key management.
 
-Future versions should use stronger protections such as hosted key management, encryption at rest, key rotation, and hardware-backed signing.
+Future versions should use stronger protections such as hosted key management,
+encryption at rest, governed rotation policies, and hardware-backed signing.
 
 ## Replay risk
 
@@ -180,7 +201,8 @@ The current MVP does not provide full distributed replay protection.
 
 Receipts include timestamps, but there is no shared nonce store, no global receipt registry, and no distributed replay database.
 
-The local meter helps with local budget tracking, but it does not prevent replay across machines, processes, environments, or after local state reset.
+The local meter prevents concurrent over-consumption on one host, but it does
+not prevent replay across machines, environments, or after local state reset.
 
 ## Out of scope for the current beta
 
@@ -210,8 +232,7 @@ Planned or possible future mitigations include:
 * remote receipt retention
 * shared ActionMeter state
 * replay-resistant metering
-* key rotation
-* key revocation
+* remotely distributed revocation and rotation state
 * HSM-backed or hosted signing
 * caller identity binding
 * agent identity binding

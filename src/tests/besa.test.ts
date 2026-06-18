@@ -7,21 +7,32 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { Worker } from "node:worker_threads";
 import {
 REASON,
+addTrustAnchor,
 admit,
+applyKeyRotation,
+checkTrustedKey,
 createReceipt,
+createKeyRotation,
+emptyTrustStore,
 generateKeyPair,
+getCount,
 hashManifest,
 loadManifest,
 loadMeter,
 meterKey,
+revokeTrustAnchor,
 signManifest,
 validateKeyPair,
 validateManifest,
+validateTrustStore,
+verifyKeyRotation,
 verifyReceipt,
 verifyReceiptDetailed,
 verifySignedManifest,
+verifyTrustedSignedManifest,
 type Manifest
 } from "../sdk.js";
 
@@ -332,4 +343,126 @@ test("verifySignedManifest fails on unsupported algorithm", () => {
 
   assert.equal(result.valid, false);
   assert.equal(result.reasonCode, "E_ALGORITHM_UNSUPPORTED");
+});
+
+test("a signed manifest must chain to an explicit trust anchor", () => {
+  const keypair = generateKeyPair();
+  const signed = signManifest(sampleManifest(), keypair);
+  const untrusted = verifyTrustedSignedManifest(signed, emptyTrustStore());
+  const store = addTrustAnchor(emptyTrustStore(), keypair.publicKeyDer);
+  const trusted = verifyTrustedSignedManifest(signed, store);
+
+  assert.equal(untrusted.valid, false);
+  assert.equal(untrusted.reasonCode, "E_KEY_UNTRUSTED");
+  assert.equal(trusted.valid, true);
+});
+
+test("a signed key rotation retires the previous key without breaking history", () => {
+  const previous = generateKeyPair();
+  const next = generateKeyPair();
+  const signedBeforeRotation = signManifest(sampleManifest(), previous);
+  const rotatedAt = new Date(Date.now() + 1_000).toISOString();
+  const rotation = createKeyRotation(previous, next, rotatedAt);
+  const initial = addTrustAnchor(emptyTrustStore(), previous.publicKeyDer);
+  const rotated = applyKeyRotation(initial, rotation);
+
+  assert.equal(verifyKeyRotation(rotation).valid, true);
+  assert.equal(
+    verifyTrustedSignedManifest(signedBeforeRotation, rotated, "verify").valid,
+    true,
+  );
+  assert.equal(
+    verifyTrustedSignedManifest(signedBeforeRotation, rotated, "admit")
+      .reasonCode,
+    "E_KEY_RETIRED",
+  );
+
+  const signedWithNext = signManifest(sampleManifest(), next);
+  assert.equal(
+    verifyTrustedSignedManifest(signedWithNext, rotated, "admit").valid,
+    true,
+  );
+});
+
+test("tampered rotations and revoked keys are rejected", () => {
+  const previous = generateKeyPair();
+  const next = generateKeyPair();
+  const rotation = createKeyRotation(previous, next);
+  const tampered = { ...rotation, newPublicKey: previous.publicKeyDer };
+
+  assert.equal(verifyKeyRotation(tampered).valid, false);
+
+  const store = addTrustAnchor(emptyTrustStore(), previous.publicKeyDer);
+  const revoked = revokeTrustAnchor(store, rotation.previousPublicKeyId);
+  const result = checkTrustedKey(
+    revoked,
+    previous.publicKeyDer,
+    new Date().toISOString(),
+  );
+
+  assert.equal(result.valid, false);
+  assert.equal(result.reasonCode, "E_KEY_REVOKED");
+});
+
+test("trust store validation rejects duplicate key ids", () => {
+  const keypair = generateKeyPair();
+  const store = addTrustAnchor(emptyTrustStore(), keypair.publicKeyDer);
+  const result = validateTrustStore({
+    ...store,
+    keys: [...store.keys, store.keys[0]],
+  });
+
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.some((error) => error.includes("duplicate")));
+});
+
+interface MeterWorkerInput {
+  path: string;
+  manifestHash: string;
+  manifest: Manifest;
+  toolName: string;
+  attempts: number;
+}
+
+function runMeterWorker(input: MeterWorkerInput): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(new URL("./meter-worker.js", import.meta.url), {
+      workerData: input,
+    });
+
+    worker.once("message", (value: number) => resolve(value));
+    worker.once("error", reject);
+    worker.once("exit", (code) => {
+      if (code !== 0) {
+        reject(new Error(`meter worker exited with code ${String(code)}`));
+      }
+    });
+  });
+}
+
+test("parallel meter consumers cannot exceed the manifest budget", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "besa-meter-parallel-"));
+  const path = join(directory, "meter.json");
+  const manifest = sampleManifest();
+  manifest.tools[0].budgetLimit = 25;
+  const manifestHash = hashManifest(manifest);
+  const input: MeterWorkerInput = {
+    path,
+    manifestHash,
+    manifest,
+    toolName: "crm.lookup",
+    attempts: 10,
+  };
+
+  try {
+    const allowed = await Promise.all(
+      Array.from({ length: 6 }, () => runMeterWorker(input)),
+    );
+    const state = loadMeter(path);
+
+    assert.equal(allowed.reduce((total, count) => total + count, 0), 25);
+    assert.equal(getCount(state, meterKey(manifestHash, "crm.lookup")), 25);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });

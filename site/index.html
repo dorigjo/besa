@@ -116,11 +116,13 @@ npm exec --yes --package="@dorigjo/besa@beta" -- besa --help
 
 besa keys
 besa sign examples/manifest.yaml
+besa trust add examples/manifest.signed.json
 besa verify examples/manifest.signed.json
 besa admit examples/manifest.signed.json crm.lookup
 besa admit examples/manifest.signed.json crm.delete
 besa receipt crm.lookup examples/manifest.signed.json
-besa verify-receipt .besa/receipts/receipt.json examples/manifest.signed.json</pre>
+besa verify-receipt .besa/receipts/receipt.json examples/manifest.signed.json
+besa keys rotate</pre>
       </div>
     </section>
 

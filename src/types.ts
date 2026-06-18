@@ -71,3 +71,29 @@ export interface GrantDecision {
   toolName: string;
   detail: string;
 }
+
+export type TrustKeyStatus = "active" | "retired" | "revoked";
+
+export interface TrustAnchor {
+  publicKeyId: string;
+  publicKey: string;
+  status: TrustKeyStatus;
+  addedAt: string;
+  retiredAt?: string;
+  revokedAt?: string;
+}
+
+export interface TrustStore {
+  version: 1;
+  keys: TrustAnchor[];
+}
+
+export interface KeyRotation {
+  algorithm: "ed25519";
+  previousPublicKey: string;
+  previousPublicKeyId: string;
+  newPublicKey: string;
+  newPublicKeyId: string;
+  rotatedAt: string;
+  signature: string;
+}

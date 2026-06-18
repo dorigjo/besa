@@ -1,5 +1,16 @@
+import { randomUUID } from "node:crypto";
 import { dirname } from "node:path";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  statSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import type { AdmissionDecision, Manifest, ToolDefinition } from "./types.js";
 
 export const REASON = {
@@ -18,6 +29,12 @@ export const DEFAULT_POLICY: AdmissionPolicy = {
 };
 
 export type MeterState = Record<string, number>;
+
+export interface MeterLockOptions {
+  timeoutMs?: number;
+  staleMs?: number;
+  retryMs?: number;
+}
 
 export function findTool(manifest: Manifest, toolName: string): ToolDefinition | undefined {
   return manifest.tools.find((tool) => tool.name === toolName);
@@ -119,7 +136,19 @@ export function loadMeter(path: string): MeterState {
 
 export function saveMeter(path: string, state: MeterState): void {
   mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, JSON.stringify(state, null, 2) + "\n", "utf8");
+  const temporaryPath = `${path}.${String(process.pid)}.${randomUUID()}.tmp`;
+
+  try {
+    writeFileSync(temporaryPath, JSON.stringify(state, null, 2) + "\n", {
+      encoding: "utf8",
+      mode: 0o600,
+    });
+    renameSync(temporaryPath, path);
+  } finally {
+    if (existsSync(temporaryPath)) {
+      unlinkSync(temporaryPath);
+    }
+  }
 }
 
 export function getCount(state: MeterState, key: string): number {
@@ -131,4 +160,104 @@ export function increment(state: MeterState, key: string): MeterState {
     ...state,
     [key]: getCount(state, key) + 1,
   };
+}
+
+function sleep(milliseconds: number): void {
+  const signal = new Int32Array(new SharedArrayBuffer(4));
+  Atomics.wait(signal, 0, 0, milliseconds);
+}
+
+function acquireMeterLock(
+  path: string,
+  options: MeterLockOptions,
+): () => void {
+  const lockPath = `${path}.lock`;
+  const timeoutMs = options.timeoutMs ?? 5_000;
+  const staleMs = options.staleMs ?? 30_000;
+  const retryMs = options.retryMs ?? 10;
+  const startedAt = Date.now();
+
+  mkdirSync(dirname(path), { recursive: true });
+
+  while (true) {
+    try {
+      const descriptor = openSync(lockPath, "wx", 0o600);
+      try {
+        writeFileSync(
+          descriptor,
+          JSON.stringify({
+            pid: process.pid,
+            createdAt: new Date().toISOString(),
+          }) + "\n",
+          "utf8",
+        );
+      } catch (error) {
+        closeSync(descriptor);
+        unlinkSync(lockPath);
+        throw error;
+      }
+
+      return () => {
+        closeSync(descriptor);
+        try {
+          unlinkSync(lockPath);
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+            throw error;
+          }
+        }
+      };
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+
+      if (code !== "EEXIST") {
+        throw error;
+      }
+
+      try {
+        if (Date.now() - statSync(lockPath).mtimeMs > staleMs) {
+          const stalePath = `${lockPath}.${String(process.pid)}.${randomUUID()}.stale`;
+          renameSync(lockPath, stalePath);
+          unlinkSync(stalePath);
+          continue;
+        }
+      } catch (statError) {
+        if ((statError as NodeJS.ErrnoException).code === "ENOENT") {
+          continue;
+        }
+        throw statError;
+      }
+
+      if (Date.now() - startedAt >= timeoutMs) {
+        throw new Error(`timed out waiting for meter lock at ${lockPath}`);
+      }
+
+      sleep(retryMs);
+    }
+  }
+}
+
+export function admitAndConsume(
+  path: string,
+  manifestHash: string,
+  manifest: Manifest,
+  toolName: string,
+  policy: AdmissionPolicy = DEFAULT_POLICY,
+  lockOptions: MeterLockOptions = {},
+): AdmissionDecision {
+  const release = acquireMeterLock(path, lockOptions);
+
+  try {
+    const state = loadMeter(path);
+    const key = meterKey(manifestHash, toolName);
+    const decision = admit(manifest, toolName, getCount(state, key), policy);
+
+    if (decision.decision === "allow") {
+      saveMeter(path, increment(state, key));
+    }
+
+    return decision;
+  } finally {
+    release();
+  }
 }
