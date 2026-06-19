@@ -3,14 +3,10 @@
 import {
   chmodSync,
   existsSync,
+  lstatSync,
   mkdirSync,
-  readFileSync,
-  renameSync,
-  unlinkSync,
-  writeFileSync,
 } from "node:fs";
-import { randomUUID } from "node:crypto";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import type {
   AdmissionDecision,
   KeyRotation,
@@ -27,6 +23,7 @@ import {
 import { loadManifest } from "./manifest.js";
 import {
   createReceipt,
+  hashRequest,
   signManifest,
   validateReceipt,
   validateSignedManifest,
@@ -52,6 +49,16 @@ import {
   verifyKeyRotation,
   verifyTrustedSignedManifest,
 } from "./trust.js";
+import {
+  readJsonFile,
+  writeJsonAtomic,
+  writeJsonExclusive,
+} from "./io.js";
+import {
+  isStoredKeyPair,
+  openKeyPair,
+  sealKeyPair,
+} from "./keystore.js";
 
 const BESA_DIR = ".besa";
 const KEY_PATH = join(BESA_DIR, "key.json");
@@ -84,36 +91,40 @@ const COMMAND_FLAGS: Record<string, ReadonlySet<string>> = {
 };
 
 function readJson<T>(path: string): T {
-  return JSON.parse(readFileSync(path, "utf8")) as T;
+  return readJsonFile(path) as T;
 }
 
 function writeJson(path: string, value: unknown, mode?: number): void {
-  mkdirSync(dirname(path), { recursive: true });
-  const temporaryPath = `${path}.${String(process.pid)}.${randomUUID()}.tmp`;
-
-  try {
-    writeFileSync(temporaryPath, JSON.stringify(value, null, 2) + "\n", {
-      encoding: "utf8",
-      mode,
-    });
-    renameSync(temporaryPath, path);
-  } finally {
-    if (existsSync(temporaryPath)) {
-      unlinkSync(temporaryPath);
-    }
-  }
+  writeJsonAtomic(path, value, mode ?? 0o600);
 }
 
 function ensureBesaDir(): void {
-  mkdirSync(BESA_DIR, { recursive: true });
+  mkdirSync(BESA_DIR, { recursive: true, mode: 0o700 });
+  const stats = lstatSync(BESA_DIR);
+
+  if (!stats.isDirectory() || stats.isSymbolicLink()) {
+    throw new Error(`${BESA_DIR} must be a real private directory, not a link`);
+  }
+
+  if (process.platform !== "win32") chmodSync(BESA_DIR, 0o700);
 }
 
 function protectKeyFile(path = KEY_PATH): void {
-  try {
-    chmodSync(path, 0o600);
-  } catch {
-    // Windows does not apply POSIX file modes. The key remains excluded by .gitignore.
+  if (lstatSync(path).isSymbolicLink()) {
+    throw new Error(`refusing to use symbolic-link key file at ${path}`);
   }
+
+  if (process.platform !== "win32") chmodSync(path, 0o600);
+}
+
+function keyPassphrase(): string {
+  const passphrase = process.env.BESA_KEY_PASSPHRASE;
+  if (!passphrase) {
+    throw new Error(
+      "BESA_KEY_PASSPHRASE is required and must contain at least 16 UTF-8 bytes",
+    );
+  }
+  return passphrase;
 }
 
 function loadExistingKeyPair(): KeyPair {
@@ -121,14 +132,22 @@ function loadExistingKeyPair(): KeyPair {
     throw new Error(`no signing key found at ${KEY_PATH}; run besa keys first`);
   }
 
-  const keypair = readJson<unknown>(KEY_PATH);
+  ensureBesaDir();
+  protectKeyFile();
 
-  if (!validateKeyPair(keypair)) {
+  const stored = readJson<unknown>(KEY_PATH);
+  const passphrase = keyPassphrase();
+
+  if (isStoredKeyPair(stored)) {
+    return openKeyPair(stored, passphrase);
+  }
+
+  if (!validateKeyPair(stored)) {
     throw new Error(`invalid or mismatched Ed25519 key pair at ${KEY_PATH}`);
   }
 
-  protectKeyFile();
-  return keypair;
+  writeJson(KEY_PATH, sealKeyPair(stored, passphrase), 0o600);
+  return stored;
 }
 
 function loadOrCreateKeyPair(): KeyPair {
@@ -139,13 +158,32 @@ function loadOrCreateKeyPair(): KeyPair {
   }
 
   const keypair = generateKeyPair();
-  writeJson(KEY_PATH, keypair, 0o600);
+  try {
+    writeJsonExclusive(
+      KEY_PATH,
+      sealKeyPair(keypair, keyPassphrase()),
+      0o600,
+    );
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "EEXIST") {
+      return loadExistingKeyPair();
+    }
+    throw error;
+  }
   protectKeyFile();
   return keypair;
 }
 
+function terminalText(value: string): string {
+  return value.replace(/[\u0000-\u001f\u007f-\u009f]/g, "?");
+}
+
 function selectedTrustPath(): string {
-  return flagValue("--trust") ?? TRUST_PATH;
+  const path = flagValue("--trust") ?? TRUST_PATH;
+  if (!path.endsWith(".json")) {
+    throw new Error(`trust store path must end in .json: ${terminalText(path)}`);
+  }
+  return path;
 }
 
 function loadTrustStore(path = selectedTrustPath()): TrustStore {
@@ -153,6 +191,10 @@ function loadTrustStore(path = selectedTrustPath()): TrustStore {
     throw new Error(
       `no trust store found at ${path}; run besa trust add <signed-manifest> first`,
     );
+  }
+
+  if (lstatSync(path).isSymbolicLink()) {
+    throw new Error(`refusing to use symbolic-link trust store at ${path}`);
   }
 
   const validation = validateTrustStore(readJson<unknown>(path));
@@ -171,6 +213,10 @@ function loadOrCreateTrustStore(path = selectedTrustPath()): TrustStore {
 }
 
 function saveTrustStore(store: TrustStore, path = selectedTrustPath()): void {
+  if (existsSync(path) && lstatSync(path).isSymbolicLink()) {
+    throw new Error(`refusing to write to symbolic-link trust store at ${path}`);
+  }
+
   const validation = validateTrustStore(store);
 
   if (!validation.ok) {
@@ -292,18 +338,25 @@ function cmdRotateKeys(): void {
   );
   const rotatedStore = applyKeyRotation(anchored, rotation);
 
-  writeJson(archivePath, previous, 0o600);
+  const passphrase = keyPassphrase();
+
+  // Pre-compute all crypto before touching the filesystem.
+  // If scrypt or key derivation throws, no files are written.
+  const sealedPrevious = sealKeyPair(previous, passphrase);
+  const sealedNext = sealKeyPair(next, passphrase);
+
+  writeJson(archivePath, sealedPrevious, 0o600);
   protectKeyFile(archivePath);
   writeJson(rotationPath, rotation);
-  writeJson(KEY_PATH, next, 0o600);
+  writeJson(KEY_PATH, sealedNext, 0o600);
   protectKeyFile();
   saveTrustStore(rotatedStore, path);
 
   printJson("keyRotation", rotation);
   console.log("");
   console.log(`OK: active key rotated to ${rotation.newPublicKeyId}`);
-  console.log(`OK: previous private key archived at ${archivePath}`);
-  console.log(`OK: rotation proof written to ${rotationPath}`);
+  console.log(`OK: previous private key archived at ${terminalText(archivePath)}`);
+  console.log(`OK: rotation proof written to ${terminalText(rotationPath)}`);
   console.log("NEXT: re-sign active manifests with the new key");
 }
 
@@ -349,7 +402,7 @@ function cmdTrustAdd(file: string): void {
   saveTrustStore(store, path);
 
   console.log(
-    `OK: trusted public key ${signed.publicKeyId} in ${path}`,
+    `OK: trusted public key ${signed.publicKeyId} in ${terminalText(path)}`,
   );
 }
 
@@ -374,7 +427,7 @@ function cmdTrustRevoke(keyId: string): void {
   const path = selectedTrustPath();
   const store = revokeTrustAnchor(loadTrustStore(path), keyId);
   saveTrustStore(store, path);
-  console.log(`OK: revoked public key ${keyId} in ${path}`);
+  console.log(`OK: revoked public key ${keyId} in ${terminalText(path)}`);
 }
 
 function cmdTrustList(): void {
@@ -382,7 +435,7 @@ function cmdTrustList(): void {
   const store = loadTrustStore(path);
   printJson("trustStore", store);
   console.log("");
-  console.log(`OK: loaded ${String(store.keys.length)} trust anchor(s) from ${path}`);
+  console.log(`OK: loaded ${String(store.keys.length)} trust anchor(s) from ${terminalText(path)}`);
 }
 
 function cmdTrust(action: string, value?: string): void {
@@ -421,7 +474,7 @@ function cmdLoad(file: string): void {
   printJson("manifest", manifest);
   console.log("");
   console.log(
-    "OK: loaded " + String(manifest.tools.length) + " tool(s) from " + file,
+    "OK: loaded " + String(manifest.tools.length) + " tool(s) from " + terminalText(file),
   );
 }
 
@@ -439,9 +492,9 @@ function cmdSign(file: string): void {
   printJson("signedManifest", signed);
   console.log("");
   console.log(
-    "OK: signed -> " + out + " with publicKeyId " + signed.publicKeyId,
+    "OK: signed -> " + terminalText(out) + " with publicKeyId " + signed.publicKeyId,
   );
-  console.log("OK: public key anchored in " + selectedTrustPath());
+  console.log("OK: public key anchored in " + terminalText(selectedTrustPath()));
 }
 
 function cmdVerify(file: string): void {
@@ -534,6 +587,10 @@ function cmdAdmit(file: string, toolName: string): void {
   }
 
   printJson("admission", decision);
+  console.log("");
+  console.log(
+    "[dry-run: budget not consumed — use 'besa receipt' to enforce and record]",
+  );
 
   if (decision.decision === "deny") {
     process.exitCode = 1;
@@ -558,6 +615,8 @@ function cmdReceipt(toolName: string, file?: string): void {
 
   const signed = requireSignedManifest(readJson<unknown>(signedPath));
   const keypair = loadExistingKeyPair();
+  const request = readRequest(toolName);
+  void hashRequest(request);
 
   if (publicKeyId(keypair.publicKeyDer) !== signed.publicKeyId) {
     throw new Error(
@@ -605,7 +664,7 @@ function cmdReceipt(toolName: string, file?: string): void {
       toolName,
       decision: decision.decision,
       reasonCode: decision.reasonCode,
-      request: readRequest(toolName),
+      request,
       agentId: decision.agentId,
       grantReasonCode,
     },
@@ -808,14 +867,14 @@ function main(argv: string[]): void {
         break;
 
       default:
-        console.error("Unknown command: " + command);
+        console.error("Unknown command: " + terminalText(command));
         usage();
         process.exitCode = 1;
         break;
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error("Error: " + message);
+    console.error("Error: " + terminalText(message));
     process.exitCode = 1;
   }
 }

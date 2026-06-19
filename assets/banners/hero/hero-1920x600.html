@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1920">
+<title>Besa Hero Banner</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 1920px;
+    height: 600px;
+    overflow: hidden;
+    font-family: 'Segoe UI', system-ui, -apple-system, Arial, sans-serif;
+    background: #05050f;
+  }
+
+  .banner {
+    position: relative;
+    width: 1920px;
+    height: 600px;
+    overflow: hidden;
+    background: radial-gradient(ellipse 120% 100% at 60% 50%,
+      #1a0845 0%,
+      #0d0628 30%,
+      #07041a 65%,
+      #050310 100%
+    );
+  }
+
+  /* Background grid */
+  .grid-overlay {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(139, 92, 246, 0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(139, 92, 246, 0.06) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+
+  /* Ambient glow orbs */
+  .glow-1 {
+    position: absolute;
+    width: 700px;
+    height: 700px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(124, 58, 237, 0.25) 0%, transparent 70%);
+    top: -200px;
+    left: 200px;
+    filter: blur(40px);
+  }
+
+  .glow-2 {
+    position: absolute;
+    width: 500px;
+    height: 500px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(6, 182, 212, 0.2) 0%, transparent 70%);
+    bottom: -150px;
+    right: 300px;
+    filter: blur(40px);
+  }
+
+  .glow-3 {
+    position: absolute;
+    width: 300px;
+    height: 300px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(167, 139, 250, 0.15) 0%, transparent 70%);
+    top: 50px;
+    right: 600px;
+    filter: blur(30px);
+  }
+
+  /* Flow line connecting cards */
+  .flow-line {
+    position: absolute;
+    top: 50%;
+    right: 100px;
+    width: 880px;
+    height: 1px;
+    background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(139, 92, 246, 0.3) 20%,
+      rgba(6, 182, 212, 0.5) 50%,
+      rgba(139, 92, 246, 0.3) 80%,
+      transparent 100%
+    );
+    transform: translateY(-50%);
+  }
+
+  /* Left: Brand section */
+  .brand-section {
+    position: absolute;
+    left: 100px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 640px;
+  }
+
+  .brand-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 14px 5px 8px;
+    background: rgba(139, 92, 246, 0.12);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    border-radius: 100px;
+    margin-bottom: 28px;
+  }
+
+  .brand-badge-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #06b6d4;
+    box-shadow: 0 0 8px #06b6d4;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .brand-badge-text {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(167, 139, 250, 0.9);
+  }
+
+  .brand-logo {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-bottom: 20px;
+  }
+
+  .logo-mark {
+    width: 64px;
+    height: 64px;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .logo-mark svg {
+    width: 64px;
+    height: 64px;
+  }
+
+  .brand-name {
+    font-size: 72px;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    background: linear-gradient(135deg, #ffffff 0%, #c4b5fd 50%, #06b6d4 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .brand-tagline {
+    font-size: 22px;
+    font-weight: 400;
+    color: rgba(196, 181, 253, 0.75);
+    line-height: 1.4;
+    margin-bottom: 40px;
+    letter-spacing: -0.01em;
+  }
+
+  .brand-tagline strong {
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 600;
+  }
+
+  .cta-group {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .cta-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 13px 28px;
+    background: linear-gradient(135deg, #7c3aed 0%, #06b6d4 100%);
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #ffffff;
+    letter-spacing: -0.01em;
+    box-shadow: 0 0 30px rgba(124, 58, 237, 0.4), 0 4px 20px rgba(0,0,0,0.4);
+  }
+
+  .cta-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 24px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(8px);
+  }
+
+  /* Right: Trust flow cards */
+  .cards-section {
+    position: absolute;
+    right: 80px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .flow-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 22px 24px;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    position: relative;
+    overflow: hidden;
+    width: 240px;
+  }
+
+  .flow-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg,
+      transparent,
+      rgba(255, 255, 255, 0.15),
+      transparent
+    );
+  }
+
+  .flow-card.active {
+    border-color: rgba(6, 182, 212, 0.35);
+    background: rgba(6, 182, 212, 0.06);
+  }
+
+  .flow-card.active::before {
+    background: linear-gradient(90deg,
+      transparent,
+      rgba(6, 182, 212, 0.5),
+      transparent
+    );
+  }
+
+  .card-step {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(139, 92, 246, 0.8);
+    margin-bottom: 10px;
+    font-family: 'Cascadia Code', 'Consolas', 'Courier New', monospace;
+  }
+
+  .flow-card.active .card-step {
+    color: rgba(6, 182, 212, 0.9);
+  }
+
+  .card-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 12px;
+    letter-spacing: -0.02em;
+  }
+
+  .card-code {
+    font-family: 'Cascadia Code', 'Consolas', 'Courier New', monospace;
+    font-size: 10.5px;
+    line-height: 1.65;
+    color: rgba(167, 139, 250, 0.7);
+  }
+
+  .code-comment { color: rgba(107, 114, 128, 0.8); }
+  .code-key { color: rgba(196, 181, 253, 0.85); }
+  .code-string { color: rgba(110, 231, 183, 0.85); }
+  .code-hash { color: rgba(6, 182, 212, 0.9); font-size: 9.5px; }
+  .code-verify { color: #34d399; }
+  .code-deny { color: #f87171; }
+
+  .card-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 12px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: 'Cascadia Code', 'Consolas', 'Courier New', monospace;
+  }
+
+  .status-signed {
+    background: rgba(139, 92, 246, 0.15);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    color: rgba(196, 181, 253, 0.9);
+  }
+
+  .status-verified {
+    background: rgba(6, 182, 212, 0.12);
+    border: 1px solid rgba(6, 182, 212, 0.3);
+    color: rgba(6, 182, 212, 0.95);
+  }
+
+  .status-admitted {
+    background: rgba(52, 211, 153, 0.1);
+    border: 1px solid rgba(52, 211, 153, 0.3);
+    color: rgba(52, 211, 153, 0.95);
+  }
+
+  .status-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  /* Arrow between cards */
+  .arrow {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .arrow-line {
+    width: 20px;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(139, 92, 246, 0.4), rgba(6, 182, 212, 0.4));
+  }
+
+  .arrow-head {
+    font-size: 10px;
+    color: rgba(6, 182, 212, 0.5);
+    margin-top: -4px;
+    line-height: 1;
+  }
+
+  .arrow-connector {
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+
+  /* Signature line decoration */
+  .sig-decoration {
+    position: absolute;
+    bottom: 40px;
+    left: 100px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    opacity: 0.45;
+  }
+
+  .sig-label {
+    font-family: 'Cascadia Code', 'Consolas', 'Courier New', monospace;
+    font-size: 10px;
+    color: rgba(139, 92, 246, 0.8);
+    letter-spacing: 0.05em;
+  }
+
+  .sig-hash {
+    font-family: 'Cascadia Code', 'Consolas', 'Courier New', monospace;
+    font-size: 10px;
+    color: rgba(6, 182, 212, 0.7);
+    letter-spacing: 0.04em;
+  }
+
+  .sig-divider {
+    width: 1px;
+    height: 12px;
+    background: rgba(255,255,255,0.15);
+  }
+</style>
+</head>
+<body>
+<div class="banner">
+  <!-- Background layers -->
+  <div class="grid-overlay"></div>
+  <div class="glow-1"></div>
+  <div class="glow-2"></div>
+  <div class="glow-3"></div>
+
+  <!-- Left: Brand -->
+  <div class="brand-section">
+    <div class="brand-badge">
+      <div class="brand-badge-dot"></div>
+      <span class="brand-badge-text">Trust Infrastructure · Ed25519 · MCP</span>
+    </div>
+
+    <div class="brand-logo">
+      <div class="logo-mark">
+        <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="logoGrad" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#c4b5fd"/>
+              <stop offset="100%" stop-color="#06b6d4"/>
+            </linearGradient>
+          </defs>
+          <!-- Diamond / shield shape -->
+          <polygon points="32,4 58,20 58,44 32,60 6,44 6,20" stroke="url(#logoGrad)" stroke-width="2" fill="none" opacity="0.6"/>
+          <polygon points="32,12 50,22 50,42 32,52 14,42 14,22" stroke="url(#logoGrad)" stroke-width="1" fill="rgba(139,92,246,0.08)"/>
+          <!-- Signature check mark -->
+          <path d="M22 32 L29 39 L42 25" stroke="url(#logoGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="brand-name">besa</div>
+    </div>
+
+    <p class="brand-tagline">
+      <strong>Signed trust</strong> for AI agents.<br>
+      Sign · Verify · Admit · Receipt.
+    </p>
+
+    <div class="cta-group">
+      <div class="cta-primary">
+        &#10003;&nbsp; Get started
+      </div>
+      <div class="cta-secondary">
+        $ npm install besa
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Trust flow cards -->
+  <div class="cards-section">
+
+    <!-- Card 1: Sign -->
+    <div class="flow-card">
+      <div class="card-step">01 · sign</div>
+      <div class="card-title">Manifest</div>
+      <div class="card-code">
+        <span class="code-key">tool:</span> <span class="code-string">crm.lookup</span><br>
+        <span class="code-key">capability:</span> <span class="code-string">read</span><br>
+        <span class="code-key">risk:</span> <span class="code-string">low</span><br>
+        <span class="code-key">scopes:</span><br>
+        &nbsp;&nbsp;<span class="code-string">- crm:read</span><br>
+        <span class="code-key">budgetLimit:</span> <span class="code-string">100</span>
+      </div>
+      <div class="card-status status-signed">
+        <div class="status-dot"></div>
+        signed · ed25519
+      </div>
+    </div>
+
+    <!-- Arrow -->
+    <div class="arrow">
+      <div class="arrow-connector">
+        <div class="arrow-line"></div>
+        <span style="color:rgba(6,182,212,0.6);font-size:12px;">&#8594;</span>
+      </div>
+    </div>
+
+    <!-- Card 2: Verify (active) -->
+    <div class="flow-card active">
+      <div class="card-step">02 · verify</div>
+      <div class="card-title">Signature check</div>
+      <div class="card-code">
+        <span class="code-key">pubKey:</span><br>
+        <span class="code-hash">&nbsp;ed25519:7f3a…c291</span><br>
+        <span class="code-key">hash:</span><br>
+        <span class="code-hash">&nbsp;sha256:4d8b…f190</span><br>
+        <span class="code-verify">✓ signature valid</span><br>
+        <span class="code-verify">✓ manifest intact</span>
+      </div>
+      <div class="card-status status-verified">
+        <div class="status-dot"></div>
+        verified
+      </div>
+    </div>
+
+    <!-- Arrow -->
+    <div class="arrow">
+      <div class="arrow-connector">
+        <div class="arrow-line"></div>
+        <span style="color:rgba(6,182,212,0.6);font-size:12px;">&#8594;</span>
+      </div>
+    </div>
+
+    <!-- Card 3: Admit + Receipt -->
+    <div class="flow-card">
+      <div class="card-step">03 · admit</div>
+      <div class="card-title">Receipt issued</div>
+      <div class="card-code">
+        <span class="code-key">decision:</span> <span class="code-verify">allow</span><br>
+        <span class="code-key">tool:</span> <span class="code-string">crm.lookup</span><br>
+        <span class="code-key">reason:</span> <span class="code-string">policy:pass</span><br>
+        <span class="code-key">receipt:</span><br>
+        <span class="code-hash">&nbsp;besa:r:9f2e…a401</span>
+      </div>
+      <div class="card-status status-admitted">
+        <div class="status-dot"></div>
+        admitted · signed
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Bottom signature strip -->
+  <div class="sig-decoration">
+    <span class="sig-label">besa/manifest</span>
+    <div class="sig-divider"></div>
+    <span class="sig-hash">sha256:4d8bf190a2c3e7d91b5f…</span>
+    <div class="sig-divider"></div>
+    <span class="sig-label">ed25519:7f3ac291</span>
+    <div class="sig-divider"></div>
+    <span class="sig-hash">2026-06-19T00:00:00Z</span>
+  </div>
+
+</div>
+</body>
+</html>

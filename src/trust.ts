@@ -10,15 +10,19 @@ import type {
 } from "./types.js";
 import {
   canonicalize,
+  isCanonicalBase64,
   privateKeyFromDer,
   publicKeyFromDer,
   publicKeyId,
+  signatureMessage,
   validateKeyPair,
   type KeyPair,
 } from "./crypto.js";
 import { verifySignedManifest, type VerifyResult } from "./signing.js";
 
-const KEY_ID = /^[a-f0-9]{16}$/;
+const KEY_ID = /^[a-f0-9]{64}$/;
+const MAX_CLOCK_SKEW_MS = 5 * 60 * 1_000;
+const MAX_TRUST_KEYS = 4_096;
 
 export interface TrustStoreValidationResult {
   ok: boolean;
@@ -33,16 +37,9 @@ function isObject(value: unknown): value is Record<string, unknown> {
 function isIsoDate(value: unknown): value is string {
   return (
     typeof value === "string" &&
+    value.length <= 35 &&
     !Number.isNaN(Date.parse(value)) &&
     new Date(value).toISOString() === value
-  );
-}
-
-function isCanonicalBase64(value: unknown): value is string {
-  return (
-    typeof value === "string" &&
-    value.length > 0 &&
-    Buffer.from(value, "base64").toString("base64") === value
   );
 }
 
@@ -52,12 +49,30 @@ function validateAnchor(value: unknown, index: number): string[] {
   }
 
   const errors: string[] = [];
+  const allowedFields = new Set([
+    "publicKeyId",
+    "publicKey",
+    "status",
+    "addedAt",
+    "retiredAt",
+    "revokedAt",
+  ]);
 
-  if (typeof value.publicKeyId !== "string" || !KEY_ID.test(value.publicKeyId)) {
-    errors.push(`keys[${index}].publicKeyId must be a 16-character lowercase hex string`);
+  for (const field of Object.keys(value)) {
+    if (!allowedFields.has(field)) {
+      errors.push(`unexpected keys[${index}] field '${field}'`);
+    }
   }
 
-  if (!isCanonicalBase64(value.publicKey)) {
+  if (typeof value.publicKeyId !== "string" || !KEY_ID.test(value.publicKeyId)) {
+    errors.push(`keys[${index}].publicKeyId must be a 64-character lowercase SHA-256 fingerprint`);
+  }
+
+  if (
+    typeof value.publicKey !== "string" ||
+    value.publicKey.length > 128 ||
+    !isCanonicalBase64(value.publicKey)
+  ) {
     errors.push(`keys[${index}].publicKey must be canonical base64`);
   } else {
     try {
@@ -126,6 +141,13 @@ export function validateTrustStore(value: unknown): TrustStoreValidationResult {
   }
 
   const errors: string[] = [];
+  const allowedFields = new Set(["version", "keys"]);
+
+  for (const field of Object.keys(value)) {
+    if (!allowedFields.has(field)) {
+      errors.push(`unexpected trust store field '${field}'`);
+    }
+  }
 
   if (value.version !== 1) {
     errors.push("version must be 1");
@@ -133,6 +155,8 @@ export function validateTrustStore(value: unknown): TrustStoreValidationResult {
 
   if (!Array.isArray(value.keys)) {
     errors.push("keys must be an array");
+  } else if (value.keys.length > MAX_TRUST_KEYS) {
+    errors.push(`keys must contain at most ${String(MAX_TRUST_KEYS)} entries`);
   } else {
     value.keys.forEach((key, index) => errors.push(...validateAnchor(key, index)));
 
@@ -144,6 +168,13 @@ export function validateTrustStore(value: unknown): TrustStoreValidationResult {
     if (new Set(ids).size !== ids.length) {
       errors.push("keys must not contain duplicate publicKeyId values");
     }
+  }
+
+  try {
+    canonicalize(value);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    errors.push(`trust store exceeds the JSON safety limits: ${message}`);
   }
 
   if (errors.length > 0) {
@@ -262,6 +293,7 @@ export function createKeyRotation(
   }
 
   const body: RotationBody = {
+    artifactVersion: 1,
     algorithm: "ed25519",
     previousPublicKey: previous.publicKeyDer,
     previousPublicKeyId: publicKeyId(previous.publicKeyDer),
@@ -271,7 +303,7 @@ export function createKeyRotation(
   };
   const signature = ed25519Sign(
     null,
-    Buffer.from(canonicalize(body), "utf8"),
+    signatureMessage("key-rotation", body),
     privateKeyFromDer(previous.privateKeyDer),
   );
 
@@ -287,6 +319,35 @@ export function verifyKeyRotation(value: unknown): VerifyResult {
     };
   }
 
+  const allowedFields = new Set([
+    "artifactVersion",
+    "algorithm",
+    "previousPublicKey",
+    "previousPublicKeyId",
+    "newPublicKey",
+    "newPublicKeyId",
+    "rotatedAt",
+    "signature",
+  ]);
+
+  for (const field of Object.keys(value)) {
+    if (!allowedFields.has(field)) {
+      return {
+        valid: false,
+        reasonCode: "E_ROTATION_INVALID",
+        detail: `unexpected key rotation field '${field}'`,
+      };
+    }
+  }
+
+  if (value.artifactVersion !== 1) {
+    return {
+      valid: false,
+      reasonCode: "E_ARTIFACT_VERSION_UNSUPPORTED",
+      detail: "only key rotation artifactVersion 1 is supported",
+    };
+  }
+
   if (value.algorithm !== "ed25519") {
     return {
       valid: false,
@@ -296,14 +357,21 @@ export function verifyKeyRotation(value: unknown): VerifyResult {
   }
 
   if (
+    typeof value.previousPublicKey !== "string" ||
+    value.previousPublicKey.length > 128 ||
     !isCanonicalBase64(value.previousPublicKey) ||
+    typeof value.newPublicKey !== "string" ||
+    value.newPublicKey.length > 128 ||
     !isCanonicalBase64(value.newPublicKey) ||
     typeof value.previousPublicKeyId !== "string" ||
     typeof value.newPublicKeyId !== "string" ||
     !KEY_ID.test(value.previousPublicKeyId) ||
     !KEY_ID.test(value.newPublicKeyId) ||
     !isIsoDate(value.rotatedAt) ||
-    !isCanonicalBase64(value.signature)
+    typeof value.signature !== "string" ||
+    value.signature.length !== 88 ||
+    !isCanonicalBase64(value.signature) ||
+    Buffer.from(value.signature, "base64").length !== 64
   ) {
     return {
       valid: false,
@@ -348,7 +416,7 @@ export function verifyKeyRotation(value: unknown): VerifyResult {
   try {
     const valid = ed25519Verify(
       null,
-      Buffer.from(canonicalize(body), "utf8"),
+      signatureMessage("key-rotation", body),
       publicKeyFromDer(rotation.previousPublicKey),
       Buffer.from(signature, "base64"),
     );
@@ -451,6 +519,7 @@ export function checkTrustedKey(
   publicKey: string,
   artifactTimestamp: string,
   purpose: "verify" | "admit" = "verify",
+  now = new Date(),
 ): VerifyResult {
   const storeValidation = validateTrustStore(store);
   if (!storeValidation.ok) {
@@ -469,7 +538,28 @@ export function checkTrustedKey(
     };
   }
 
-  const id = publicKeyId(publicKey);
+  if (
+    !Number.isFinite(now.getTime()) ||
+    Date.parse(artifactTimestamp) > now.getTime() + MAX_CLOCK_SKEW_MS
+  ) {
+    return {
+      valid: false,
+      reasonCode: "E_ARTIFACT_TIMESTAMP_FUTURE",
+      detail: "artifact timestamp is beyond the allowed clock skew",
+    };
+  }
+
+  let id: string;
+  try {
+    publicKeyFromDer(publicKey);
+    id = publicKeyId(publicKey);
+  } catch {
+    return {
+      valid: false,
+      reasonCode: "E_PUBLIC_KEY_INVALID",
+      detail: "artifact public key is not valid Ed25519 key material",
+    };
+  }
   const anchor = store.keys.find((key) => key.publicKeyId === id);
 
   if (!anchor) {

@@ -24,7 +24,7 @@ emptyTrustStore,
 generateKeyPair,
 getCount,
 hashManifest,
-hashObject,
+hashRequest,
 loadManifest,
 loadMeter,
 meterKey,
@@ -288,8 +288,8 @@ test("receipt hashing preserves an explicit null request", () => {
     keypair,
   );
 
-  assert.equal(receipt.requestHash, hashObject(null));
-  assert.notEqual(receipt.requestHash, hashObject({}));
+  assert.equal(receipt.requestHash, hashRequest(null));
+  assert.notEqual(receipt.requestHash, hashRequest({}));
 });
 
 test("verifySignedManifest rejects malformed input without throwing", () => {
@@ -465,7 +465,7 @@ test("validateManifest rejects non-JSON input schema values", () => {
 test("verifySignedManifest fails on publicKeyId mismatch", () => {
   const keypair = generateKeyPair();
   const signed = signManifest(sampleManifest(), keypair);
-  signed.publicKeyId = "0000000000000000";
+  signed.publicKeyId = "0".repeat(64);
 
   const result = verifySignedManifest(signed);
 
@@ -591,11 +591,20 @@ function runMeterWorker(input: MeterWorkerInput): Promise<number> {
       workerData: input,
     });
 
-    worker.once("message", (value: number) => resolve(value));
+    let result: number | undefined;
+
+    worker.once("message", (value: number) => {
+      result = value;
+    });
     worker.once("error", reject);
+    // Resolve only after the worker has fully exited and released all file
+    // handles. Resolving on "message" alone causes ENOTEMPTY on Windows when
+    // rmSync runs while the worker process is still alive.
     worker.once("exit", (code) => {
       if (code !== 0) {
         reject(new Error(`meter worker exited with code ${String(code)}`));
+      } else {
+        resolve(result ?? 0);
       }
     });
   });
@@ -624,6 +633,8 @@ test("parallel meter consumers cannot exceed the manifest budget", async () => {
     assert.equal(allowed.reduce((total, count) => total + count, 0), 25);
     assert.equal(getCount(state, meterKey(manifestHash, "crm.lookup")), 25);
   } finally {
-    rmSync(directory, { recursive: true, force: true });
+    // On Windows, the OS may release file handles slightly after the worker
+    // "exit" event fires.  maxRetries lets Node.js retry on ENOTEMPTY.
+    rmSync(directory, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });

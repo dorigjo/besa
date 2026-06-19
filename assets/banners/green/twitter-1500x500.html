@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  width:1500px; height:500px; overflow:hidden;
+  font-family:'Segoe UI', system-ui, -apple-system, Arial, sans-serif;
+  background:#F5FAF7;
+}
+.banner {
+  position:relative; width:1500px; height:500px; overflow:hidden;
+  background:#F5FAF7;
+}
+
+/* Dot grid */
+.dot-grid {
+  position:absolute; inset:0;
+  background-image: radial-gradient(circle, #A8D5B5 1px, transparent 1px);
+  background-size: 32px 32px;
+  opacity:0.45;
+}
+
+/* Right decorative block */
+.right-block {
+  position:absolute;
+  right:0; top:0; bottom:0;
+  width:520px;
+  background: linear-gradient(135deg, #2E6B4F 0%, #1B3A2D 100%);
+  clip-path: polygon(80px 0, 100% 0, 100% 100%, 0 100%);
+}
+
+/* Mint accent stripe */
+.accent-stripe {
+  position:absolute;
+  right:520px; top:0; bottom:0;
+  width:4px;
+  background: linear-gradient(180deg, #A8D5B5 0%, #2E6B4F 100%);
+}
+
+/* Right block dot pattern */
+.right-dots {
+  position:absolute;
+  right:0; top:0; bottom:0; width:520px;
+  background-image: radial-gradient(circle, rgba(168,213,181,0.2) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* Right block content */
+.right-content {
+  position:absolute;
+  right:60px;
+  top:50%;
+  transform:translateY(-50%);
+  text-align:right;
+}
+
+.flow-item {
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:12px;
+  margin-bottom:18px;
+}
+
+.flow-num {
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:0.1em;
+  color:rgba(168,213,181,0.6);
+  font-family:'Cascadia Code','Consolas','Courier New',monospace;
+}
+
+.flow-text {
+  font-size:17px;
+  font-weight:600;
+  color:rgba(255,255,255,0.92);
+  letter-spacing:-0.01em;
+}
+
+.flow-dot {
+  width:6px; height:6px;
+  border-radius:50%;
+  background:#A8D5B5;
+  flex-shrink:0;
+}
+
+/* Left: brand */
+.brand-section {
+  position:absolute;
+  left:80px; top:50%;
+  transform:translateY(-50%);
+  width:580px;
+}
+
+.brand-eyebrow {
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  margin-bottom:22px;
+}
+
+.eyebrow-line {
+  width:28px; height:2px;
+  background:#A8D5B5;
+  border-radius:1px;
+}
+
+.eyebrow-text {
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:0.14em;
+  text-transform:uppercase;
+  color:#2E6B4F;
+}
+
+.brand-name {
+  font-size:90px;
+  font-weight:900;
+  letter-spacing:-0.04em;
+  line-height:1;
+  color:#1B3A2D;
+  margin-bottom:16px;
+}
+
+.brand-name span {
+  color:#2E6B4F;
+}
+
+.brand-tag {
+  font-size:20px;
+  font-weight:400;
+  color:#2E6B4F;
+  letter-spacing:-0.01em;
+  margin-bottom:32px;
+  opacity:0.85;
+}
+
+.brand-tag strong {
+  font-weight:700;
+  color:#1B3A2D;
+}
+
+.cta-pill {
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+  padding:12px 24px;
+  background:#1B3A2D;
+  border-radius:8px;
+  color:#F5FAF7;
+  font-size:14px;
+  font-weight:600;
+  letter-spacing:0.01em;
+}
+
+.cta-dot {
+  width:6px; height:6px;
+  border-radius:50%;
+  background:#A8D5B5;
+}
+
+/* Bottom bar */
+.bottom-bar {
+  position:absolute;
+  bottom:0; left:0; right:0;
+  height:3px;
+  background: linear-gradient(90deg, #A8D5B5 0%, #2E6B4F 40%, #1B3A2D 100%);
+}
+</style>
+</head>
+<body>
+<div class="banner">
+  <div class="dot-grid"></div>
+
+  <div class="right-block"></div>
+  <div class="right-dots"></div>
+  <div class="accent-stripe"></div>
+
+  <div class="right-content">
+    <div class="flow-item">
+      <div class="flow-text">sign</div>
+      <div class="flow-num">01</div>
+      <div class="flow-dot"></div>
+    </div>
+    <div class="flow-item">
+      <div class="flow-text">verify</div>
+      <div class="flow-num">02</div>
+      <div class="flow-dot"></div>
+    </div>
+    <div class="flow-item">
+      <div class="flow-text">admit</div>
+      <div class="flow-num">03</div>
+      <div class="flow-dot"></div>
+    </div>
+    <div class="flow-item" style="margin-bottom:0">
+      <div class="flow-text">receipt</div>
+      <div class="flow-num">04</div>
+      <div class="flow-dot" style="background:#6bd4a0"></div>
+    </div>
+  </div>
+
+  <div class="brand-section">
+    <div class="brand-eyebrow">
+      <div class="eyebrow-line"></div>
+      <span class="eyebrow-text">Trust infrastructure for AI agents</span>
+    </div>
+    <div class="brand-name">besa</div>
+    <div class="brand-tag"><strong>Signed trust</strong> for AI agents.</div>
+    <div class="cta-pill">
+      <div class="cta-dot"></div>
+      Developer preview · Ed25519
+    </div>
+  </div>
+
+  <div class="bottom-bar"></div>
+</div>
+</body>
+</html>

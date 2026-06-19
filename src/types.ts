@@ -23,6 +23,7 @@ export interface Manifest {
 }
 
 export interface SignedManifest {
+  artifactVersion: 1;
   manifest: Manifest;
   manifestHash: string;
   algorithm: "ed25519";
@@ -41,6 +42,7 @@ export interface AdmissionDecision {
 }
 
 export interface Receipt {
+  artifactVersion: 1;
   receiptId: string;
   manifestHash: string;
   toolName: string;
@@ -89,6 +91,7 @@ export interface TrustStore {
 }
 
 export interface KeyRotation {
+  artifactVersion: 1;
   algorithm: "ed25519";
   previousPublicKey: string;
   previousPublicKeyId: string;

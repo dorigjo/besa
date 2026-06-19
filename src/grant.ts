@@ -1,7 +1,8 @@
-import { readFileSync } from "node:fs";
 import { extname } from "node:path";
 import { parse as parseYaml } from "yaml";
 import type { Grant, GrantDecision, GrantSet } from "./types.js";
+import { canonicalize } from "./crypto.js";
+import { readUtf8File } from "./io.js";
 
 export const GRANT_REASON = {
   GRANTED: "GRANT_OK",
@@ -15,12 +16,21 @@ export interface GrantValidationResult {
   errors: string[];
 }
 
+const MAX_GRANTS = 256;
+const MAX_TOOLS_PER_GRANT = 256;
+
 function isObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 function isNonEmptyString(value: unknown): value is string {
-  return typeof value === "string" && value.trim().length > 0;
+  return (
+    typeof value === "string" &&
+    value.length <= 256 &&
+    value.trim().length > 0 &&
+    value.trim() === value &&
+    !/[\u0000-\u001f\u007f]/.test(value)
+  );
 }
 
 export function validateGrantSet(raw: unknown): GrantValidationResult {
@@ -33,8 +43,16 @@ export function validateGrantSet(raw: unknown): GrantValidationResult {
     };
   }
 
+  for (const field of Object.keys(raw)) {
+    if (field !== "grants") {
+      errors.push(`unexpected grant set field '${field}'`);
+    }
+  }
+
   if (!Array.isArray(raw.grants) || raw.grants.length === 0) {
     errors.push("grants must be a non-empty array");
+  } else if (raw.grants.length > MAX_GRANTS) {
+    errors.push(`grants must contain at most ${String(MAX_GRANTS)} entries`);
   } else {
     const seenAgents = new Set<string>();
 
@@ -44,6 +62,12 @@ export function validateGrantSet(raw: unknown): GrantValidationResult {
       if (!isObject(grant)) {
         errors.push(`${path} must be an object`);
         return;
+      }
+
+      for (const field of Object.keys(grant)) {
+        if (field !== "agentId" && field !== "tools") {
+          errors.push(`unexpected ${path} field '${field}'`);
+        }
       }
 
       if (!isNonEmptyString(grant.agentId)) {
@@ -57,11 +81,21 @@ export function validateGrantSet(raw: unknown): GrantValidationResult {
       if (
         !Array.isArray(grant.tools) ||
         grant.tools.length === 0 ||
+        grant.tools.length > MAX_TOOLS_PER_GRANT ||
         !grant.tools.every((tool) => isNonEmptyString(tool))
       ) {
-        errors.push(`${path}.tools must be a non-empty array of non-empty strings`);
+        errors.push(`${path}.tools must contain 1-${String(MAX_TOOLS_PER_GRANT)} valid tool names`);
+      } else if (new Set(grant.tools).size !== grant.tools.length) {
+        errors.push(`${path}.tools must not contain duplicate tool names`);
       }
     });
+  }
+
+  try {
+    canonicalize(raw);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    errors.push(`grant set must contain only bounded JSON values: ${message}`);
   }
 
   if (errors.length > 0) {
@@ -79,9 +113,21 @@ export function validateGrantSet(raw: unknown): GrantValidationResult {
 }
 
 export function loadGrants(path: string): GrantSet {
-  const source = readFileSync(path, "utf8");
-  const raw =
-    extname(path).toLowerCase() === ".json" ? JSON.parse(source) : parseYaml(source);
+  const source = readUtf8File(path);
+  const extension = extname(path).toLowerCase();
+  let raw: unknown;
+
+  if (extension === ".json") {
+    raw = JSON.parse(source) as unknown;
+  } else if (extension === ".yaml" || extension === ".yml") {
+    raw = parseYaml(source, {
+      maxAliasCount: 50,
+      strict: true,
+      uniqueKeys: true,
+    });
+  } else {
+    throw new Error("grant path must end in .json, .yaml, or .yml");
+  }
 
   const result = validateGrantSet(raw);
 

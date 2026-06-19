@@ -161,7 +161,7 @@ This creates a tamper-evident record of what Besa allowed or denied.
 
 The current beta has important limitations:
 
-* local unencrypted key storage
+* local key storage only (AES-256-GCM encrypted at rest; no hosted key management or HSM)
 * no hosted verifier service
 * no hardware-backed keys
 * no hardware-backed or centrally governed key lifecycle
@@ -189,15 +189,16 @@ receipts until consumers apply a revocation or trusted rotation.
 Current protections:
 
 * `.besa/` is ignored by Git.
-* demo keys are local-only
-* generated private keys should never be committed
-* local rotation proofs preserve public-key continuity
-* consumers can mark compromised public keys as revoked
+* Private keys are encrypted at rest with AES-256-GCM + scrypt KDF (N=32768)
+  and require the `BESA_KEY_PASSPHRASE` environment variable to decrypt.
+* Local rotation proofs preserve public-key continuity.
+* Consumers can mark compromised public keys as revoked.
+* Key files are protected against symlink substitution.
 
 This is not production key management.
 
 Future versions should use stronger protections such as hosted key management,
-encryption at rest, governed rotation policies, and hardware-backed signing.
+hardware-backed signing, and governed rotation policies.
 
 ## Replay risk
 

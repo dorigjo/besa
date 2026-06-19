@@ -3,22 +3,35 @@ import { dirname } from "node:path";
 import {
   closeSync,
   existsSync,
+  fsyncSync,
   mkdirSync,
   openSync,
-  readFileSync,
   renameSync,
   statSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
 import type { AdmissionDecision, Manifest, ToolDefinition } from "./types.js";
+import { validateManifest } from "./manifest.js";
+import { readJsonFile, writeJsonAtomic } from "./io.js";
 
 export const REASON = {
   ALLOWED: "ALLOWED",
   TOOL_NOT_FOUND: "TOOL_NOT_FOUND",
   RISK_BLOCKED: "RISK_BLOCKED",
   BUDGET_EXCEEDED: "BUDGET_EXCEEDED",
+  INVALID_MANIFEST: "INVALID_MANIFEST",
+  INVALID_TOOL_NAME: "INVALID_TOOL_NAME",
+  INVALID_CALL_COUNT: "INVALID_CALL_COUNT",
+  INVALID_POLICY: "INVALID_POLICY",
 } as const;
+
+const SHA256_HEX = /^[a-f0-9]{64}$/;
+const TOOL_NAME_RE = /^[a-zA-Z0-9._-]{1,256}$/;
+
+function isValidToolName(name: unknown): name is string {
+  return typeof name === "string" && TOOL_NAME_RE.test(name);
+}
 
 export interface AdmissionPolicy {
   denyDestructiveHighRisk: boolean;
@@ -46,6 +59,36 @@ export function admit(
   callCount: number,
   policy: AdmissionPolicy = DEFAULT_POLICY,
 ): AdmissionDecision {
+  if (!isValidToolName(toolName)) {
+    return deny("", REASON.INVALID_TOOL_NAME, "tool name is invalid");
+  }
+
+  if (!Number.isSafeInteger(callCount) || callCount < 0) {
+    return deny(
+      toolName,
+      REASON.INVALID_CALL_COUNT,
+      "call count must be a safe non-negative integer",
+    );
+  }
+
+  if (
+    !policy ||
+    typeof policy !== "object" ||
+    policy.denyDestructiveHighRisk !== true &&
+      policy.denyDestructiveHighRisk !== false
+  ) {
+    return deny(toolName, REASON.INVALID_POLICY, "admission policy is invalid");
+  }
+
+  const manifestValidation = validateManifest(manifest);
+  if (!manifestValidation.ok) {
+    return deny(
+      toolName,
+      REASON.INVALID_MANIFEST,
+      "manifest failed runtime validation",
+    );
+  }
+
   const tool = findTool(manifest, toolName);
 
   if (!tool) {
@@ -94,6 +137,12 @@ function deny(toolName: string, reasonCode: string, detail: string): AdmissionDe
 }
 
 export function meterKey(manifestHash: string, toolName: string): string {
+  if (!SHA256_HEX.test(manifestHash)) {
+    throw new Error("manifestHash must be a lowercase SHA-256 hex digest");
+  }
+  if (!isValidToolName(toolName)) {
+    throw new Error("toolName is invalid");
+  }
   return `${manifestHash}:${toolName}`;
 }
 
@@ -105,7 +154,7 @@ export function loadMeter(path: string): MeterState {
   let raw: unknown;
 
   try {
-    raw = JSON.parse(readFileSync(path, "utf8")) as unknown;
+    raw = readJsonFile(path);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(`invalid meter state at ${path}: ${message}`);
@@ -115,7 +164,7 @@ export function loadMeter(path: string): MeterState {
     throw new Error(`invalid meter state at ${path}: expected a JSON object`);
   }
 
-  const state: MeterState = {};
+  const state = Object.create(null) as MeterState;
 
   for (const [key, value] of Object.entries(raw)) {
     if (
@@ -135,20 +184,7 @@ export function loadMeter(path: string): MeterState {
 }
 
 export function saveMeter(path: string, state: MeterState): void {
-  mkdirSync(dirname(path), { recursive: true });
-  const temporaryPath = `${path}.${String(process.pid)}.${randomUUID()}.tmp`;
-
-  try {
-    writeFileSync(temporaryPath, JSON.stringify(state, null, 2) + "\n", {
-      encoding: "utf8",
-      mode: 0o600,
-    });
-    renameSync(temporaryPath, path);
-  } finally {
-    if (existsSync(temporaryPath)) {
-      unlinkSync(temporaryPath);
-    }
-  }
+  writeJsonAtomic(path, state, 0o600);
 }
 
 export function getCount(state: MeterState, key: string): number {
@@ -156,10 +192,14 @@ export function getCount(state: MeterState, key: string): number {
 }
 
 export function increment(state: MeterState, key: string): MeterState {
-  return {
-    ...state,
-    [key]: getCount(state, key) + 1,
-  };
+  const count = getCount(state, key);
+  if (!Number.isSafeInteger(count) || count < 0 || count === Number.MAX_SAFE_INTEGER) {
+    throw new Error(`meter count for '${key}' cannot be incremented safely`);
+  }
+
+  return Object.assign(Object.create(null) as MeterState, state, {
+    [key]: count + 1,
+  });
 }
 
 function sleep(milliseconds: number): void {
@@ -204,6 +244,7 @@ function acquireMeterLock(
           }) + "\n",
           "utf8",
         );
+        fsyncSync(descriptor);
       } catch (error) {
         closeSync(descriptor);
         unlinkSync(lockPath);
@@ -213,9 +254,7 @@ function acquireMeterLock(
       return () => {
         closeSync(descriptor);
         try {
-          const lock = JSON.parse(readFileSync(lockPath, "utf8")) as {
-            token?: unknown;
-          };
+          const lock = readJsonFile(lockPath) as { token?: unknown };
           if (lock.token === token) {
             unlinkSync(lockPath);
           }
@@ -233,7 +272,10 @@ function acquireMeterLock(
       }
 
       try {
-        if (Date.now() - statSync(lockPath).mtimeMs > staleMs) {
+        if (
+          Date.now() - statSync(lockPath).mtimeMs > staleMs &&
+          !lockOwnerIsAlive(lockPath)
+        ) {
           const stalePath = `${lockPath}.${String(process.pid)}.${randomUUID()}.stale`;
           renameSync(lockPath, stalePath);
           unlinkSync(stalePath);
@@ -252,6 +294,30 @@ function acquireMeterLock(
 
       sleep(retryMs);
     }
+  }
+}
+
+function lockOwnerIsAlive(lockPath: string): boolean {
+  try {
+    const value = readJsonFile(lockPath);
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return false;
+    }
+
+    const pid = (value as Record<string, unknown>).pid;
+    if (!Number.isSafeInteger(pid) || (pid as number) <= 0) {
+      return false;
+    }
+
+    try {
+      process.kill(pid as number, 0);
+      return true;
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      return code !== "ESRCH";
+    }
+  } catch {
+    return false;
   }
 }
 
