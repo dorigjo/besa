@@ -19,7 +19,8 @@
     "test": "npm run build && node dist/tests/run.js",
     "smoke": "node scripts/smoke.mjs",
     "test:package": "node scripts/package-smoke.mjs",
-    "prepack": "npm run build"
+    "prepack": "npm run build",
+    "postinstall": "node scripts/postinstall.mjs"
   },
   "keywords": [
     "mcp",
@@ -51,7 +52,8 @@
     "dist/*.d.ts",
     "examples/manifest.yaml",
     "examples/grants.yaml",
-    "examples/request.json"
+    "examples/request.json",
+    "scripts/postinstall.mjs"
   ],
   "bugs": {
     "url": "https://github.com/dorigjo/besa/issues"

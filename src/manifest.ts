@@ -1,13 +1,32 @@
-import { readFileSync } from "node:fs";
 import { extname } from "node:path";
 import { parse as parseYaml } from "yaml";
 import type { CapabilityType, Manifest, RiskLevel } from "./types.js";
 import { canonicalize } from "./crypto.js";
+import { readUtf8File } from "./io.js";
 
 const CAPABILITIES: CapabilityType[] = ["read", "write", "destructive"];
 const RISKS: RiskLevel[] = ["low", "medium", "high"];
 const ISO_DATE =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
+const MANIFEST_FIELDS = new Set([
+  "serverName",
+  "serverVersion",
+  "serverUrl",
+  "createdAt",
+  "tools",
+]);
+const TOOL_FIELDS = new Set([
+  "name",
+  "description",
+  "capability",
+  "risk",
+  "scopes",
+  "budgetLimit",
+  "inputSchema",
+]);
+const MAX_TOOLS = 256;
+const MAX_SCOPES = 64;
+const TOOL_NAME_RE = /^[a-zA-Z0-9._-]{1,256}$/;
 
 export interface ValidationResult {
   ok: boolean;
@@ -19,8 +38,14 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-function isNonEmptyString(value: unknown): value is string {
-  return typeof value === "string" && value.trim().length > 0;
+function isNonEmptyString(value: unknown, maximumLength: number): value is string {
+  return (
+    typeof value === "string" &&
+    value.length <= maximumLength &&
+    value.trim().length > 0 &&
+    value.trim() === value &&
+    !/[\u0000-\u001f\u007f]/.test(value)
+  );
 }
 
 function isHttpUrl(value: unknown): boolean {
@@ -28,7 +53,17 @@ function isHttpUrl(value: unknown): boolean {
 
   try {
     const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
+    const isLoopback =
+      url.hostname === "localhost" ||
+      url.hostname === "127.0.0.1" ||
+      url.hostname === "[::1]";
+    return (
+      value.length <= 2_048 &&
+      (url.protocol === "https:" || (url.protocol === "http:" && isLoopback)) &&
+      url.username === "" &&
+      url.password === "" &&
+      url.hash === ""
+    );
   } catch {
     return false;
   }
@@ -49,12 +84,18 @@ export function validateManifest(raw: unknown): ValidationResult {
     return { ok: false, errors: ["manifest must be an object"] };
   }
 
-  if (!isNonEmptyString(raw.serverName)) {
-    errors.push("serverName must be a non-empty string");
+  for (const field of Object.keys(raw)) {
+    if (!MANIFEST_FIELDS.has(field)) {
+      errors.push(`unexpected manifest field '${field}'`);
+    }
   }
 
-  if (!isNonEmptyString(raw.serverVersion)) {
-    errors.push("serverVersion must be a non-empty string");
+  if (!isNonEmptyString(raw.serverName, 128)) {
+    errors.push("serverName must be a non-empty string of at most 128 characters");
+  }
+
+  if (!isNonEmptyString(raw.serverVersion, 64)) {
+    errors.push("serverVersion must be a non-empty string of at most 64 characters");
   }
 
   if (!isHttpUrl(raw.serverUrl)) {
@@ -67,6 +108,8 @@ export function validateManifest(raw: unknown): ValidationResult {
 
   if (!Array.isArray(raw.tools) || raw.tools.length === 0) {
     errors.push("tools must be a non-empty array");
+  } else if (raw.tools.length > MAX_TOOLS) {
+    errors.push(`tools must contain at most ${String(MAX_TOOLS)} entries`);
   } else {
     const seen = new Set<string>();
 
@@ -107,12 +150,18 @@ function validateTool(tool: unknown, index: number, errors: string[]): void {
     return;
   }
 
-  if (!isNonEmptyString(tool.name)) {
-    errors.push(`${path}.name must be a non-empty string`);
+  for (const field of Object.keys(tool)) {
+    if (!TOOL_FIELDS.has(field)) {
+      errors.push(`unexpected ${path} field '${field}'`);
+    }
   }
 
-  if (typeof tool.description !== "string") {
-    errors.push(`${path}.description must be a string`);
+  if (typeof tool.name !== "string" || !TOOL_NAME_RE.test(tool.name)) {
+    errors.push(`${path}.name must contain only ASCII letters, digits, dots, underscores, and hyphens (1-256 characters)`);
+  }
+
+  if (typeof tool.description !== "string" || tool.description.length > 4_096) {
+    errors.push(`${path}.description must be a string of at most 4096 characters`);
   }
 
   if (!CAPABILITIES.includes(tool.capability as CapabilityType)) {
@@ -126,9 +175,10 @@ function validateTool(tool: unknown, index: number, errors: string[]): void {
   if (
     !Array.isArray(tool.scopes) ||
     tool.scopes.length === 0 ||
-    !tool.scopes.every((scope) => isNonEmptyString(scope))
+    tool.scopes.length > MAX_SCOPES ||
+    !tool.scopes.every((scope) => isNonEmptyString(scope, 256))
   ) {
-    errors.push(`${path}.scopes must be a non-empty array of non-empty strings`);
+    errors.push(`${path}.scopes must contain 1-${String(MAX_SCOPES)} non-empty strings of at most 256 characters`);
   }
 
   if (
@@ -145,11 +195,21 @@ function validateTool(tool: unknown, index: number, errors: string[]): void {
 }
 
 export function loadManifest(path: string): Manifest {
-  const source = readFileSync(path, "utf8");
-  const raw =
-    extname(path).toLowerCase() === ".json"
-      ? JSON.parse(source)
-      : parseYaml(source);
+  const source = readUtf8File(path);
+  const extension = extname(path).toLowerCase();
+  let raw: unknown;
+
+  if (extension === ".json") {
+    raw = JSON.parse(source) as unknown;
+  } else if (extension === ".yaml" || extension === ".yml") {
+    raw = parseYaml(source, {
+      maxAliasCount: 50,
+      strict: true,
+      uniqueKeys: true,
+    });
+  } else {
+    throw new Error("manifest path must end in .json, .yaml, or .yml");
+  }
   const result = validateManifest(raw);
 
   if (!result.ok || !result.manifest) {

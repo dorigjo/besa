@@ -91,7 +91,7 @@ Besa currently checks:
 
 The current beta has important limitations:
 
-* local unencrypted key storage
+* local key storage only (AES-256-GCM encrypted at rest; no hosted key management or HSM)
 * local JSON-based meter state with single-host file locking
 * no hosted verifier API
 * no centralized receipt retention

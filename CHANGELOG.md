@@ -8,24 +8,53 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+* AES-256-GCM key encryption at rest with scrypt KDF (N=32768, r=8, p=1);
+  `BESA_KEY_PASSPHRASE` is required for all key operations.
+* `src/keystore.ts`: `sealKeyPair` / `openKeyPair` with AEAD authentication
+  (public key DER used as AAD).
+* `src/io.ts`: `readUtf8File` (1 MB limit, strict UTF-8), `readJsonFile`,
+  `writeJsonAtomic` (write-temp-then-rename), `writeJsonExclusive`.
+* Bounded canonical JSON: node limit (100k), depth (64), bytes (1 MB).
+* Full 64-character SHA-256 public key fingerprints (was 16-character truncated).
+* Domain-separated Ed25519 signature messages (`besa:<domain>:v1\0<canonical-json>`).
+* Timing-safe public key comparison via `crypto.timingSafeEqual` in `validateKeyPair`.
+* Symlink protection for key files and trust store paths.
+* ASCII-only tool name validation (`^[a-zA-Z0-9._-]{1,256}$`) in both the
+  manifest schema and the admission engine.
+* Trust store path must end in `.json`; symlink writes are rejected.
+* Atomic budget increment: `admitAndConsume` holds a cross-process file lock
+  for the full check-and-increment cycle.
+* PID-verified stale meter lock detection and recovery.
+* S5 Sovereign Diamond logo on `npm install` (TTY only; skipped in CI).
 * Installed-package smoke test covering npm tarball installation, SDK import,
   generated CLI binary, and the complete local trust flow.
-* Regression tests for timestamp tampering, non-Ed25519 keys, non-JSON signing
-  inputs, unsigned extension fields, explicit null requests, and stale locks.
+* Dedicated security test suite covering key fingerprints, domain separation,
+  canonical JSON limits, keystore encryption, fail-closed admission, schema
+  strictness, trust timestamp validation, and bounded file reads.
+* Stale-lock-owned-by-live-process regression test.
 
 ### Changed
 
 * Manifest signatures now cover the entire artifact envelope, including
-  `signedAt`, key identity, algorithm, and manifest hash.
-* Canonicalization now accepts only finite JSON values and plain JSON objects.
+  `signedAt`, key identity, algorithm, and manifest hash — closing the
+  `signedAt` injection vector.
+* Canonicalization now accepts only finite JSON values and plain JSON objects;
+  rejects circular references, accessors, non-JSON types, and non-plain objects.
+* `besa admit` is explicitly labeled `[dry-run]`; budget is only consumed by
+  `besa receipt`.
+* Key rotation pre-computes both scrypt seals before any filesystem write.
 * CLI parsing rejects unknown, duplicate, and valueless flags.
 * The npm binary path uses npm's canonical package format.
 
 ### Security
 
+* Private key material is encrypted at rest; plaintext keys on disk are
+  migrated to AES-256-GCM sealed format on first load.
 * RSA and other non-Ed25519 DER keys are rejected before signing or trust use.
-* Meter lock release checks lock ownership before deleting the lock file.
+* Meter lock release verifies lock token ownership before unlinking.
 * Unsigned top-level fields are rejected from signed manifest artifacts.
+* Trust store is validated and re-validated on every read and before every write.
+* `npm audit --omit=dev` added to CI on all Node.js matrix versions.
 
 ## [0.1.0-beta.1] - 2026-06-18
 
