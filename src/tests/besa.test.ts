@@ -1,8 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { generateKeyPairSync } from "node:crypto";
 import {
   mkdtempSync,
   rmSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -12,7 +14,9 @@ import {
 REASON,
 addTrustAnchor,
 admit,
+admitAndConsume,
 applyKeyRotation,
+canonicalize,
 checkTrustedKey,
 createReceipt,
 createKeyRotation,
@@ -20,6 +24,7 @@ emptyTrustStore,
 generateKeyPair,
 getCount,
 hashManifest,
+hashObject,
 loadManifest,
 loadMeter,
 meterKey,
@@ -158,6 +163,64 @@ const result = verifySignedManifest(signed);
 assert.equal(result.valid, false);
 });
 
+test("tampering with signedAt breaks the manifest envelope signature", () => {
+  const keypair = generateKeyPair();
+  const signed = signManifest(sampleManifest(), keypair);
+  signed.signedAt = "2020-01-01T00:00:00.000Z";
+
+  const result = verifySignedManifest(signed);
+
+  assert.equal(result.valid, false);
+  assert.equal(result.reasonCode, "E_SIGNATURE_INVALID");
+});
+
+test("signed manifests reject unsigned extension fields", () => {
+  const keypair = generateKeyPair();
+  const signed = signManifest(sampleManifest(), keypair);
+  const extended = { ...signed, trusted: true };
+
+  const result = verifySignedManifest(extended);
+
+  assert.equal(result.valid, false);
+  assert.equal(result.reasonCode, "E_SIGNED_MANIFEST_INVALID");
+});
+
+test("canonicalize rejects values outside the JSON data model", () => {
+  assert.throws(() => canonicalize({ value: undefined }), /non-JSON/);
+  assert.throws(() => canonicalize({ value: Number.NaN }), /finite JSON/);
+  assert.throws(() => canonicalize({ value: new Date() }), /plain JSON/);
+
+  const circular: Record<string, unknown> = {};
+  circular.self = circular;
+  assert.throws(() => canonicalize(circular), /circular reference/);
+});
+
+test("canonicalize preserves prototype-named JSON properties", () => {
+  const value = JSON.parse('{"__proto__":{"polluted":true}}') as unknown;
+
+  assert.equal(
+    canonicalize(value),
+    '{"__proto__":{"polluted":true}}',
+  );
+  assert.equal((Object.prototype as { polluted?: unknown }).polluted, undefined);
+});
+
+test("key pair validation rejects non-Ed25519 key material", () => {
+  const { publicKey, privateKey } = generateKeyPairSync("rsa", {
+    modulusLength: 2048,
+  });
+  const keypair = {
+    publicKeyDer: publicKey
+      .export({ type: "spki", format: "der" })
+      .toString("base64"),
+    privateKeyDer: privateKey
+      .export({ type: "pkcs8", format: "der" })
+      .toString("base64"),
+  };
+
+  assert.equal(validateKeyPair(keypair), false);
+});
+
 test("admit allows a low-risk read tool under budget", () => {
 const decision = admit(sampleManifest(), "crm.lookup", 0);
 
@@ -210,6 +273,23 @@ assert.equal(verifyReceipt(receipt, keypair.publicKeyDer), true);
 receipt.decision = "deny";
 
 assert.equal(verifyReceipt(receipt, keypair.publicKeyDer), false);
+});
+
+test("receipt hashing preserves an explicit null request", () => {
+  const keypair = generateKeyPair();
+  const receipt = createReceipt(
+    {
+      manifestHash: "a".repeat(64),
+      toolName: "crm.lookup",
+      decision: "allow",
+      reasonCode: REASON.ALLOWED,
+      request: null,
+    },
+    keypair,
+  );
+
+  assert.equal(receipt.requestHash, hashObject(null));
+  assert.notEqual(receipt.requestHash, hashObject({}));
 });
 
 test("verifySignedManifest rejects malformed input without throwing", () => {
@@ -270,6 +350,58 @@ test("loadMeter fails closed on corrupt state", () => {
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test("meter consumption recovers an abandoned stale lock", () => {
+  const directory = mkdtempSync(join(tmpdir(), "besa-meter-stale-"));
+  const path = join(directory, "meter.json");
+  const lockPath = `${path}.lock`;
+  const manifest = sampleManifest();
+  const manifestHash = hashManifest(manifest);
+
+  try {
+    writeFileSync(lockPath, "abandoned", "utf8");
+    const old = new Date(Date.now() - 60_000);
+    utimesSync(lockPath, old, old);
+
+    const decision = admitAndConsume(
+      path,
+      manifestHash,
+      manifest,
+      "crm.lookup",
+      undefined,
+      { staleMs: 1, timeoutMs: 500, retryMs: 1 },
+    );
+
+    assert.equal(decision.decision, "allow");
+    assert.equal(
+      getCount(loadMeter(path), meterKey(manifestHash, "crm.lookup")),
+      1,
+    );
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("meter lock rejects non-finite timing options", () => {
+  const directory = mkdtempSync(join(tmpdir(), "besa-meter-timing-"));
+
+  try {
+    assert.throws(
+      () =>
+        admitAndConsume(
+          join(directory, "meter.json"),
+          "a".repeat(64),
+          sampleManifest(),
+          "crm.lookup",
+          undefined,
+          { timeoutMs: Number.NaN },
+        ),
+      /timings must be positive/,
+    );
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
 test("validateManifest rejects an invalid serverUrl", () => {
   const manifest = sampleManifest();
   manifest.serverUrl = "not-a-url";
@@ -318,6 +450,16 @@ test("validateManifest rejects an unsafe budgetLimit", () => {
 
   assert.equal(result.ok, false);
   assert.ok(result.errors.some((error) => error.includes("budgetLimit")));
+});
+
+test("validateManifest rejects non-JSON input schema values", () => {
+  const manifest = sampleManifest();
+  manifest.tools[0].inputSchema = { invalid: undefined };
+
+  const result = validateManifest(manifest);
+
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.some((error) => error.includes("only JSON values")));
 });
 
 test("verifySignedManifest fails on publicKeyId mismatch", () => {
@@ -414,6 +556,25 @@ test("trust store validation rejects duplicate key ids", () => {
 
   assert.equal(result.ok, false);
   assert.ok(result.errors.some((error) => error.includes("duplicate")));
+});
+
+test("contradictory trust lifecycle fields fail closed", () => {
+  const keypair = generateKeyPair();
+  const store = addTrustAnchor(emptyTrustStore(), keypair.publicKeyDer);
+  const invalid = {
+    ...store,
+    keys: [{ ...store.keys[0], revokedAt: new Date().toISOString() }],
+  };
+  const validation = validateTrustStore(invalid);
+  const trust = checkTrustedKey(
+    invalid,
+    keypair.publicKeyDer,
+    new Date().toISOString(),
+  );
+
+  assert.equal(validation.ok, false);
+  assert.equal(trust.valid, false);
+  assert.equal(trust.reasonCode, "E_TRUST_STORE_INVALID");
 });
 
 interface MeterWorkerInput {

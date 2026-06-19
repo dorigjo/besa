@@ -177,16 +177,29 @@ function acquireMeterLock(
   const retryMs = options.retryMs ?? 10;
   const startedAt = Date.now();
 
+  if (
+    !Number.isFinite(timeoutMs) ||
+    !Number.isFinite(staleMs) ||
+    !Number.isFinite(retryMs) ||
+    timeoutMs < 0 ||
+    staleMs <= 0 ||
+    retryMs <= 0
+  ) {
+    throw new Error("meter lock timings must be positive");
+  }
+
   mkdirSync(dirname(path), { recursive: true });
 
   while (true) {
     try {
       const descriptor = openSync(lockPath, "wx", 0o600);
+      const token = randomUUID();
       try {
         writeFileSync(
           descriptor,
           JSON.stringify({
             pid: process.pid,
+            token,
             createdAt: new Date().toISOString(),
           }) + "\n",
           "utf8",
@@ -200,7 +213,12 @@ function acquireMeterLock(
       return () => {
         closeSync(descriptor);
         try {
-          unlinkSync(lockPath);
+          const lock = JSON.parse(readFileSync(lockPath, "utf8")) as {
+            token?: unknown;
+          };
+          if (lock.token === token) {
+            unlinkSync(lockPath);
+          }
         } catch (error) {
           if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
             throw error;

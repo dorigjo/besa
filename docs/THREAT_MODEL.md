@@ -1,6 +1,6 @@
 # Besa Threat Model
 
-Status: beta (`0.1.0-beta.1`).
+Status: beta (`0.1.0-beta.2`).
 
 This document explains what Besa protects against today, what it does not protect against yet, and which risks still exist in the current MVP.
 
@@ -79,7 +79,8 @@ This protects against silent changes to declared tools, scopes, capabilities, ri
 
 ### Signature tampering
 
-Besa signs manifests with Ed25519.
+Besa signs the complete manifest envelope with Ed25519, including the manifest,
+manifest hash, algorithm, public key, public key ID, and signing timestamp.
 
 If the signature is changed, malformed, or does not match the manifest, verification fails with:
 
@@ -107,6 +108,9 @@ trusted key before a consumer can promote the replacement key.
 
 Retired keys remain valid only for artifacts timestamped before retirement and
 cannot authorize new admissions. Revoked keys are rejected for all artifacts.
+
+Artifact timestamps are covered by signatures but are supplied by the signing
+host. Besa does not currently provide an external trusted timestamp authority.
 
 ### Unsupported algorithms
 

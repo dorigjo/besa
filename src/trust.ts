@@ -102,6 +102,21 @@ function validateAnchor(value: unknown, index: number): string[] {
     errors.push(`keys[${index}].revokedAt must not be before addedAt`);
   }
 
+  if (
+    value.status === "active" &&
+    (value.retiredAt !== undefined || value.revokedAt !== undefined)
+  ) {
+    errors.push(`keys[${index}] active keys must not have lifecycle end fields`);
+  }
+
+  if (value.status === "retired" && value.revokedAt !== undefined) {
+    errors.push(`keys[${index}] retired keys must not have revokedAt`);
+  }
+
+  if (value.status === "revoked" && value.retiredAt !== undefined) {
+    errors.push(`keys[${index}] revoked keys must not have retiredAt`);
+  }
+
   return errors;
 }
 
@@ -146,11 +161,21 @@ export function emptyTrustStore(): TrustStore {
   return { version: 1, keys: [] };
 }
 
+function assertValidTrustStore(store: TrustStore): void {
+  const validation = validateTrustStore(store);
+
+  if (!validation.ok) {
+    throw new Error(`invalid trust store: ${validation.errors.join("; ")}`);
+  }
+}
+
 export function addTrustAnchor(
   store: TrustStore,
   publicKey: string,
   addedAt = new Date().toISOString(),
 ): TrustStore {
+  assertValidTrustStore(store);
+
   if (!isIsoDate(addedAt)) {
     throw new Error("addedAt must be a canonical ISO-8601 timestamp");
   }
@@ -185,6 +210,8 @@ export function revokeTrustAnchor(
   keyId: string,
   revokedAt = new Date().toISOString(),
 ): TrustStore {
+  assertValidTrustStore(store);
+
   if (!isIsoDate(revokedAt)) {
     throw new Error("revokedAt must be a canonical ISO-8601 timestamp");
   }
@@ -193,6 +220,10 @@ export function revokeTrustAnchor(
 
   if (!existing) {
     throw new Error(`trusted key '${keyId}' was not found`);
+  }
+
+  if (Date.parse(revokedAt) < Date.parse(existing.addedAt)) {
+    throw new Error("revokedAt must not be before the key was added");
   }
 
   return {
@@ -342,6 +373,8 @@ export function applyKeyRotation(
   store: TrustStore,
   rotation: KeyRotation,
 ): TrustStore {
+  assertValidTrustStore(store);
+
   const verification = verifyKeyRotation(rotation);
 
   if (!verification.valid) {
@@ -419,6 +452,15 @@ export function checkTrustedKey(
   artifactTimestamp: string,
   purpose: "verify" | "admit" = "verify",
 ): VerifyResult {
+  const storeValidation = validateTrustStore(store);
+  if (!storeValidation.ok) {
+    return {
+      valid: false,
+      reasonCode: "E_TRUST_STORE_INVALID",
+      detail: storeValidation.errors.join("; "),
+    };
+  }
+
   if (!isIsoDate(artifactTimestamp)) {
     return {
       valid: false,

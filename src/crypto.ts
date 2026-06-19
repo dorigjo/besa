@@ -11,27 +11,65 @@ export interface KeyPair {
   privateKeyDer: string;
 }
 
-function sortValue(value: unknown): unknown {
-  if (Array.isArray(value)) {
-    return value.map(sortValue);
+function sortValue(
+  value: unknown,
+  path: string,
+  seen: WeakSet<object>,
+): unknown {
+  if (
+    value === null ||
+    typeof value === "string" ||
+    typeof value === "boolean"
+  ) {
+    return value;
   }
 
-  if (value !== null && typeof value === "object") {
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) {
+      throw new TypeError(`${path} must be a finite JSON number`);
+    }
+    return value;
+  }
+
+  if (typeof value !== "object") {
+    throw new TypeError(`${path} contains a non-JSON value`);
+  }
+
+  if (seen.has(value)) {
+    throw new TypeError(`${path} contains a circular reference`);
+  }
+
+  seen.add(value);
+
+  try {
+    if (Array.isArray(value)) {
+      return value.map((item, index) =>
+        sortValue(item, `${path}[${String(index)}]`, seen),
+      );
+    }
+
+    const prototype = Object.getPrototypeOf(value) as object | null;
+    if (prototype !== Object.prototype && prototype !== null) {
+      throw new TypeError(`${path} must contain only plain JSON objects`);
+    }
+
     const input = value as Record<string, unknown>;
-    const output: Record<string, unknown> = {};
+    const output = Object.create(null) as Record<string, unknown>;
 
     for (const key of Object.keys(input).sort()) {
-      output[key] = sortValue(input[key]);
+      output[key] = sortValue(input[key], `${path}.${key}`, seen);
     }
 
     return output;
+  } finally {
+    seen.delete(value);
   }
-
-  return value;
 }
 
 export function canonicalize(value: unknown): string {
-  const canonical = JSON.stringify(sortValue(value));
+  const canonical = JSON.stringify(
+    sortValue(value, "$", new WeakSet<object>()),
+  );
 
   if (canonical === undefined) {
     throw new TypeError("value cannot be canonicalized");
@@ -62,19 +100,31 @@ export function generateKeyPair(): KeyPair {
 }
 
 export function publicKeyFromDer(publicKeyDer: string): KeyObject {
-  return createPublicKey({
+  const key = createPublicKey({
     key: Buffer.from(publicKeyDer, "base64"),
     type: "spki",
     format: "der",
   });
+
+  if (key.asymmetricKeyType !== "ed25519") {
+    throw new TypeError("public key must be Ed25519");
+  }
+
+  return key;
 }
 
 export function privateKeyFromDer(privateKeyDer: string): KeyObject {
-  return createPrivateKey({
+  const key = createPrivateKey({
     key: Buffer.from(privateKeyDer, "base64"),
     type: "pkcs8",
     format: "der",
   });
+
+  if (key.asymmetricKeyType !== "ed25519") {
+    throw new TypeError("private key must be Ed25519");
+  }
+
+  return key;
 }
 
 export function publicKeyId(publicKeyDer: string): string {

@@ -16,7 +16,7 @@ databases. Besa makes those calls verifiable.
 Besa validates and signs an MCP-style tool manifest, verifies it before use,
 admits or denies a tool call, and issues a signed receipt for the decision.
 
-> **Beta.** `0.1.0-beta.1` is a local developer beta. It is not production key
+> **Beta.** `0.1.0-beta.2` is a local developer beta. It is not production key
 > management, authorization, or audit storage.
 
 ## Trust flow
@@ -39,6 +39,7 @@ admission decision, request hash, and signed execution receipt.
 
 - YAML and JSON manifest loading with runtime schema validation
 - Ed25519 key generation, manifest signing, and verification
+- Whole-envelope signatures binding manifest, hash, key, algorithm, and time
 - Explicit public-key trust anchors with active, retired, and revoked states
 - Old-key-signed rotation proofs and local private-key archival
 - Stable canonical manifest hashing with SHA-256
@@ -190,6 +191,7 @@ npm ci
 npm run build
 npm test
 npm run smoke
+npm run test:package
 npm pack --dry-run
 ```
 
@@ -208,6 +210,7 @@ See [SECURITY.md](SECURITY.md) and
 - File-based trust and meter state, intended for one host
 - No hardware-backed or remote key custody
 - No distributed replay protection
+- No external trusted timestamp authority
 - No hosted verifier or receipt retention
 - No production identity or authorization integration
 

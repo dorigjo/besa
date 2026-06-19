@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { extname } from "node:path";
 import { parse as parseYaml } from "yaml";
 import type { CapabilityType, Manifest, RiskLevel } from "./types.js";
+import { canonicalize } from "./crypto.js";
 
 const CAPABILITIES: CapabilityType[] = ["read", "write", "destructive"];
 const RISKS: RiskLevel[] = ["low", "medium", "high"];
@@ -82,6 +83,13 @@ export function validateManifest(raw: unknown): ValidationResult {
         seen.add(tool.name);
       }
     });
+  }
+
+  try {
+    canonicalize(raw);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    errors.push(`manifest must contain only JSON values: ${message}`);
   }
 
   if (errors.length > 0) {
