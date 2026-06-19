@@ -46,6 +46,21 @@ export interface ReceiptInput {
   grantReasonCode?: string;
 }
 
+type ManifestSignaturePayload = Omit<SignedManifest, "signature">;
+
+function manifestSignaturePayload(
+  signed: Omit<SignedManifest, "signature">,
+): ManifestSignaturePayload {
+  return {
+    manifest: signed.manifest,
+    manifestHash: signed.manifestHash,
+    algorithm: signed.algorithm,
+    publicKey: signed.publicKey,
+    publicKeyId: signed.publicKeyId,
+    signedAt: signed.signedAt,
+  };
+}
+
 function isObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
@@ -85,6 +100,22 @@ export function validateSignedManifest(
   }
 
   const errors: string[] = [];
+  const allowedFields = new Set([
+    "manifest",
+    "manifestHash",
+    "algorithm",
+    "publicKey",
+    "publicKeyId",
+    "signature",
+    "signedAt",
+  ]);
+
+  for (const field of Object.keys(value)) {
+    if (!allowedFields.has(field)) {
+      errors.push(`unexpected signed manifest field '${field}'`);
+    }
+  }
+
   const manifestResult = validateManifest(value.manifest);
 
   if (!manifestResult.ok) {
@@ -221,21 +252,23 @@ export function signManifest(manifest: Manifest, keypair: KeyPair): SignedManife
     throw new Error("invalid or mismatched Ed25519 key pair");
   }
 
-  const canonical = canonicalize(validation.manifest);
+  const body = {
+    manifest: validation.manifest,
+    manifestHash: hashManifest(validation.manifest),
+    algorithm: "ed25519" as const,
+    publicKey: keypair.publicKeyDer,
+    publicKeyId: publicKeyId(keypair.publicKeyDer),
+    signedAt: new Date().toISOString(),
+  };
   const signature = ed25519Sign(
     null,
-    Buffer.from(canonical, "utf8"),
+    Buffer.from(canonicalize(manifestSignaturePayload(body)), "utf8"),
     privateKeyFromDer(keypair.privateKeyDer),
   );
 
   return {
-    manifest: validation.manifest,
-    manifestHash: hashManifest(validation.manifest),
-    algorithm: "ed25519",
-    publicKey: keypair.publicKeyDer,
-    publicKeyId: publicKeyId(keypair.publicKeyDer),
+    ...body,
     signature: signature.toString("base64"),
-    signedAt: new Date().toISOString(),
   };
 }
 
@@ -263,7 +296,6 @@ export function verifySignedManifest(value: unknown): VerifyResult {
   }
 
   const signed = validation.signedManifest;
-  const canonical = canonicalize(signed.manifest);
   const expectedHash = hashManifest(signed.manifest);
 
   if (expectedHash !== signed.manifestHash) {
@@ -285,7 +317,10 @@ export function verifySignedManifest(value: unknown): VerifyResult {
   try {
     const valid = ed25519Verify(
       null,
-      Buffer.from(canonical, "utf8"),
+      Buffer.from(
+        canonicalize(manifestSignaturePayload(signed)),
+        "utf8",
+      ),
       publicKeyFromDer(signed.publicKey),
       Buffer.from(signed.signature, "base64"),
     );
@@ -325,6 +360,21 @@ export function createReceipt(input: ReceiptInput, keypair: KeyPair): Receipt {
     throw new Error("reasonCode must be a non-empty string");
   }
 
+  if (input.decision !== "allow" && input.decision !== "deny") {
+    throw new Error("decision must be allow or deny");
+  }
+
+  if (input.agentId !== undefined && !isNonEmptyString(input.agentId)) {
+    throw new Error("agentId must be a non-empty string when present");
+  }
+
+  if (
+    input.grantReasonCode !== undefined &&
+    !isNonEmptyString(input.grantReasonCode)
+  ) {
+    throw new Error("grantReasonCode must be a non-empty string when present");
+  }
+
   if (!validateKeyPair(keypair)) {
     throw new Error("invalid or mismatched Ed25519 key pair");
   }
@@ -336,9 +386,11 @@ export function createReceipt(input: ReceiptInput, keypair: KeyPair): Receipt {
     decision: input.decision,
     reasonCode: input.reasonCode,
     timestamp: new Date().toISOString(),
-    requestHash: hashObject(input.request ?? {}),
-    agentId: input.agentId,
-    grantReasonCode: input.grantReasonCode,
+    requestHash: hashObject(input.request === undefined ? {} : input.request),
+    ...(input.agentId === undefined ? {} : { agentId: input.agentId }),
+    ...(input.grantReasonCode === undefined
+      ? {}
+      : { grantReasonCode: input.grantReasonCode }),
     publicKeyId: publicKeyId(keypair.publicKeyDer),
     algorithm: "ed25519",
   };

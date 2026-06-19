@@ -4,6 +4,29 @@ All notable changes to this project are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-beta.2] - 2026-06-19
+
+### Added
+
+* Installed-package smoke test covering npm tarball installation, SDK import,
+  generated CLI binary, and the complete local trust flow.
+* Regression tests for timestamp tampering, non-Ed25519 keys, non-JSON signing
+  inputs, unsigned extension fields, explicit null requests, and stale locks.
+
+### Changed
+
+* Manifest signatures now cover the entire artifact envelope, including
+  `signedAt`, key identity, algorithm, and manifest hash.
+* Canonicalization now accepts only finite JSON values and plain JSON objects.
+* CLI parsing rejects unknown, duplicate, and valueless flags.
+* The npm binary path uses npm's canonical package format.
+
+### Security
+
+* RSA and other non-Ed25519 DER keys are rejected before signing or trust use.
+* Meter lock release checks lock ownership before deleting the lock file.
+* Unsigned top-level fields are rejected from signed manifest artifacts.
+
 ## [0.1.0-beta.1] - 2026-06-18
 
 ### Added
@@ -144,3 +167,4 @@ Initial alpha / developer preview of Besa — signed trust infrastructure for AI
 [0.1.0-alpha.1]: https://github.com/dorigjo/besa/releases/tag/v0.1.0-alpha.1
 [0.1.0-beta.0]: https://github.com/dorigjo/besa/releases/tag/v0.1.0-beta.0
 [0.1.0-beta.1]: https://github.com/dorigjo/besa/releases/tag/v0.1.0-beta.1
+[0.1.0-beta.2]: https://github.com/dorigjo/besa/releases/tag/v0.1.0-beta.2

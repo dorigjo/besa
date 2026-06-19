@@ -1,6 +1,6 @@
 # Beta Release Checklist
 
-Release gate for `0.1.0-beta.1`.
+Release gate for `0.1.0-beta.2`.
 
 ## Quality
 
@@ -10,6 +10,7 @@ npx tsc --noEmit
 npm run build
 npm test
 npm run smoke
+npm run test:package
 npm audit --omit=dev
 ```
 
@@ -18,6 +19,7 @@ npm audit --omit=dev
 - [ ] Unit tests pass.
 - [ ] The isolated smoke test covers load, sign, verify, allow, deny, receipt,
       receipt verification, trust pinning, key rotation, and grant checks.
+- [ ] The packed tarball installs in an empty project and exposes its SDK and CLI.
 - [ ] Parallel worker tests prove local call budgets cannot be overspent.
 - [ ] Production dependency audit reports no vulnerabilities.
 
@@ -48,9 +50,9 @@ git diff --cached --name-only
 
 ## Version and documentation
 
-- [ ] `package.json` and `package-lock.json` both use `0.1.0-beta.1`.
+- [ ] `package.json` and `package-lock.json` both use `0.1.0-beta.2`.
 - [ ] `README.md`, `SECURITY.md`, and `docs/THREAT_MODEL.md` say beta.
-- [ ] `CHANGELOG.md` and `docs/releases/v0.1.0-beta.1.md` describe the release.
+- [ ] `CHANGELOG.md` and `docs/releases/v0.1.0-beta.2.md` describe the release.
 - [ ] PowerShell examples cover every CLI command.
 - [ ] Limitations still state that Besa is not production-ready.
 
@@ -59,10 +61,10 @@ git diff --cached --name-only
 Only after every gate is green:
 
 ```powershell
-git commit -m "Add trust anchors and key rotation"
-git tag v0.1.0-beta.1
+git commit -m "Harden Besa beta trust artifacts"
+git tag v0.1.0-beta.2
 git push origin main
-git push origin v0.1.0-beta.1
+git push origin v0.1.0-beta.2
 npm publish --access public --tag beta
 ```
 

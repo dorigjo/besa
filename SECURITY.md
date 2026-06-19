@@ -2,7 +2,7 @@
 
 ## Status: beta
 
-Besa is a local **developer beta** (`0.1.0-beta.1`).
+Besa is a local **developer beta** (`0.1.0-beta.2`).
 
 The project is intended for local development, security review, and early integration feedback.
 
@@ -79,6 +79,7 @@ Besa currently checks:
 * public key ID consistency
 * explicit public-key trust status
 * signed key-rotation continuity
+* whole-envelope manifest signatures, including `signedAt`
 * supported signing algorithm
 * declared tool capability
 * declared risk level
@@ -98,6 +99,7 @@ The current beta has important limitations:
 * no SSO
 * no hardware-backed key storage
 * no replay protection across distributed systems
+* no externally trusted timestamp authority
 * no hardware-backed or centrally governed key rotation
 * no formal compliance certification
 * no guarantee of regulatory compliance

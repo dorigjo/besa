@@ -67,6 +67,21 @@ const FLAGS_WITH_VALUES = new Set([
   "--request",
   "--trust",
 ]);
+const COMMAND_FLAGS: Record<string, ReadonlySet<string>> = {
+  keys: new Set(["--trust"]),
+  trust: new Set(["--trust"]),
+  load: new Set(),
+  sign: new Set(["--trust"]),
+  verify: new Set(["--trust"]),
+  admit: new Set(["--trust", "--agent", "--grants"]),
+  receipt: new Set([
+    "--trust",
+    "--request",
+    "--agent",
+    "--grants",
+  ]),
+  "verify-receipt": new Set(["--trust"]),
+};
 
 function readJson<T>(path: string): T {
   return JSON.parse(readFileSync(path, "utf8")) as T;
@@ -195,16 +210,47 @@ function signedOutPath(manifestPath: string): string {
 
 function flagValue(name: string): string | undefined {
   const index = process.argv.indexOf(name);
-  return index >= 0 ? process.argv[index + 1] : undefined;
+  if (index < 0) {
+    return undefined;
+  }
+
+  const value = process.argv[index + 1];
+  if (!value || value.startsWith("--")) {
+    throw new Error(`${name} requires a value`);
+  }
+
+  return value;
 }
 
-function positionals(args: string[]): string[] {
+function positionals(
+  args: string[],
+  allowedFlags: ReadonlySet<string>,
+): string[] {
   const values: string[] = [];
+  const seenFlags = new Set<string>();
 
   for (let index = 0; index < args.length; index += 1) {
     const value = args[index];
 
-    if (value && FLAGS_WITH_VALUES.has(value)) {
+    if (value?.startsWith("-")) {
+      if (!FLAGS_WITH_VALUES.has(value)) {
+        throw new Error(`unknown flag '${value}'`);
+      }
+
+      if (!allowedFlags.has(value)) {
+        throw new Error(`flag '${value}' is not supported by this command`);
+      }
+
+      if (seenFlags.has(value)) {
+        throw new Error(`duplicate flag '${value}'`);
+      }
+
+      const flagArgument = args[index + 1];
+      if (!flagArgument || flagArgument.startsWith("--")) {
+        throw new Error(`${value} requires a value`);
+      }
+
+      seenFlags.add(value);
       index += 1;
       continue;
     }
@@ -269,6 +315,10 @@ function cmdKeys(action?: string): void {
 
   if (action) {
     throw new Error(`unknown keys action '${action}'`);
+  }
+
+  if (flagValue("--trust")) {
+    throw new Error("--trust is only supported by keys rotate");
   }
 
   const keypair = loadOrCreateKeyPair();
@@ -356,6 +406,9 @@ function cmdTrust(action: string, value?: string): void {
       cmdTrustRevoke(value);
       break;
     case "list":
+      if (value) {
+        throw new Error("trust list does not accept a positional value");
+      }
       cmdTrustList();
       break;
     default:
@@ -423,13 +476,17 @@ function denyFromVerification(
 
 export function grantGate(toolName: string): AdmissionDecision | undefined {
   const grantsPath = flagValue("--grants");
+  const agentId = flagValue("--agent");
+
+  if (Boolean(grantsPath) !== Boolean(agentId)) {
+    throw new Error("--agent and --grants must be provided together");
+  }
 
   if (!grantsPath) {
     return undefined;
   }
 
-  const agentId = flagValue("--agent") ?? "";
-  const grant = checkGrant(loadGrants(grantsPath), agentId, toolName);
+  const grant = checkGrant(loadGrants(grantsPath), agentId ?? "", toolName);
 
   return {
     decision: grant.granted ? "allow" : "deny",
@@ -678,26 +735,38 @@ function usage(): void {
   );
 }
 
-function requireArgs(args: string[], expected: number, command: string): void {
-  if (args.length < expected) {
+function requireArgs(
+  args: string[],
+  minimum: number,
+  command: string,
+  maximum = minimum,
+): void {
+  if (args.length < minimum || args.length > maximum) {
+    const expected =
+      minimum === maximum
+        ? String(minimum)
+        : `${String(minimum)}-${String(maximum)}`;
     throw new Error(
-      command + " requires " + String(expected) + " argument(s)",
+      `${command} requires ${expected} argument(s), received ${String(args.length)}`,
     );
   }
 }
 
 function main(argv: string[]): void {
   const command = argv[0] ?? "";
-  const args = positionals(argv.slice(1));
 
   try {
+    const allowedFlags = COMMAND_FLAGS[command] ?? new Set<string>();
+    const args = positionals(argv.slice(1), allowedFlags);
+
     switch (command) {
       case "keys":
+        requireArgs(args, 0, command, 1);
         cmdKeys(args[0]);
         break;
 
       case "trust":
-        requireArgs(args, 1, command);
+        requireArgs(args, 1, command, 2);
         cmdTrust(args[0] ?? "", args[1]);
         break;
 
@@ -722,12 +791,12 @@ function main(argv: string[]): void {
         break;
 
       case "receipt":
-        requireArgs(args, 1, command);
+        requireArgs(args, 1, command, 2);
         cmdReceipt(args[0] ?? "", args[1]);
         break;
 
       case "verify-receipt":
-        requireArgs(args, 1, command);
+        requireArgs(args, 1, command, 2);
         cmdVerifyReceipt(args[0] ?? "", args[1]);
         break;
 
