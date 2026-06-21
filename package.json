@@ -1,7 +1,7 @@
 {
   "name": "@dorigjo/besa",
-  "version": "0.1.0-beta.2",
-  "description": "Signed trust infrastructure for AI-agent tools.",
+  "version": "0.1.0-beta.3",
+  "description": "Cryptographic execution evidence for AI-agent tool calls: signed manifests, admission decisions, and tamper-evident receipts.",
   "type": "module",
   "main": "./dist/sdk.js",
   "types": "./dist/sdk.d.ts",
@@ -25,11 +25,15 @@
   "keywords": [
     "mcp",
     "ai-agents",
+    "agent-security",
     "trust",
+    "execution-evidence",
+    "audit-readiness",
     "ed25519",
     "signing",
     "manifest",
-    "receipt"
+    "receipt",
+    "attestation"
   ],
   "repository": {
     "type": "git",

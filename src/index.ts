@@ -6,7 +6,8 @@ import {
   lstatSync,
   mkdirSync,
 } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import type {
   AdmissionDecision,
   KeyRotation,
@@ -758,38 +759,60 @@ function cmdVerifyReceipt(receiptFile: string, manifestFile?: string): void {
   console.log("OK: receipt and signed manifest form a valid trust chain");
 }
 
+function readVersion(): string {
+  try {
+    const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)));
+    const pkg = readJsonFile(join(packageRoot, "package.json")) as {
+      version?: unknown;
+    };
+    return typeof pkg.version === "string" ? pkg.version : "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+
 function usage(): void {
   console.log(
     [
       "Besa - signed trust infrastructure for AI-agent tools",
       "",
       "Usage:",
-      "  besa keys",
-      "  besa keys rotate [--trust <trust.json>]",
-      "  besa trust add     <signed-manifest.json> [--trust <trust.json>]",
-      "  besa trust apply   <rotation.json> [--trust <trust.json>]",
-      "  besa trust revoke  <public-key-id> [--trust <trust.json>]",
-      "  besa trust list    [--trust <trust.json>]",
-      "  besa load           <manifest.yaml>",
-      "  besa sign           <manifest.yaml> [--trust <trust.json>]",
-      "  besa verify         <manifest.signed.json> [--trust <trust.json>]",
-      "  besa admit          <manifest.signed.json> <tool-name> [--trust <trust.json>] [--agent <agent-id> --grants <grants.yaml>]",
-      "  besa receipt        <tool-name> [manifest.signed.json] [--trust <trust.json>] [--request <request.json>] [--agent <agent-id> --grants <grants.yaml>]",
-      "  besa verify-receipt <receipt.json> [manifest.signed.json] [--trust <trust.json>]",
+      "  besa <command> [arguments] [options]",
+      "  besa --help | --version",
+      "",
+      "Commands:",
+      "  keys                 Show the local signing key, generating one if absent",
+      "  keys rotate          Rotate the signing key and emit a signed rotation proof",
+      "  trust add            Anchor a signed manifest's public key in a trust store",
+      "  trust apply          Apply a signed rotation proof to a trust store",
+      "  trust revoke         Revoke a public key in a trust store",
+      "  trust list           List trusted, retired, and revoked keys",
+      "  load                 Load and validate a manifest (YAML or JSON)",
+      "  sign                 Sign a manifest and anchor the publisher key",
+      "  verify               Verify a signed manifest against a trust store",
+      "  admit                Check whether a tool call is allowed (dry-run)",
+      "  receipt              Enforce budget and issue a signed execution receipt",
+      "  verify-receipt       Verify a receipt and its manifest trust chain",
+      "",
+      "Options:",
+      "  --trust <file>       Trust store path (default: .besa/trust.json)",
+      "  --agent <id>         Scope admission to a named agent (admit, receipt)",
+      "  --grants <file>      Grant set for agent-scoped admission (admit, receipt)",
+      "  --request <file>     Request payload hashed into the receipt (receipt)",
       "",
       "Examples:",
       "  besa keys",
-      "  besa keys rotate",
-      "  besa load examples/manifest.yaml",
       "  besa sign examples/manifest.yaml",
       "  besa trust add examples/manifest.signed.json --trust consumer-trust.json",
-      "  besa trust list --trust consumer-trust.json",
       "  besa verify examples/manifest.signed.json",
       "  besa admit examples/manifest.signed.json crm.lookup",
       "  besa admit examples/manifest.signed.json crm.lookup --agent agent-alpha --grants examples/grants.yaml",
-      "  besa receipt crm.lookup examples/manifest.signed.json",
       "  besa receipt crm.lookup examples/manifest.signed.json --request examples/request.json",
       "  besa verify-receipt .besa/receipts/<receipt-id>.json examples/manifest.signed.json",
+      "",
+      "Security:",
+      "  Local developer beta. Private keys are encrypted at rest (AES-256-GCM + scrypt).",
+      "  Never commit the .besa/ directory. Not hardened for production use yet.",
     ].join("\n"),
   );
 }
@@ -857,6 +880,12 @@ function main(argv: string[]): void {
       case "verify-receipt":
         requireArgs(args, 1, command, 2);
         cmdVerifyReceipt(args[0] ?? "", args[1]);
+        break;
+
+      case "version":
+      case "--version":
+      case "-v":
+        console.log("besa " + readVersion());
         break;
 
       case "":
