@@ -4,6 +4,20 @@ All notable changes to this project are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-beta.3] - 2026-06-21
+
+### Changed
+
+* Prepared final beta release metadata.
+* Clarified public-safe legal messaging boundaries.
+* Updated release preparation workflow for GitHub Release tarball distribution.
+
+### Notes
+
+* No npm publish for this beta due to npm account access recovery.
+* Distribution remains GitHub Release tarball.
+* Besa does not guarantee compliance, prevent fines, or replace legal, security, risk, or compliance work.
+
 ## [0.1.0-beta.2] - 2026-06-19
 
 ### Added
@@ -197,3 +211,4 @@ Initial alpha / developer preview of Besa — signed trust infrastructure for AI
 [0.1.0-beta.0]: https://github.com/dorigjo/besa/releases/tag/v0.1.0-beta.0
 [0.1.0-beta.1]: https://github.com/dorigjo/besa/releases/tag/v0.1.0-beta.1
 [0.1.0-beta.2]: https://github.com/dorigjo/besa/releases/tag/v0.1.0-beta.2
+[0.1.0-beta.3]: https://github.com/dorigjo/besa/releases/tag/v0.1.0-beta.3

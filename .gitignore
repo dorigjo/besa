@@ -147,5 +147,16 @@ vite.config.ts.timestamp-*
 .besa/
 examples/manifest.signed.json
 
-# Local strategy/spec doc - kept out of the public repo
+# Local strategy/spec docs - kept out of the public repo
+# (AGENTS.md is the same build spec as CLAUDE.md; both stay private)
 CLAUDE.md
+AGENTS.md
+
+# Internal strategy docs — keep out of the public repo
+PRICING_STRATEGY.md
+GLOBAL_GTM_STRATEGY.md
+PRODUCT_ROADMAP.md
+
+# Release notes are for GitHub Release copy-paste only — never committed
+# (.tgz tarballs are already ignored above)
+release-notes*.md
