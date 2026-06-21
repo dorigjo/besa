@@ -18,6 +18,20 @@
 
 ---
 
+## Early Access
+
+Besa 0.1.0-beta.2 is available as a GitHub Release tarball while npm publishing is pending.
+
+Install:
+
+```bash
+npm install https://github.com/dorigjo/besa/releases/download/v0.1.0-beta.2/dorigjo-besa-0.1.0-beta.2.tgz
+```
+
+See [EARLY_ACCESS.md](EARLY_ACCESS.md) for integrity hash, quickstart, and known limitations.
+
+---
+
 AI agents are calling real systems: CRMs, payment APIs, deployment pipelines,
 databases. Every call is a liability.
 
