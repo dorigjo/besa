@@ -11,6 +11,8 @@ import {
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
+process.env.BESA_KEY_PASSPHRASE ??= "besa-package-smoke-test-passphrase-2026!!";
+
 const repositoryRoot = resolve(".");
 const workspace = mkdtempSync(join(tmpdir(), "besa-package-smoke-"));
 const installRoot = join(workspace, "consumer");
