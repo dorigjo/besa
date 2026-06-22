@@ -13,22 +13,7 @@
 <p align="center">
   <a href="https://github.com/dorigjo/besa/actions/workflows/ci.yml"><img src="https://github.com/dorigjo/besa/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
   <a href="https://www.npmjs.com/package/@dorigjo/besa"><img src="https://img.shields.io/npm/v/@dorigjo/besa" alt="npm" /></a>
-  <img src="https://img.shields.io/badge/public_release-coming_soon-C1121F?labelColor=003049" alt="Public release coming soon" />
 </p>
-
----
-
-## Early Access
-
-Besa 0.1.0-beta.4 is available as a GitHub Release tarball while npm publishing is pending.
-
-Install:
-
-```bash
-npm install https://github.com/dorigjo/besa/releases/download/v0.1.0-beta.4/dorigjo-besa-0.1.0-beta.4.tgz
-```
-
-See [EARLY_ACCESS.md](EARLY_ACCESS.md) for integrity hash, quickstart, and known limitations.
 
 ---
 
@@ -36,8 +21,8 @@ Besa creates cryptographic execution evidence for AI-agent tool calls. Every
 admission decision is signed. Every signed receipt is tamper-evident and
 independently verifiable.
 
-> **Beta.** `0.1.0-beta.4` is a local developer beta. Public release coming soon.
-> Enterprise inquiry: [open an issue](https://github.com/dorigjo/besa/issues).
+> **Beta.** `0.1.0-beta.5` is a public developer beta. Not yet production-ready.
+> Feedback and issues: [github.com/dorigjo/besa/issues](https://github.com/dorigjo/besa/issues).
 
 ---
 
@@ -81,16 +66,13 @@ all tamper-evident. Changing any field causes verification to fail.
 ## Install
 
 ```bash
-npm install @dorigjo/besa@beta
+npm install @dorigjo/besa
 ```
 
-Or build from source:
+Pin the beta channel explicitly:
 
 ```bash
-git clone https://github.com/dorigjo/besa
-cd besa
-npm ci
-npm run build
+npm install @dorigjo/besa@beta
 ```
 
 Set the key passphrase before any signing operation:
@@ -99,33 +81,45 @@ Set the key passphrase before any signing operation:
 export BESA_KEY_PASSPHRASE="your-passphrase-at-least-16-bytes"
 ```
 
+### Build from source
+
+```bash
+git clone https://github.com/dorigjo/besa
+cd besa
+npm ci
+npm run build
+```
+
 ---
 
 ## Quickstart
 
 ```bash
+# Show available commands
+npx besa --help
+
 # Generate or load the local signing key
-node dist/index.js keys
+npx besa keys
 
 # Validate the manifest (dry-run, no signing)
-node dist/index.js load examples/manifest.yaml
+npx besa load examples/manifest.yaml
 
 # Sign the manifest
-node dist/index.js sign examples/manifest.yaml
+npx besa sign examples/manifest.yaml
 
 # Verify the signature
-node dist/index.js verify examples/manifest.signed.json
+npx besa verify examples/manifest.signed.json
 
 # Admission dry-run (does not consume budget)
-node dist/index.js admit examples/manifest.signed.json crm.lookup   # → allow
-node dist/index.js admit examples/manifest.signed.json crm.delete   # → deny RISK_BLOCKED
+npx besa admit examples/manifest.signed.json crm.lookup   # → allow
+npx besa admit examples/manifest.signed.json crm.delete   # → deny RISK_BLOCKED
 
 # Issue a signed receipt (consumes budget)
-node dist/index.js receipt crm.lookup examples/manifest.signed.json \
+npx besa receipt crm.lookup examples/manifest.signed.json \
   --request examples/request.json
 
 # Verify the receipt chain
-node dist/index.js verify-receipt .besa/receipts/<id>.json \
+npx besa verify-receipt .besa/receipts/<id>.json \
   examples/manifest.signed.json
 ```
 
@@ -133,39 +127,39 @@ node dist/index.js verify-receipt .besa/receipts/<id>.json \
 
 ```powershell
 $env:BESA_KEY_PASSPHRASE = "your-passphrase-at-least-16-bytes"
-node .\dist\index.js keys
-node .\dist\index.js sign .\examples\manifest.yaml
-node .\dist\index.js verify .\examples\manifest.signed.json
-node .\dist\index.js admit .\examples\manifest.signed.json crm.lookup
-node .\dist\index.js receipt crm.lookup .\examples\manifest.signed.json `
-  --request .\examples\request.json
+npx besa keys
+npx besa sign examples/manifest.yaml
+npx besa verify examples/manifest.signed.json
+npx besa admit examples/manifest.signed.json crm.lookup
+npx besa receipt crm.lookup examples/manifest.signed.json `
+  --request examples/request.json
 
 $receipt = Get-ChildItem .\.besa\receipts\*.json |
   Sort-Object LastWriteTime -Descending | Select-Object -First 1
-node .\dist\index.js verify-receipt $receipt.FullName .\examples\manifest.signed.json
+npx besa verify-receipt $receipt.FullName examples/manifest.signed.json
 ```
 
 ### Consumer trust (separate system)
 
 ```bash
 # Pin the publisher's public key
-node dist/index.js trust add examples/manifest.signed.json \
+npx besa trust add examples/manifest.signed.json \
   --trust consumer-trust.json
 
 # Verify against a pinned trust anchor (fails without it)
-node dist/index.js verify examples/manifest.signed.json \
+npx besa verify examples/manifest.signed.json \
   --trust consumer-trust.json
 ```
 
 ### Key rotation
 
 ```bash
-node dist/index.js keys rotate
+npx besa keys rotate
 
-node dist/index.js trust apply .besa/rotations/<rotation>.json \
+npx besa trust apply .besa/rotations/<rotation>.json \
   --trust consumer-trust.json
 
-node dist/index.js sign examples/manifest.yaml   # re-sign under the new key
+npx besa sign examples/manifest.yaml   # re-sign under the new key
 ```
 
 The previous key becomes `retired`: artifacts signed before rotation remain
@@ -272,7 +266,7 @@ time under a specific key.
 
 - Ed25519 signatures (256-bit security) on the complete artifact envelope
 - AES-256-GCM key encryption at rest with scrypt KDF (N=32768, r=8, p=1)
-- SHA-256 manifest hashing and full 64-bit SHA-256 public key fingerprints
+- SHA-256 manifest hashing and full 256-bit (64-hex-character) SHA-256 public key fingerprints
 - Domain-separated signature messages (`besa:<domain>:v1\0<canonical-json>`)
 - Timing-safe public key comparison via `crypto.timingSafeEqual`
 

@@ -4,6 +4,28 @@ All notable changes to this project are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-beta.5] - 2026-06-23
+
+### Changed
+
+* Published to npm as primary distribution channel (`@dorigjo/besa@beta`).
+* Updated README install section: `npm install @dorigjo/besa` is now the primary command; `@beta` pin is listed as secondary.
+* Updated README quickstart to use `npx besa` throughout; removed all `node dist/index.js` invocations from public documentation.
+* Updated the landing page (`site/` and `docs/`) quickstart to `npm install @dorigjo/besa` and `npx besa`.
+* Removed "public release coming soon" badge and the "Early Access" tarball-install section from README.
+* Updated beta note from beta.4 to beta.5 and from "local developer beta" to "public developer beta".
+* Bumped the version reference in `SECURITY.md` to beta.5.
+* "Build from source" is now a distinct `###` subsection under Install.
+
+### Fixed
+
+* Corrected the SHA-256 public-key fingerprint wording in the README security model to describe full 256-bit (64-hex-character) fingerprints.
+
+### Notes
+
+* On publish, the `latest` and `beta` dist-tags both point to this release, so `npm install @dorigjo/besa` resolves to it; the `alpha` dist-tag is unchanged.
+* Besa does not guarantee compliance, prevent fines, or replace legal, security, risk, or compliance work.
+
 ## [0.1.0-beta.4] - 2026-06-22
 
 ### Changed
@@ -232,3 +254,4 @@ Initial alpha / developer preview of Besa — signed trust infrastructure for AI
 [0.1.0-beta.2]: https://github.com/dorigjo/besa/releases/tag/v0.1.0-beta.2
 [0.1.0-beta.3]: https://github.com/dorigjo/besa/releases/tag/v0.1.0-beta.3
 [0.1.0-beta.4]: https://github.com/dorigjo/besa/releases/tag/v0.1.0-beta.4
+[0.1.0-beta.5]: https://github.com/dorigjo/besa/releases/tag/v0.1.0-beta.5

@@ -12,6 +12,10 @@
   /* Primitive */
   --red-600:  #C1121F;
   --navy-900: #003049;
+  --forest:   #1B3A2D;
+  --canopy:   #2E6B4F;
+  --sage:     #A8D5B5;
+  --ivory:    #F5F1E6;
 
   /* Semantic */
   --color-accent:        var(--red-600);
