@@ -13,7 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 * Removed unused `--parchment-50` CSS token from `site/styles.css` and `docs/styles.css`.
 * Changed postinstall ANSI color from true-color (`\x1b[38;2;193;18;31m`) to standard 16-color (`\x1b[31m`) for broader terminal compatibility including Windows conhost.
 * Added legal disclaimer footer to `site/index.html` and `docs/index.html`: Besa does not guarantee regulatory compliance, prevent fines, or replace legal or compliance counsel.
-* Removed GTM and compliance-framing language from `README.md`: replaced "Every call is a liability" and "compliance team" copy with factual description; removed regulatory framework table.
+* Removed marketing-framing language from `README.md`: replaced "Every call is a liability" and "compliance team" copy with factual description; removed regulatory framework table.
 * Updated browser theme-color meta tag from `#FDF0D5` to `#fafafa` in both HTML entry points.
 * Updated page `<title>` and `<meta name="description">` to reflect current positioning: "Signed Trust for AI-Agent Tools".
 * Updated Early Access README to reference the beta.4 tarball URL.
