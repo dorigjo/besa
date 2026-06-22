@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
@@ -34,7 +35,8 @@ import {
 } from "../sdk.js";
 import { MAX_ARTIFACT_BYTES, readUtf8File } from "../io.js";
 
-const PASSPHRASE = "test-only-passphrase-32-bytes!!";
+const PASSPHRASE =
+  process.env.BESA_KEY_PASSPHRASE ?? randomBytes(32).toString("base64url");
 
 function manifest(): Manifest {
   return {

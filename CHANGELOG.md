@@ -4,6 +4,25 @@ All notable changes to this project are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-beta.4] - 2026-06-22
+
+### Changed
+
+* Replaced postinstall ASCII-art diamond with a clean terminal wordmark (no shape characters, no mid-line ANSI color switches, PowerShell-safe).
+* Updated public site background from parchment (`#FDF0D5`) to near-white (`#fafafa`) in `site/styles.css` and `docs/styles.css`.
+* Removed unused `--parchment-50` CSS token from `site/styles.css` and `docs/styles.css`.
+* Changed postinstall ANSI color from true-color (`\x1b[38;2;193;18;31m`) to standard 16-color (`\x1b[31m`) for broader terminal compatibility including Windows conhost.
+* Added legal disclaimer footer to `site/index.html` and `docs/index.html`: Besa does not guarantee regulatory compliance, prevent fines, or replace legal or compliance counsel.
+* Removed GTM and compliance-framing language from `README.md`: replaced "Every call is a liability" and "compliance team" copy with factual description; removed regulatory framework table.
+* Updated browser theme-color meta tag from `#FDF0D5` to `#fafafa` in both HTML entry points.
+* Updated page `<title>` and `<meta name="description">` to reflect current positioning: "Signed Trust for AI-Agent Tools".
+* Updated Early Access README to reference the beta.4 tarball URL.
+
+### Notes
+
+* No npm publish for this beta; distribution remains GitHub Release tarball.
+* Besa does not guarantee compliance, prevent fines, or replace legal, security, risk, or compliance work.
+
 ## [0.1.0-beta.3] - 2026-06-21
 
 ### Changed
@@ -212,3 +231,4 @@ Initial alpha / developer preview of Besa — signed trust infrastructure for AI
 [0.1.0-beta.1]: https://github.com/dorigjo/besa/releases/tag/v0.1.0-beta.1
 [0.1.0-beta.2]: https://github.com/dorigjo/besa/releases/tag/v0.1.0-beta.2
 [0.1.0-beta.3]: https://github.com/dorigjo/besa/releases/tag/v0.1.0-beta.3
+[0.1.0-beta.4]: https://github.com/dorigjo/besa/releases/tag/v0.1.0-beta.4
