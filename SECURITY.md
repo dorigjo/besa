@@ -2,7 +2,7 @@
 
 ## Status: beta
 
-Besa is a local **developer beta** (`0.1.0-beta.2`).
+Besa is a local **developer beta** (`0.1.0-beta.5`).
 
 The project is intended for local development, security review, and early integration feedback.
 

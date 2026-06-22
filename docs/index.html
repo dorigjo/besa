@@ -56,7 +56,7 @@
              tabindex="0"
              aria-label="Copy install command"
              onclick="copyInstall(this)"
-             onkeydown="if(event.key==='Enter'||event.key===' ')copyInstall(this)">npm install @dorigjo/besa@beta</pre>
+             onkeydown="if(event.key==='Enter'||event.key===' ')copyInstall(this)">npm install @dorigjo/besa</pre>
         <a class="spec-link"
            href="https://github.com/dorigjo/besa"
            data-en="Read the spec →"
@@ -110,9 +110,9 @@
     <section class="cli reveal">
       <span class="section-label">CLI</span>
       <div class="terminal-card">
-        <pre>npm install @dorigjo/besa@beta
+        <pre>npm install @dorigjo/besa
 
-npm exec --yes --package="@dorigjo/besa@beta" -- besa --help
+npx besa --help
 
 besa keys
 besa sign examples/manifest.yaml
@@ -193,7 +193,7 @@ besa keys rotate</pre>
     }
 
     function copyInstall(el) {
-      navigator.clipboard.writeText('npm install @dorigjo/besa@beta').then(function () {
+      navigator.clipboard.writeText('npm install @dorigjo/besa').then(function () {
         el.classList.add('copied');
         setTimeout(function () { el.classList.remove('copied'); }, 1800);
       }).catch(function () {});
