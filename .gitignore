@@ -151,9 +151,8 @@ examples/manifest.signed.json
 CLAUDE.md
 AGENTS.md
 
-# Internal strategy docs — keep out of the public repo
-PRICING_STRATEGY.md
-GLOBAL_GTM_STRATEGY.md
+# Internal planning docs — keep out of the public repo
+*_STRATEGY.md
 PRODUCT_ROADMAP.md
 
 # Release notes are for GitHub Release copy-paste only — never committed
