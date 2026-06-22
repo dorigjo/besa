@@ -147,8 +147,7 @@ vite.config.ts.timestamp-*
 .besa/
 examples/manifest.signed.json
 
-# Local strategy/spec docs - kept out of the public repo
-# (AGENTS.md is the same build spec as CLAUDE.md; both stay private)
+# Internal development tooling — not for public repo
 CLAUDE.md
 AGENTS.md
 

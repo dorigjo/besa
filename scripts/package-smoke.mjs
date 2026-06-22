@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import {
   copyFileSync,
@@ -11,7 +12,7 @@ import {
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-process.env.BESA_KEY_PASSPHRASE ??= "besa-package-smoke-test-passphrase-2026!!";
+process.env.BESA_KEY_PASSPHRASE ??= randomBytes(32).toString("base64url");
 
 const repositoryRoot = resolve(".");
 const workspace = mkdtempSync(join(tmpdir(), "besa-package-smoke-"));

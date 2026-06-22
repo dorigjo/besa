@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import {
   copyFileSync,
@@ -18,10 +19,8 @@ const cli = resolve("dist/index.js");
 const workspace = mkdtempSync(join(tmpdir(), "besa-smoke-"));
 const examplesDirectory = join(workspace, "examples");
 
-// Use caller-supplied passphrase or a deterministic test-only value.
-// The smoke key is ephemeral and discarded when the workspace is removed.
 const SMOKE_PASSPHRASE =
-  process.env.BESA_KEY_PASSPHRASE ?? "besa-smoke-test-passphrase-2026!!";
+  process.env.BESA_KEY_PASSPHRASE ?? randomBytes(32).toString("base64url");
 
 const smokeEnv = {
   ...process.env,

@@ -22,9 +22,5 @@ jobs:
       - run: npm run build
       - run: npm test
       - run: npm run smoke
-        env:
-          BESA_KEY_PASSPHRASE: besa-ci-test-passphrase-2026!!
       - run: npm run test:package
-        env:
-          BESA_KEY_PASSPHRASE: besa-ci-test-passphrase-2026!!
       - run: npm pack --dry-run

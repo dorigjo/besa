@@ -20,48 +20,24 @@
 
 ## Early Access
 
-Besa 0.1.0-beta.2 is available as a GitHub Release tarball while npm publishing is pending.
+Besa 0.1.0-beta.4 is available as a GitHub Release tarball while npm publishing is pending.
 
 Install:
 
 ```bash
-npm install https://github.com/dorigjo/besa/releases/download/v0.1.0-beta.2/dorigjo-besa-0.1.0-beta.2.tgz
+npm install https://github.com/dorigjo/besa/releases/download/v0.1.0-beta.4/dorigjo-besa-0.1.0-beta.4.tgz
 ```
 
 See [EARLY_ACCESS.md](EARLY_ACCESS.md) for integrity hash, quickstart, and known limitations.
 
 ---
 
-AI agents are calling real systems: CRMs, payment APIs, deployment pipelines,
-databases. Every call is a liability.
+Besa creates cryptographic execution evidence for AI-agent tool calls. Every
+admission decision is signed. Every signed receipt is tamper-evident and
+independently verifiable.
 
-The question your compliance team will ask: **which tools was this agent
-authorized to call, and where is the signed record?**
-
-Besa answers that by creating cryptographically signed **Agent Action Receipts**
-for every admission decision — before the tool executes.
-
-> **Beta.** `0.1.0-beta.2` is a local developer beta for security review and
-> early integration. Public release coming soon.
+> **Beta.** `0.1.0-beta.4` is a local developer beta. Public release coming soon.
 > Enterprise inquiry: [open an issue](https://github.com/dorigjo/besa/issues).
-
----
-
-## Why this matters
-
-The regulatory window is closing:
-
-| Framework | Requirement |
-|---|---|
-| EU AI Act (2025–2026) | Logging and documentation of high-risk AI systems |
-| NIST AI RMF | Govern → Map → Measure → Manage AI risk |
-| SOC 2 Type II | Evidence of access controls for AI-integrated systems |
-| ISO 42001 | AI management system standard |
-| SEC / FINRA guidance | Explainability and audit trails for AI in financial services |
-
-Besa creates the artifact that answers the audit question: **which tool was
-called, by which agent, under which signed authorization, at what time, and was
-it allowed or denied?**
 
 ---
 
