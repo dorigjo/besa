@@ -4,10 +4,10 @@
 
 <h1 align="center">Besa</h1>
 
-<p align="center"><strong>Agent Action Receipts</strong></p>
+<p align="center"><strong>The audit layer for AI-agent actions.</strong></p>
 
 <p align="center">
-  The signed-receipt layer for AI-agent tool calls.
+  Know what your AI agents were authorized to do — and prove it.
 </p>
 
 <p align="center">
@@ -17,49 +17,65 @@
 
 ---
 
-Besa creates cryptographic execution evidence for AI-agent tool calls. Every
-admission decision is signed. Every signed receipt is tamper-evident and
-independently verifiable.
+## The problem
 
-> **Beta.** `0.1.0-beta.5` is a public developer beta. Not yet production-ready.
-> Feedback and issues: [github.com/dorigjo/besa/issues](https://github.com/dorigjo/besa/issues).
+AI agents are calling real systems — CRMs, payment APIs, deployment pipelines, databases. Every call is a real action with real consequences.
+
+When something goes wrong — or when compliance asks — your team needs to answer:
+
+- What was this agent actually authorized to do?
+- Was this action inside declared policy?
+- Was it blocked — or admitted — and why?
+- Can you show an auditor the evidence?
+
+Most teams today cannot answer these questions. There is no record. There is no proof.
 
 ---
 
-## Trust flow
+## What Besa does
+
+Besa gives every AI-agent action a signed, tamper-evident audit record.
+
+**Before a tool call:** Besa checks whether the tool is declared, policy-approved, and within budget. Blocked by default if the tool is undeclared or marked `destructive`/`high` risk.
+
+**When a call is admitted:** Besa issues a cryptographic receipt — a tamper-evident record of the decision, the manifest hash, the request fingerprint, and the signing key.
+
+**When you need to prove it:** the receipt chain is independently verifiable. Any tampering is detectable.
+
+> **Beta.** `0.1.0-beta.5` is a public developer beta. Designed for development and early integration. See [Beta limitations](#beta-limitations).
+
+---
+
+## The evidence flow
 
 ```
 manifest.yaml
-  → besa sign              # sign the declared tools, capabilities, risks, scopes
-  → manifest.signed.json   # Ed25519-signed artifact
+  → besa sign              # declare and sign tool capabilities, risks, scopes
+  → manifest.signed.json   # tamper-evident capability declaration
   → besa trust add         # pin the publisher's public key
-  → besa verify            # verify signature against pinned trust anchor
-  → besa admit <tool>      # dry-run: check policy, capabilities, budget
-  → besa receipt <tool>    # enforce budget, issue signed receipt
-  → besa verify-receipt    # verify the receipt chain end-to-end
+  → besa verify            # verify signature against trust anchor
+  → besa admit <tool>      # policy gate: allow or deny (dry-run)
+  → besa receipt <tool>    # enforce budget, issue signed audit receipt
+  → besa verify-receipt    # verify the complete evidence chain
 ```
 
-Every step produces a durable, verifiable artifact. The signed manifest, public
-key ID, manifest hash, admission decision, request hash, and signed receipt are
-all tamper-evident. Changing any field causes verification to fail.
+Every step produces a durable, independently verifiable artifact. Changing any field in any artifact causes verification to fail closed.
 
 ---
 
-## What works today
+## What you get
 
-- YAML + JSON manifest loading with strict schema validation
-- Ed25519 key generation; AES-256-GCM encrypted key storage with scrypt KDF
-- Whole-envelope Ed25519 signatures covering manifest, hash, key, algorithm, and timestamp
-- Explicit public-key trust anchors (active / retired / revoked)
-- Signed key-rotation proofs preserving forward trust continuity
-- Allow / deny decisions with machine-readable reason codes
-- Destructive high-risk tool blocking by default policy
-- ASCII-validated tool names (prevents Unicode homograph attacks)
-- Manifest-scoped call budgets with cross-process atomic file locking
-- Optional per-agent grant scoping
-- Signed, tamper-evident Agent Action Receipts
-- Receipt trust-chain verification
-- TypeScript SDK exports
+### Signed capability declarations
+Every tool's declared capabilities, risk level, allowed scopes, and budget limits are captured in a manifest and signed with Ed25519. Any change after signing is detectable.
+
+### Policy enforcement at the gate
+Besa checks every tool call before it happens. Destructive high-risk tools are blocked by default. Budget limits cap runaway usage. Per-agent grant scoping restricts access to specific tools.
+
+### Tamper-evident audit receipts
+Every admission decision — allow or deny — produces a signed receipt recording the tool name, manifest hash, request fingerprint, decision, and timestamp. Not a log. Proof.
+
+### Verifiable evidence chain
+Sign → verify → admit → receipt → verify-receipt. Each step is independently verifiable. The signed manifest, admission decision, and receipt form a complete, tamper-evident chain.
 
 ---
 
@@ -190,7 +206,7 @@ All commands accept `--trust <trust.json>` to use a consumer-side trust store.
 
 ---
 
-## Receipt artifact
+## The audit receipt
 
 ```json
 {
@@ -212,7 +228,7 @@ Changing any field causes `verify-receipt` to fail closed.
 
 ---
 
-## Reason codes
+## Admission reason codes
 
 | Code | Meaning |
 |---|---|
@@ -297,6 +313,9 @@ npm pack --dry-run
 
 ## Beta limitations
 
+Besa `0.1.0-beta.5` is a **public developer beta**. The core evidence artifacts — signed manifests, signed receipts, and the verification chain — are production-quality. The surrounding infrastructure is not yet.
+
+Current limitations:
 - Local key storage only; no hosted key management or HSM integration
 - File-based meter and trust state; intended for single-host use
 - No distributed replay protection across machines or environments
@@ -304,6 +323,8 @@ npm pack --dry-run
 - No hosted verifier, receipt retention, or SIEM export
 - No production identity or multi-user authorization
 - No formal compliance certification (SOC 2, ISO 27001, EU AI Act)
+
+Use Besa today to build and validate the audit layer for your AI-agent tooling. The evidence artifacts are designed to remain forward-compatible as the infrastructure matures.
 
 ---
 
