@@ -1,0 +1,66 @@
+name: Besa manifest gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - 'examples/manifest.yaml'
+      - 'examples/manifest.signed.json'
+      - 'examples/trust.json'
+
+jobs:
+  besa-gate:
+    name: Verify manifest and policy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Verify signed manifest
+        run: node dist/index.js verify examples/manifest.signed.json
+        # Fails (exit 1) if: signature invalid, manifest tampered, or key untrusted
+
+      - name: Gate — crm.lookup (expect allow)
+        run: node dist/index.js admit examples/manifest.signed.json crm.lookup
+        # Exits non-zero if this tool is denied — blocks the merge
+
+      - name: Gate — crm.update (expect allow)
+        run: node dist/index.js admit examples/manifest.signed.json crm.update
+        # Exits non-zero if this tool is denied
+
+      - name: Gate — crm.delete (expect RISK_BLOCKED)
+        shell: bash
+        run: |
+          set +e
+          output=$(node dist/index.js admit examples/manifest.signed.json crm.delete 2>&1)
+          exit_code=$?
+          echo "$output"
+          if echo "$output" | grep -q "RISK_BLOCKED"; then
+            echo "OK: crm.delete correctly denied with RISK_BLOCKED"
+            exit 0
+          fi
+          if [ "$exit_code" -eq 0 ]; then
+            echo "FAIL: crm.delete was admitted — expected denial"
+            exit 1
+          fi
+          echo "FAIL: crm.delete denied but no RISK_BLOCKED reason code"
+          exit 1
+        # Verifies that high-risk destructive tools are blocked at policy level
+
+      - name: Run unit tests
+        run: npm test
+        # Ensures the signing/verification logic still passes all tests
