@@ -458,6 +458,11 @@ main {
   color: var(--color-authority);
 }
 
+.status .source-link {
+  display: inline-block;
+  margin-top: 0.6rem;
+}
+
 /* ─── Footer ──────────────────────────────────────────────────────────────── */
 
 .site-footer {
