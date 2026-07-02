@@ -3,11 +3,23 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Besa — The audit layer for AI-agent actions</title>
-  <meta name="description" content="Besa gives every AI-agent action a signed, tamper-evident audit record. Know what your AI agents were authorized to do — and prove it." />
+  <title>Besa — The AI agent execution control plane</title>
+  <meta name="description" content="Besa is the AI agent execution control plane. Policy-gated tool calls, signed allow/deny decisions, and tamper-evident execution receipts — before the tool call happens." />
   <meta name="theme-color" content="#fafafa" />
+  <link rel="canonical" href="https://dorigjo.github.io/besa/" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="stylesheet" href="styles.css" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Besa" />
+  <meta property="og:title" content="Besa — The AI agent execution control plane" />
+  <meta property="og:description" content="Policy-gated tool calls, signed allow/deny decisions, and tamper-evident execution receipts — before the tool call happens." />
+  <meta property="og:url" content="https://dorigjo.github.io/besa/" />
+  <meta property="og:image" content="https://dorigjo.github.io/besa/logo.svg" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Besa — The AI agent execution control plane" />
+  <meta name="twitter:description" content="Policy-gated tool calls, signed allow/deny decisions, and tamper-evident execution receipts — before the tool call happens." />
+  <meta name="twitter:image" content="https://dorigjo.github.io/besa/logo.svg" />
 </head>
 <body>
 
@@ -28,19 +40,19 @@
 
     <section class="hero">
       <span class="category-eyebrow"
-            data-en="AI Agent Governance"
-            data-de="KI-Agenten-Governance">AI Agent Governance</span>
+            data-en="AI Agent Execution Control Plane"
+            data-de="KI-Agenten-Ausführungskontrollebene">AI Agent Execution Control Plane</span>
       <div class="hero-rule" aria-hidden="true"></div>
       <h1 class="hero-brand">Besa</h1>
       <p class="hero-claim"
-         data-en="The audit layer for AI-agent actions."
-         data-de="Die Audit-Schicht für KI-Agenten-Aktionen.">
-        The audit layer for AI-agent actions.
+         data-en="The AI agent execution control plane."
+         data-de="Die KI-Agenten-Ausführungskontrollebene.">
+        The AI agent execution control plane.
       </p>
       <p class="hero-sub"
-         data-en="AI agents are taking real actions in real systems. Besa lets you approve what they can do, enforce those policies at runtime, and prove every decision with a signed audit record."
-         data-de="KI-Agenten treffen echte Aktionen in echten Systemen. Besa ermöglicht es, ihre Fähigkeiten zu genehmigen, diese Richtlinien zur Laufzeit durchzusetzen und jede Entscheidung mit einem signierten Audit-Nachweis zu beweisen.">
-        AI agents are taking real actions in real systems. Besa lets you approve what they can do, enforce those policies at runtime, and prove every decision with a signed audit record.
+         data-en="Before an AI agent touches a tool, API, database, or pipeline — Besa checks whether the action is declared, policy-approved, within budget, and attributable. Fail-closed. Signed proof of every decision."
+         data-de="Bevor ein KI-Agent ein Tool, eine API, eine Datenbank oder eine Pipeline berührt – prüft Besa, ob die Aktion deklariert, richtlinienkonform, im Budget und zurechenbar ist. Fail-closed. Signierter Nachweis jeder Entscheidung.">
+        Before an AI agent touches a tool, API, database, or pipeline — Besa checks whether the action is declared, policy-approved, within budget, and attributable. Fail-closed. Signed proof of every decision.
       </p>
       <div class="pipeline-card">
         <pre class="pipeline-flow">manifest.yaml
@@ -154,9 +166,9 @@ besa keys rotate</pre>
     <section class="status reveal">
       <span class="section-label">Status</span>
       <p class="status-copy"
-         data-en="Public beta (0.1.0-beta.5). Local-first. No hosted backend. The audit artifacts are production-quality; the surrounding infrastructure is not yet."
-         data-de="Öffentliche Beta (0.1.0-beta.5). Local-first. Noch kein gehostetes Backend. Die Audit-Artefakte sind produktionsreif; die umgebende Infrastruktur noch nicht.">
-        Public beta (0.1.0-beta.5). Local-first. No hosted backend. The audit artifacts are production-quality; the surrounding infrastructure is not yet.
+         data-en="Public beta (0.1.0-beta.5). Local-first. The execution control artifacts — signed manifests, policy gates, signed receipts — are production-quality cryptography. Hosted infrastructure (verifier API, receipt retention, HSM) is on the roadmap."
+         data-de="Öffentliche Beta (0.1.0-beta.5). Local-first. Die Ausführungskontroll-Artefakte – signierte Manifeste, Policy-Gates, signierte Receipts – sind produktionsreife Kryptografie. Gehostete Infrastruktur (Verifier-API, Receipt-Aufbewahrung, HSM) ist in Planung.">
+        Public beta (0.1.0-beta.5). Local-first. The execution control artifacts — signed manifests, policy gates, signed receipts — are production-quality cryptography. Hosted infrastructure (verifier API, receipt retention, HSM) is on the roadmap.
       </p>
       <a class="source-link"
          href="https://github.com/dorigjo/besa"
@@ -179,6 +191,12 @@ besa keys rotate</pre>
        data-en="Besa does not guarantee regulatory compliance, prevent fines, or replace legal, security, or compliance counsel. It is a developer tool that produces cryptographic evidence artifacts."
        data-de="Besa garantiert keine regulatorische Konformität, verhindert keine Bußgelder und ersetzt keine rechtliche, sicherheitsbezogene oder Compliance-Beratung. Es ist ein Entwicklertool, das kryptografische Beweisartefakte erzeugt.">
       Besa does not guarantee regulatory compliance, prevent fines, or replace legal, security, or compliance counsel. It is a developer tool that produces cryptographic evidence artifacts.
+    </p>
+    <p class="footer-legal"
+       data-en="Legal &amp; privacy: This static site uses no contact forms, analytics scripts, advertising trackers, or custom cookies. Hosting providers may process technical access data under their own policies. Legal notice and privacy policy: not yet published, to be added before commercial operation. Security policy: see SECURITY.md."
+       data-de="Rechtliches &amp; Datenschutz: Diese statische Website verwendet keine Kontaktformulare, Analyse-Skripte, Werbe-Tracker oder eigene Cookies. Hosting-Anbieter können technische Zugriffsdaten gemäß ihren eigenen Richtlinien verarbeiten. Impressum und Datenschutzerklärung: noch nicht veröffentlicht, werden vor kommerziellem Betrieb ergänzt. Sicherheitsrichtlinie: siehe SECURITY.md.">
+      Legal &amp; privacy: This static site uses no contact forms, analytics scripts, advertising trackers, or custom cookies. Hosting providers may process technical access data under their own policies. Legal notice and privacy policy: not yet published, to be added before commercial operation. Security policy: see
+      <a class="source-link" href="https://github.com/dorigjo/besa/blob/main/SECURITY.md">SECURITY.md</a>.
     </p>
   </footer>
 

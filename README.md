@@ -4,10 +4,10 @@
 
 <h1 align="center">Besa</h1>
 
-<p align="center"><strong>The audit layer for AI-agent actions.</strong></p>
+<p align="center"><strong>The AI agent execution control plane.</strong></p>
 
 <p align="center">
-  Know what your AI agents were authorized to do — and prove it.
+  Before an AI agent touches a tool, API, database, or deployment pipeline — Besa checks whether the action is declared, policy-approved, within budget, and attributable.
 </p>
 
 <p align="center">
@@ -19,34 +19,34 @@
 
 ## The problem
 
-AI agents are calling real systems — CRMs, payment APIs, deployment pipelines, databases. Every call is a real action with real consequences.
+AI agents are calling real systems — CRMs, payment APIs, deployment pipelines, databases, code repositories. Every call is a real action with real consequences and no natural chokepoint.
 
 When something goes wrong — or when compliance asks — your team needs to answer:
 
-- What was this agent actually authorized to do?
-- Was this action inside declared policy?
-- Was it blocked — or admitted — and why?
-- Can you show an auditor the evidence?
+- What was this agent actually declared to do?
+- Was this action inside policy before it happened?
+- Was it admitted or blocked — and why?
+- Can you show an auditor a tamper-evident proof?
 
-Most teams today cannot answer these questions. There is no record. There is no proof.
+Most teams today cannot answer these questions. There is no gate. There is no record. There is no proof.
 
 ---
 
 ## What Besa does
 
-Besa gives every AI-agent action a signed, tamper-evident audit record.
+Besa is the execution control plane for AI-agent tool calls.
 
-**Before a tool call:** Besa checks whether the tool is declared, policy-approved, and within budget. Blocked by default if the tool is undeclared or marked `destructive`/`high` risk.
+**Gate before execution:** Besa checks whether the tool is declared in a signed manifest, policy-approved, within budget, and scoped to the requesting agent. Undeclared tools are denied. Destructive high-risk tools are blocked by default. Budget overruns are stopped.
 
-**When a call is admitted:** Besa issues a cryptographic receipt — a tamper-evident record of the decision, the manifest hash, the request fingerprint, and the signing key.
+**Sign the decision:** Every admission — allow or deny — produces a signed cryptographic receipt recording the tool name, manifest hash, request fingerprint, reason code, and signing key. Not a log. Signed proof.
 
-**When you need to prove it:** the receipt chain is independently verifiable. Any tampering is detectable.
+**Verify the chain:** The signed manifest, admission decision, and receipt form a complete, tamper-evident evidence chain. Any field change causes verification to fail closed.
 
-> **Beta.** `0.1.0-beta.5` is a public developer beta. Designed for development and early integration. See [Beta limitations](#beta-limitations).
+> **Beta.** `0.1.0-beta.5` is a public developer beta. Designed for development, CI integration, and early runtime control. See [Beta limitations](#beta-limitations).
 
 ---
 
-## The evidence flow
+## The control flow
 
 ```
 manifest.yaml
@@ -54,8 +54,8 @@ manifest.yaml
   → manifest.signed.json   # tamper-evident capability declaration
   → besa trust add         # pin the publisher's public key
   → besa verify            # verify signature against trust anchor
-  → besa admit <tool>      # policy gate: allow or deny (dry-run)
-  → besa receipt <tool>    # enforce budget, issue signed audit receipt
+  → besa admit <tool>      # policy gate: allow or deny (fail-closed)
+  → besa receipt <tool>    # enforce budget, issue signed execution receipt
   → besa verify-receipt    # verify the complete evidence chain
 ```
 
@@ -68,14 +68,17 @@ Every step produces a durable, independently verifiable artifact. Changing any f
 ### Signed capability declarations
 Every tool's declared capabilities, risk level, allowed scopes, and budget limits are captured in a manifest and signed with Ed25519. Any change after signing is detectable.
 
-### Policy enforcement at the gate
-Besa checks every tool call before it happens. Destructive high-risk tools are blocked by default. Budget limits cap runaway usage. Per-agent grant scoping restricts access to specific tools.
+### Policy-gated tool calls
+Besa checks every tool call before it happens. Destructive high-risk tools are blocked by default. Budget limits cap runaway usage. Per-agent grant scoping restricts access to specific tools. Undeclared tools are denied.
 
-### Tamper-evident audit receipts
+### Signed allow/deny decisions
 Every admission decision — allow or deny — produces a signed receipt recording the tool name, manifest hash, request fingerprint, decision, and timestamp. Not a log. Proof.
 
 ### Verifiable evidence chain
 Sign → verify → admit → receipt → verify-receipt. Each step is independently verifiable. The signed manifest, admission decision, and receipt form a complete, tamper-evident chain.
+
+### CI/CD gate
+Run Besa in your CI pipeline to verify that manifests are signed, that declared tools pass policy, and that undeclared or high-risk tools fail the build. See [docs/CI_GATE.md](docs/CI_GATE.md).
 
 ---
 
@@ -126,11 +129,11 @@ npx besa sign examples/manifest.yaml
 # Verify the signature
 npx besa verify examples/manifest.signed.json
 
-# Admission dry-run (does not consume budget)
+# Admission gate (fail-closed dry-run)
 npx besa admit examples/manifest.signed.json crm.lookup   # → allow
 npx besa admit examples/manifest.signed.json crm.delete   # → deny RISK_BLOCKED
 
-# Issue a signed receipt (consumes budget)
+# Issue a signed execution receipt (consumes budget)
 npx besa receipt crm.lookup examples/manifest.signed.json \
   --request examples/request.json
 
@@ -184,6 +187,42 @@ invalidates a key for all artifacts, current and historical.
 
 ---
 
+## CI/CD gate
+
+Besa can run as a verification gate in GitHub Actions or any CI pipeline. A failed manifest signature or a denied tool call fails the build.
+
+```yaml
+- name: Verify manifest
+  run: |
+    npx besa verify examples/manifest.signed.json
+    npx besa admit examples/manifest.signed.json crm.lookup
+```
+
+See [docs/CI_GATE.md](docs/CI_GATE.md) for a complete example workflow.
+
+---
+
+## Runtime gateway pattern
+
+Besa's SDK can sit on the call path of an agent runtime. Before the agent calls a tool, the gateway calls `admit()` or `admitAndConsume()` from `@dorigjo/besa`. If the decision is deny, the tool call never reaches the upstream system.
+
+```typescript
+import { admit, verifyTrustedSignedManifest } from "@dorigjo/besa";
+
+// Before forwarding any agent tool call:
+const verified = verifyTrustedSignedManifest(signedManifest, trustStore);
+if (!verified.valid) return { decision: "deny", reasonCode: verified.reasonCode };
+
+const decision = admit(signedManifest.manifest, toolName, currentCount);
+if (decision.decision === "deny") return decision;
+
+// Only here: forward the call to the actual tool
+```
+
+See [examples/agent-gateway/](examples/agent-gateway/) for a working skeleton.
+
+---
+
 ## Commands
 
 | Command | Description |
@@ -197,8 +236,8 @@ invalidates a key for all artifacts, current and historical.
 | `besa load <manifest>` | Validate a manifest without signing |
 | `besa sign <manifest>` | Sign a manifest |
 | `besa verify <manifest>` | Verify a signed manifest against the trust store |
-| `besa admit <manifest> <tool>` | Dry-run: check policy + budget |
-| `besa receipt <tool> <manifest>` | Enforce budget and issue a signed receipt |
+| `besa admit <manifest> <tool>` | Gate: check policy + budget (fail-closed, dry-run) |
+| `besa receipt <tool> <manifest>` | Enforce budget and issue a signed execution receipt |
 | `besa verify-receipt <receipt> <manifest>` | Verify the receipt trust chain |
 
 All commands accept `--trust <trust.json>` to use a consumer-side trust store.
@@ -206,7 +245,7 @@ All commands accept `--trust <trust.json>` to use a consumer-side trust store.
 
 ---
 
-## The audit receipt
+## The execution receipt
 
 ```json
 {
@@ -313,7 +352,7 @@ npm pack --dry-run
 
 ## Beta limitations
 
-Besa `0.1.0-beta.5` is a **public developer beta**. The core evidence artifacts — signed manifests, signed receipts, and the verification chain — are production-quality. The surrounding infrastructure is not yet.
+Besa `0.1.0-beta.5` is a **public developer beta**. The core execution control artifacts — signed manifests, signed execution receipts, and the verification chain — are production-quality cryptography. The surrounding infrastructure is not yet production-grade.
 
 Current limitations:
 - Local key storage only; no hosted key management or HSM integration
@@ -324,7 +363,19 @@ Current limitations:
 - No production identity or multi-user authorization
 - No formal compliance certification (SOC 2, ISO 27001, EU AI Act)
 
-Use Besa today to build and validate the audit layer for your AI-agent tooling. The evidence artifacts are designed to remain forward-compatible as the infrastructure matures.
+The signed manifest, admission gate, and receipt chain are designed to remain forward-compatible as the infrastructure matures. The policy contract you establish today will be verifiable against future infrastructure.
+
+---
+
+## Roadmap
+
+The path from local control plane to hosted infrastructure:
+
+1. **Today (beta.5):** CLI gate, CI/CD integration, local enforcement, signed receipts
+2. **Next:** Hosted verifier API — consumers verify receipts without a local trust store
+3. **Then:** Hosted receipt retention — tamper-evident receipt log with export
+4. **Then:** Runtime gateway — HTTP proxy that gates agent tool calls in production
+5. **Then:** Enterprise control plane — org-level policy, SIEM export, HSM signing, multi-user
 
 ---
 
