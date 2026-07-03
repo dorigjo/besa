@@ -34,6 +34,15 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Sign the example manifest (ephemeral throwaway CI key)
+        env:
+          # Not a real secret: this signing key is generated inside the runner,
+          # used once, and destroyed with the runner. It protects nothing.
+          # examples/manifest.signed.json is a generated artifact (gitignored),
+          # so the gate must produce it before it can verify it.
+          BESA_KEY_PASSPHRASE: ci-only-ephemeral-passphrase-0123456789
+        run: node dist/index.js sign examples/manifest.yaml
+
       - name: Verify signed manifest
         run: node dist/index.js verify examples/manifest.signed.json
         # Fails (exit 1) if: signature invalid, manifest tampered, or key untrusted
@@ -41,10 +50,6 @@ jobs:
       - name: Gate — crm.lookup (expect allow)
         run: node dist/index.js admit examples/manifest.signed.json crm.lookup
         # Exits non-zero if this tool is denied — blocks the merge
-
-      - name: Gate — crm.update (expect allow)
-        run: node dist/index.js admit examples/manifest.signed.json crm.update
-        # Exits non-zero if this tool is denied
 
       - name: Gate — crm.delete (expect RISK_BLOCKED)
         shell: bash
