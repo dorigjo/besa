@@ -9,6 +9,10 @@ on:
       - 'examples/manifest.signed.json'
       - 'examples/trust.json'
 
+# Least privilege: this gate only reads the repo (checkout, build, verify). No writes.
+permissions:
+  contents: read
+
 jobs:
   besa-gate:
     name: Verify manifest and policy
