@@ -161,6 +161,7 @@ docs/GTM.md
 docs/SALES_MOTION.md
 docs/VC_ATTACK_SURFACE.md
 docs/PLATFORM_STRATEGY.md
+docs/POSITIONING.md
 # Category wildcards — auto-ignore any future private strategy/sales/pricing/VC docs
 docs/*STRATEGY*.md
 docs/*SALES*.md
