@@ -1,6 +1,6 @@
 {
   "name": "@dorigjo/besa",
-  "version": "0.1.0-beta.5",
+  "version": "0.1.0",
   "description": "Cryptographic execution evidence for AI-agent tool calls: signed manifests, admission decisions, and tamper-evident receipts.",
   "type": "module",
   "main": "./dist/sdk.js",

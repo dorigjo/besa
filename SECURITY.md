@@ -1,8 +1,8 @@
 # Security Policy
 
-## Status: beta
+## Status: early access
 
-Besa is a local **developer beta** (`0.1.0-beta.5`).
+Besa is an early-access **developer preview** (`0.1.0`).
 
 The project is intended for local development, security review, and early integration feedback.
 

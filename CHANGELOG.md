@@ -4,6 +4,32 @@ All notable changes to this project are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0] - 2026-07-08
+
+First public release. Consolidates the beta series (beta.0 → beta.5) into a stable
+`0.1.0` early-access developer preview. The signed-artifact formats are unchanged
+since beta.2, so existing signed manifests, receipts, trust stores, and rotation
+proofs remain verifiable.
+
+### Changed
+
+* Version promoted from `0.1.0-beta.5` to `0.1.0` (first public tagged release).
+* Unified version references across `README.md`, `SECURITY.md`,
+  `docs/THREAT_MODEL.md`, and `docs/RELEASE_CHECKLIST.md`, and reframed
+  "public developer beta" as "first public release (early access)".
+* README install guidance pins the exact version (`@dorigjo/besa@0.1.0`) instead
+  of the `@beta` dist-tag.
+
+### Notes
+
+* Scope is unchanged: local, single-host tamper-evidence for AI-agent tool calls.
+  Not production security infrastructure. See
+  [Beta limitations](README.md#beta-limitations).
+* No new dependencies. 56 tests pass; build, smoke, package-smoke, and
+  `npm pack --dry-run` are green on Node.js 20, 22, and 24.
+* Besa does not guarantee compliance, prevent fines, or replace legal, security,
+  risk, or compliance work.
+
 ## [0.1.0-beta.5] - 2026-06-23
 
 ### Changed
@@ -247,6 +273,7 @@ Initial alpha / developer preview of Besa — signed trust infrastructure for AI
 * No key rotation or revocation.
 * No formal compliance certification.
 
+[0.1.0]: https://github.com/dorigjo/besa/releases/tag/v0.1.0
 [0.1.0-alpha.0]: https://github.com/dorigjo/besa/releases/tag/v0.1.0-alpha.0
 [0.1.0-alpha.1]: https://github.com/dorigjo/besa/releases/tag/v0.1.0-alpha.1
 [0.1.0-beta.0]: https://github.com/dorigjo/besa/releases/tag/v0.1.0-beta.0

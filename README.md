@@ -88,10 +88,10 @@ Run Besa in your CI pipeline to verify that manifests are signed, that declared 
 npm install @dorigjo/besa
 ```
 
-Pin the beta channel explicitly:
+Pin the exact version explicitly:
 
 ```bash
-npm install @dorigjo/besa@beta
+npm install @dorigjo/besa@0.1.0
 ```
 
 Set the key passphrase before any signing operation:
@@ -352,7 +352,7 @@ npm pack --dry-run
 
 ## Beta limitations
 
-Besa `0.1.0-beta.5` is a **public developer beta**. The core execution control artifacts — signed manifests, signed execution receipts, and the verification chain — are production-quality cryptography. The surrounding infrastructure is not yet production-grade.
+Besa `0.1.0` is a **first public release (early access)**. The core execution control artifacts — signed manifests, signed execution receipts, and the verification chain — are production-quality cryptography. The surrounding infrastructure is not yet production-grade.
 
 Current limitations:
 - Local key storage only; no hosted key management or HSM integration
@@ -371,7 +371,7 @@ The signed manifest, admission gate, and receipt chain are designed to remain fo
 
 The path from local control plane to hosted infrastructure:
 
-1. **Today (beta.5):** CLI gate, CI/CD integration, local enforcement, signed receipts
+1. **Today (0.1.0):** CLI gate, CI/CD integration, local enforcement, signed receipts
 2. **Next:** Hosted verifier API — consumers verify receipts without a local trust store
 3. **Then:** Hosted receipt retention — tamper-evident receipt log with export
 4. **Then:** Runtime gateway — HTTP proxy that gates agent tool calls in production

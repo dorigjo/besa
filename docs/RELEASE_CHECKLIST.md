@@ -1,6 +1,6 @@
-# Beta Release Checklist
+# Release Checklist
 
-Release gate for `0.1.0-beta.2`.
+Release gate for `0.1.0`.
 
 ## Quality
 
@@ -50,9 +50,9 @@ git diff --cached --name-only
 
 ## Version and documentation
 
-- [ ] `package.json` and `package-lock.json` both use `0.1.0-beta.2`.
-- [ ] `README.md`, `SECURITY.md`, and `docs/THREAT_MODEL.md` say beta.
-- [ ] `CHANGELOG.md` and `docs/releases/v0.1.0-beta.2.md` describe the release.
+- [ ] `package.json` and `package-lock.json` both use `0.1.0`.
+- [ ] `README.md`, `SECURITY.md`, and `docs/THREAT_MODEL.md` say `0.1.0` (early access).
+- [ ] `CHANGELOG.md` describes the `0.1.0` release.
 - [ ] PowerShell examples cover every CLI command.
 - [ ] Limitations still state that Besa is not production-ready.
 
@@ -61,11 +61,12 @@ git diff --cached --name-only
 Only after every gate is green:
 
 ```powershell
-git commit -m "Harden Besa beta trust artifacts"
-git tag v0.1.0-beta.2
+git commit -m "chore: release v0.1.0"
+git tag v0.1.0
 git push origin main
-git push origin v0.1.0-beta.2
-npm publish --access public --tag beta
+git push origin v0.1.0
+npm login          # authenticate first (2FA if enabled)
+npm publish --access public
 ```
 
 Tagging and npm publication are explicit release actions. Do not perform them

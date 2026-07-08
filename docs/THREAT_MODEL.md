@@ -1,6 +1,6 @@
 # Besa Threat Model
 
-Status: beta (`0.1.0-beta.2`).
+Status: early access (`0.1.0`).
 
 This document explains what Besa protects against today, what it does not protect against yet, and which risks still exist in the current MVP.
 
