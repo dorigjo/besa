@@ -274,11 +274,3 @@ Initial alpha / developer preview of Besa — signed trust infrastructure for AI
 * No formal compliance certification.
 
 [0.1.0]: https://github.com/dorigjo/besa/releases/tag/v0.1.0
-[0.1.0-alpha.0]: https://github.com/dorigjo/besa/releases/tag/v0.1.0-alpha.0
-[0.1.0-alpha.1]: https://github.com/dorigjo/besa/releases/tag/v0.1.0-alpha.1
-[0.1.0-beta.0]: https://github.com/dorigjo/besa/releases/tag/v0.1.0-beta.0
-[0.1.0-beta.1]: https://github.com/dorigjo/besa/releases/tag/v0.1.0-beta.1
-[0.1.0-beta.2]: https://github.com/dorigjo/besa/releases/tag/v0.1.0-beta.2
-[0.1.0-beta.3]: https://github.com/dorigjo/besa/releases/tag/v0.1.0-beta.3
-[0.1.0-beta.4]: https://github.com/dorigjo/besa/releases/tag/v0.1.0-beta.4
-[0.1.0-beta.5]: https://github.com/dorigjo/besa/releases/tag/v0.1.0-beta.5
