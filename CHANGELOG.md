@@ -24,7 +24,7 @@ proofs remain verifiable.
 
 * Scope is unchanged: local, single-host tamper-evidence for AI-agent tool calls.
   Not production security infrastructure. See
-  [Beta limitations](README.md#beta-limitations).
+  [Limitations](README.md#limitations).
 * No new dependencies. 56 tests pass; build, smoke, package-smoke, and
   `npm pack --dry-run` are green on Node.js 20, 22, and 24.
 * Besa does not guarantee compliance, prevent fines, or replace legal, security,

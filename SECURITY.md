@@ -89,7 +89,7 @@ Besa currently checks:
 
 ## Current MVP limitations
 
-The current beta has important limitations:
+This early-access release has important limitations:
 
 * local key storage only (AES-256-GCM encrypted at rest; no hosted key management or HSM)
 * local JSON-based meter state with single-host file locking
@@ -104,7 +104,7 @@ The current beta has important limitations:
 * no formal compliance certification
 * no guarantee of regulatory compliance
 
-Do not represent this beta as SOC 2, ISO 27001, DORA, AI Act, or GDPR compliant.
+Do not represent this early-access release as SOC 2, ISO 27001, DORA, AI Act, or GDPR compliant.
 
 ## Reporting a vulnerability
 

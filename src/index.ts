@@ -811,7 +811,7 @@ function usage(): void {
       "  besa verify-receipt .besa/receipts/<receipt-id>.json examples/manifest.signed.json",
       "",
       "Security:",
-      "  Local developer beta. Private keys are encrypted at rest (AES-256-GCM + scrypt).",
+      "  Local early-access developer preview. Private keys are encrypted at rest (AES-256-GCM + scrypt).",
       "  Never commit the .besa/ directory. Not hardened for production use yet.",
     ].join("\n"),
   );

@@ -46,7 +46,7 @@ jobs:
           cache: 'npm'
 
       - name: Install Besa
-        run: npm install @dorigjo/besa@beta
+        run: npm install @dorigjo/besa
 
       - name: Verify signed manifest
         run: npx besa verify examples/manifest.signed.json
@@ -139,7 +139,7 @@ The CI gate is the first step toward treating agent tool declarations as first-c
 
 ---
 
-## Limitations (beta.5)
+## Limitations (0.1.0)
 
 - The trust store and signing key are local. CI runs must either generate a key per run (non-persistent verification) or use a key committed to secrets (more persistent but not HSM-backed).
 - No distributed replay protection — duplicate build runs with the same manifest produce the same verification result, which is correct behavior for verification.

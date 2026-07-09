@@ -93,14 +93,14 @@ Then load `examples/agent-gateway/trust.json` in the server instead of the empty
 | Rate limiting | Not implemented | Needed before any public exposure |
 | TLS | Not implemented | Use a reverse proxy in front |
 
-These features are the Runtime Gateway surface — on the roadmap, not in beta.5.
+These features are the Runtime Gateway surface — on the roadmap, not in 0.1.0.
 
 ---
 
 ## How it fits the roadmap
 
 ```
-Today (beta.5):
+Today (0.1.0):
   CLI → sign → verify → admit → receipt (local, file-based)
 
 This skeleton adds:
@@ -114,7 +114,7 @@ The skeleton proves the call sequence is correct and the SDK is composable. The 
 
 ---
 
-## Limitations (beta.5)
+## Limitations (0.1.0)
 
 - Trust store is in-memory only — restart resets it
 - Call counter is hardcoded to 0 — budget enforcement does not work correctly

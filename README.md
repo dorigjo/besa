@@ -42,7 +42,7 @@ Besa is the execution control plane for AI-agent tool calls.
 
 **Verify the chain:** The signed manifest, admission decision, and receipt form a complete, tamper-evident evidence chain. Any field change causes verification to fail closed.
 
-> **Beta.** `0.1.0-beta.5` is a public developer beta. Designed for development, CI integration, and early runtime control. See [Beta limitations](#beta-limitations).
+> **Early access.** `0.1.0` is the first public release — local, single-host tamper-evidence for AI-agent tool calls. Built for development, CI integration, and early runtime control. See [Limitations](#limitations).
 
 ---
 
@@ -350,7 +350,7 @@ npm pack --dry-run
 
 ---
 
-## Beta limitations
+## Limitations
 
 Besa `0.1.0` is a **first public release (early access)**. The core execution control artifacts — signed manifests, signed execution receipts, and the verification chain — are production-quality cryptography. The surrounding infrastructure is not yet production-grade.
 

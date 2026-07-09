@@ -46,7 +46,7 @@ git diff --cached --name-only
 - [ ] No local trust store or generated rotation proof is staged.
 - [ ] No meter, receipt, signed manifest, or private key is staged.
 - [ ] `examples/manifest.signed.json` remains ignored.
-- [ ] Only intentional beta release files are staged.
+- [ ] Only intentional release files are staged.
 
 ## Version and documentation
 

@@ -159,7 +159,7 @@ This creates a tamper-evident record of what Besa allowed or denied.
 
 ## Current MVP limitations
 
-The current beta has important limitations:
+This early-access release has important limitations:
 
 * local key storage only (AES-256-GCM encrypted at rest; no hosted key management or HSM)
 * no hosted verifier service
@@ -209,7 +209,7 @@ Receipts include timestamps, but there is no shared nonce store, no global recei
 The local meter prevents concurrent over-consumption on one host, but it does
 not prevent replay across machines, environments, or after local state reset.
 
-## Out of scope for the current beta
+## Out of scope for this early-access release
 
 Besa does not currently provide:
 
@@ -261,7 +261,7 @@ It helps answer questions such as:
 * Was the requested tool too risky?
 * Was the local budget exceeded?
 
-The current beta is useful for development, integration testing, security
+This early-access release is useful for development, integration testing, security
 review, and architecture validation.
 
 It is not yet production security infrastructure.
