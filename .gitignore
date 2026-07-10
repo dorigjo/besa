@@ -146,6 +146,9 @@ vite.config.ts.timestamp-*
 # Besa local trust artifacts — NEVER commit (contains Ed25519 private key)
 .besa/
 examples/manifest.signed.json
+# Local signed receipts and evidence — never commit (also covered by .besa/)
+receipts/
+rcpt_*.json
 
 # Internal development tooling — not for public repo
 CLAUDE.md
