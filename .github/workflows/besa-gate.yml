@@ -5,24 +5,34 @@ on:
     branches: [main]
   pull_request:
     paths:
-      - 'examples/manifest.yaml'
-      - 'examples/manifest.signed.json'
-      - 'examples/trust.json'
+      - 'src/**'
+      - 'scripts/**'
+      - 'tests/**'
+      - 'examples/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.json'
+      - '.github/workflows/besa-gate.yml'
 
 # Least privilege: this gate only reads the repo (checkout, build, verify). No writes.
 permissions:
   contents: read
 
+concurrency:
+  group: besa-gate-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   besa-gate:
     name: Verify manifest and policy
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: Set up Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -33,6 +43,9 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Unit tests
+        run: npm test
 
       - name: Sign the example manifest (ephemeral throwaway CI key)
         env:
@@ -47,29 +60,25 @@ jobs:
         run: node dist/index.js verify examples/manifest.signed.json
         # Fails (exit 1) if: signature invalid, manifest tampered, or key untrusted
 
-      - name: Gate — crm.lookup (expect allow)
+      - name: Gate — crm.lookup must be admitted
         run: node dist/index.js admit examples/manifest.signed.json crm.lookup
         # Exits non-zero if this tool is denied — blocks the merge
 
-      - name: Gate — crm.delete (expect RISK_BLOCKED)
+      - name: Gate — crm.delete must be denied with RISK_BLOCKED
         shell: bash
         run: |
           set +e
           output=$(node dist/index.js admit examples/manifest.signed.json crm.delete 2>&1)
           exit_code=$?
           echo "$output"
-          if echo "$output" | grep -q "RISK_BLOCKED"; then
-            echo "OK: crm.delete correctly denied with RISK_BLOCKED"
-            exit 0
-          fi
+          # The denial must be proven two independent ways: a non-zero exit code
+          # AND the RISK_BLOCKED reason. A matching string alone must not pass.
           if [ "$exit_code" -eq 0 ]; then
-            echo "FAIL: crm.delete was admitted — expected denial"
+            echo "FAIL: crm.delete exited 0 — a high-risk destructive tool was admitted"
             exit 1
           fi
-          echo "FAIL: crm.delete denied but no RISK_BLOCKED reason code"
-          exit 1
-        # Verifies that high-risk destructive tools are blocked at policy level
-
-      - name: Run unit tests
-        run: npm test
-        # Ensures the signing/verification logic still passes all tests
+          if ! echo "$output" | grep -q "RISK_BLOCKED"; then
+            echo "FAIL: crm.delete was denied (exit $exit_code) but without the RISK_BLOCKED reason code"
+            exit 1
+          fi
+          echo "OK: crm.delete denied with non-zero exit ($exit_code) and RISK_BLOCKED reason code"
