@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="site/logo.svg" alt="" width="44" height="40" />
-</p>
-
 <h1 align="center">Besa</h1>
 
 <p align="center"><strong>The AI agent execution control plane.</strong></p>
@@ -319,7 +315,7 @@ time under a specific key.
 
 **Cryptography:**
 
-- Ed25519 signatures (256-bit security) on the complete artifact envelope
+- Ed25519 signatures on the complete artifact envelope
 - AES-256-GCM key encryption at rest with scrypt KDF (N=32768, r=8, p=1)
 - SHA-256 manifest hashing and full 256-bit (64-hex-character) SHA-256 public key fingerprints
 - Domain-separated signature messages (`besa:<domain>:v1\0<canonical-json>`)
@@ -352,7 +348,7 @@ npm pack --dry-run
 
 ## Limitations
 
-Besa `0.1.0` is a **first public release (early access)**. The core execution control artifacts — signed manifests, signed execution receipts, and the verification chain — are production-quality cryptography. The surrounding infrastructure is not yet production-grade.
+Besa `0.1.0` is a **first public release (early access)**. The core execution control artifacts — signed manifests, signed execution receipts, and the verification chain — use standard cryptographic primitives and are designed for tamper-evident local verification. The surrounding infrastructure is not yet production-grade.
 
 Current limitations:
 - Local key storage only; no hosted key management or HSM integration
