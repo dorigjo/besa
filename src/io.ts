@@ -5,6 +5,7 @@ import {
   existsSync,
   fstatSync,
   fsyncSync,
+  lstatSync,
   mkdirSync,
   openSync,
   readSync,
@@ -15,6 +16,43 @@ import {
 import { dirname } from "node:path";
 
 export const MAX_ARTIFACT_BYTES = 1_048_576;
+
+function rejectSymlink(path: string): void {
+  // Fail closed if the final path is already a symlink: an atomic rename or
+  // exclusive create must never be redirected through an attacker-planted link.
+  let stats;
+  try {
+    stats = lstatSync(path);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
+    throw error;
+  }
+
+  if (stats.isSymbolicLink()) {
+    throw new Error(`refusing to write through symlink at ${path}`);
+  }
+}
+
+function fsyncParentDirectory(path: string): void {
+  // Durably persist the directory entry after rename/create. Directory fsync is
+  // a POSIX durability guarantee; Windows cannot fsync a directory handle, so
+  // any failure here is a best-effort no-op rather than a hard error.
+  let descriptor: number | undefined;
+  try {
+    descriptor = openSync(dirname(path), "r");
+    fsyncSync(descriptor);
+  } catch {
+    // Platform does not support directory fsync; skip silently.
+  } finally {
+    if (descriptor !== undefined) {
+      try {
+        closeSync(descriptor);
+      } catch {
+        // Directory handle already gone; nothing to clean up.
+      }
+    }
+  }
+}
 
 export function readUtf8File(
   path: string,
@@ -81,6 +119,7 @@ export function writeJsonAtomic(
   }
 
   mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
+  rejectSymlink(path);
   const temporaryPath = `${path}.${String(process.pid)}.${randomUUID()}.tmp`;
   let descriptor: number | undefined;
 
@@ -97,6 +136,8 @@ export function writeJsonAtomic(
     } catch {
       // Windows does not apply POSIX modes; ACL custody remains operator-owned.
     }
+
+    fsyncParentDirectory(path);
   } finally {
     if (descriptor !== undefined) {
       closeSync(descriptor);
@@ -119,6 +160,7 @@ export function writeJsonExclusive(
   }
 
   mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
+  rejectSymlink(path);
   const descriptor = openSync(path, "wx", mode);
   let complete = false;
 
@@ -138,4 +180,6 @@ export function writeJsonExclusive(
   } catch {
     if (process.platform !== "win32") throw new Error(`cannot protect ${path}`);
   }
+
+  fsyncParentDirectory(path);
 }

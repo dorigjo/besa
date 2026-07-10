@@ -21,6 +21,7 @@ const SHA256_HEX = /^[a-f0-9]{64}$/;
 const KEY_ID = /^[a-f0-9]{64}$/;
 const RECEIPT_ID = /^rcpt_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const REASON_CODE = /^[A-Z][A-Z0-9_]{0,63}$/;
+const TOOL_NAME = /^[a-zA-Z0-9._-]{1,256}$/;
 const MAX_IDENTIFIER_LENGTH = 256;
 
 export interface VerifyResult {
@@ -229,8 +230,10 @@ export function validateReceipt(value: unknown): ReceiptValidationResult {
     errors.push("manifestHash must be a lowercase SHA-256 hex digest");
   }
 
-  if (!isNonEmptyString(value.toolName)) {
-    errors.push("toolName must be a non-empty string");
+  if (typeof value.toolName !== "string" || !TOOL_NAME.test(value.toolName)) {
+    errors.push(
+      "toolName must match /^[a-zA-Z0-9._-]{1,256}$/ (ASCII, no whitespace or control characters)",
+    );
   }
 
   if (value.decision !== "allow" && value.decision !== "deny") {
@@ -267,6 +270,21 @@ export function validateReceipt(value: unknown): ReceiptValidationResult {
       !REASON_CODE.test(value.grantReasonCode))
   ) {
     errors.push("grantReasonCode must be a non-empty string when present");
+  }
+
+  // Decision/reason consistency: an allow is only meaningful as ALLOWED, and a
+  // deny must never masquerade as ALLOWED. A grant reason code is agent-scoped
+  // evidence, so it may only appear alongside an agentId.
+  if (value.decision === "allow" && value.reasonCode !== "ALLOWED") {
+    errors.push("allow receipts must carry reasonCode ALLOWED");
+  }
+
+  if (value.decision === "deny" && value.reasonCode === "ALLOWED") {
+    errors.push("deny receipts must not carry reasonCode ALLOWED");
+  }
+
+  if (value.grantReasonCode !== undefined && value.agentId === undefined) {
+    errors.push("grantReasonCode may only be present when agentId is present");
   }
 
   if (!isSignature(value.signature)) {
@@ -416,8 +434,10 @@ export function createReceipt(input: ReceiptInput, keypair: KeyPair): Receipt {
     throw new Error("manifestHash must be a lowercase SHA-256 hex digest");
   }
 
-  if (!isNonEmptyString(input.toolName)) {
-    throw new Error("toolName must be a non-empty string");
+  if (typeof input.toolName !== "string" || !TOOL_NAME.test(input.toolName)) {
+    throw new Error(
+      "toolName must match /^[a-zA-Z0-9._-]{1,256}$/ (ASCII, no whitespace or control characters)",
+    );
   }
 
   if (!REASON_CODE.test(input.reasonCode)) {
@@ -426,6 +446,14 @@ export function createReceipt(input: ReceiptInput, keypair: KeyPair): Receipt {
 
   if (input.decision !== "allow" && input.decision !== "deny") {
     throw new Error("decision must be allow or deny");
+  }
+
+  if (input.decision === "allow" && input.reasonCode !== "ALLOWED") {
+    throw new Error("allow receipts must carry reasonCode ALLOWED");
+  }
+
+  if (input.decision === "deny" && input.reasonCode === "ALLOWED") {
+    throw new Error("deny receipts must not carry reasonCode ALLOWED");
   }
 
   if (input.agentId !== undefined && !isNonEmptyString(input.agentId)) {
@@ -437,6 +465,10 @@ export function createReceipt(input: ReceiptInput, keypair: KeyPair): Receipt {
     !REASON_CODE.test(input.grantReasonCode)
   ) {
     throw new Error("grantReasonCode must be a non-empty string when present");
+  }
+
+  if (input.grantReasonCode !== undefined && input.agentId === undefined) {
+    throw new Error("grantReasonCode may only be present when agentId is present");
   }
 
   if (!validateKeyPair(keypair)) {

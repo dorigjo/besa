@@ -88,7 +88,7 @@ const COMMAND_FLAGS: Record<string, ReadonlySet<string>> = {
     "--agent",
     "--grants",
   ]),
-  "verify-receipt": new Set(["--trust"]),
+  "verify-receipt": new Set(["--trust", "--request"]),
 };
 
 function readJson<T>(path: string): T {
@@ -633,6 +633,12 @@ function cmdReceipt(toolName: string, file?: string): void {
   let decision: AdmissionDecision;
   let grantReasonCode: string | undefined;
 
+  // A receipt is issued for BOTH outcomes. When manifest/trust verification
+  // fails, the deny below is intentional and load-bearing: it produces a
+  // tamper-evident, signed record that the call was refused, carrying the
+  // verification failure code as its reasonCode. Verify-receipt later replays
+  // the same manifest/trust chain, so a deny receipt is durable evidence of a
+  // refusal — not a soft error to be swallowed.
   if (!verified.valid) {
     decision = denyFromVerification(
       toolName,
@@ -744,6 +750,42 @@ function cmdVerifyReceipt(receiptFile: string, manifestFile?: string): void {
     return;
   }
 
+  // An allow receipt asserts a tool the signed manifest actually declares. A
+  // deny receipt may legitimately name an undeclared tool (that is exactly what
+  // a TOOL_NOT_FOUND deny records), so this binding applies to allows only.
+  if (
+    receipt.decision === "allow" &&
+    !signed.manifest.tools.some((tool) => tool.name === receipt.toolName)
+  ) {
+    const result = {
+      valid: false,
+      reasonCode: "E_RECEIPT_TOOL_NOT_DECLARED",
+      detail:
+        "allow receipt references a tool not declared in the signed manifest",
+    };
+    printJson("verifyReceipt", result);
+    process.exitCode = 1;
+    return;
+  }
+
+  // Optional request binding: when the caller supplies the original request
+  // payload, prove it hashes to the requestHash sealed inside the receipt. Not
+  // required by default, so existing verify-receipt invocations are unchanged.
+  const requestPath = flagValue("--request");
+  if (requestPath !== undefined) {
+    const boundRequest = readJson<unknown>(requestPath);
+    if (hashRequest(boundRequest) !== receipt.requestHash) {
+      const result = {
+        valid: false,
+        reasonCode: "E_RECEIPT_REQUEST_MISMATCH",
+        detail: "supplied request does not hash to the receipt requestHash",
+      };
+      printJson("verifyReceipt", result);
+      process.exitCode = 1;
+      return;
+    }
+  }
+
   const signatureResult = verifyReceiptDetailed(receipt, signed.publicKey);
   const result = signatureResult.valid
     ? checkTrustedKey(trustStore, signed.publicKey, receipt.timestamp)
@@ -798,7 +840,8 @@ function usage(): void {
       "  --trust <file>       Trust store path (default: .besa/trust.json)",
       "  --agent <id>         Scope admission to a named agent (admit, receipt)",
       "  --grants <file>      Grant set for agent-scoped admission (admit, receipt)",
-      "  --request <file>     Request payload hashed into the receipt (receipt)",
+      "  --request <file>     Request payload hashed into the receipt (receipt);",
+      "                       re-checked against receipt.requestHash (verify-receipt)",
       "",
       "Examples:",
       "  besa keys",
@@ -809,6 +852,7 @@ function usage(): void {
       "  besa admit examples/manifest.signed.json crm.lookup --agent agent-alpha --grants examples/grants.yaml",
       "  besa receipt crm.lookup examples/manifest.signed.json --request examples/request.json",
       "  besa verify-receipt .besa/receipts/<receipt-id>.json examples/manifest.signed.json",
+      "  besa verify-receipt .besa/receipts/<receipt-id>.json examples/manifest.signed.json --request examples/request.json",
       "",
       "Security:",
       "  Local early-access developer preview. Private keys are encrypted at rest (AES-256-GCM + scrypt).",

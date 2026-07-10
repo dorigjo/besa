@@ -134,8 +134,9 @@ npx besa receipt crm.lookup examples/manifest.signed.json \
   --request examples/request.json
 
 # Verify the receipt chain
+# (optionally add --request to rebind the original request to the receipt hash)
 npx besa verify-receipt .besa/receipts/<id>.json \
-  examples/manifest.signed.json
+  examples/manifest.signed.json --request examples/request.json
 ```
 
 ### PowerShell
