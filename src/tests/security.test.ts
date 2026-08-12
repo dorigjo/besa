@@ -141,6 +141,132 @@ test("manifest and grant schemas reject extensions, insecure URLs, and duplicate
   );
 });
 
+test("validateManifest enforces the MAX_TOOLS boundary exactly at 256", () => {
+  const tool = manifest().tools[0]!;
+  const toolsAt256 = Array.from({ length: 256 }, (_, index) => ({
+    ...tool,
+    name: `vault.read.${String(index)}`,
+  }));
+  const toolsAt257 = [
+    ...toolsAt256,
+    { ...tool, name: "vault.read.257" },
+  ];
+
+  assert.equal(
+    validateManifest({ ...manifest(), tools: toolsAt256 }).ok,
+    true,
+  );
+
+  const overLimit = validateManifest({ ...manifest(), tools: toolsAt257 });
+  assert.equal(overLimit.ok, false);
+  assert.ok(
+    overLimit.errors.some((error) => error.includes("at most 256 entries")),
+  );
+});
+
+test("validateManifest enforces the MAX_SCOPES boundary exactly at 64", () => {
+  const base = manifest();
+  const scopesAt64 = Array.from(
+    { length: 64 },
+    (_, index) => `vault:read:${String(index)}`,
+  );
+  const scopesAt65 = [...scopesAt64, "vault:read:65"];
+
+  assert.equal(
+    validateManifest({
+      ...base,
+      tools: [{ ...base.tools[0]!, scopes: scopesAt64 }],
+    }).ok,
+    true,
+  );
+
+  const overLimit = validateManifest({
+    ...base,
+    tools: [{ ...base.tools[0]!, scopes: scopesAt65 }],
+  });
+  assert.equal(overLimit.ok, false);
+  assert.ok(
+    overLimit.errors.some((error) =>
+      error.includes("1-64 non-empty strings"),
+    ),
+  );
+});
+
+test("validateTrustStore enforces the MAX_TRUST_KEYS boundary exactly at 4096", () => {
+  const anchor = () => {
+    const keypair = generateKeyPair();
+    return {
+      publicKeyId: publicKeyId(keypair.publicKeyDer),
+      publicKey: keypair.publicKeyDer,
+      status: "active" as const,
+      addedAt: "2026-06-19T00:00:00.000Z",
+    };
+  };
+  const keysAt4096 = Array.from({ length: 4_096 }, () => anchor());
+  const keysAt4097 = [...keysAt4096, anchor()];
+
+  assert.equal(
+    validateTrustStore({ version: 1, keys: keysAt4096 }).ok,
+    true,
+  );
+
+  const overLimit = validateTrustStore({ version: 1, keys: keysAt4097 });
+  assert.equal(overLimit.ok, false);
+  assert.ok(
+    overLimit.errors.some((error) => error.includes("at most 4096 entries")),
+  );
+});
+
+test("validateManifest enforces the tool description length boundary exactly at 4096 characters", () => {
+  const base = manifest();
+  const descriptionAt4096 = "d".repeat(4_096);
+  const descriptionAt4097 = "d".repeat(4_097);
+
+  assert.equal(
+    validateManifest({
+      ...base,
+      tools: [{ ...base.tools[0]!, description: descriptionAt4096 }],
+    }).ok,
+    true,
+  );
+
+  const overLimit = validateManifest({
+    ...base,
+    tools: [{ ...base.tools[0]!, description: descriptionAt4097 }],
+  });
+  assert.equal(overLimit.ok, false);
+  assert.ok(
+    overLimit.errors.some((error) => error.includes("at most 4096 characters")),
+  );
+});
+
+test("validateManifest enforces the scope string length boundary exactly at 256 characters", () => {
+  const base = manifest();
+  const scopeAt256 = `vault:${"s".repeat(250)}`;
+  const scopeAt257 = `vault:${"s".repeat(251)}`;
+  assert.equal(scopeAt256.length, 256);
+  assert.equal(scopeAt257.length, 257);
+
+  assert.equal(
+    validateManifest({
+      ...base,
+      tools: [{ ...base.tools[0]!, scopes: [scopeAt256] }],
+    }).ok,
+    true,
+  );
+
+  const overLimit = validateManifest({
+    ...base,
+    tools: [{ ...base.tools[0]!, scopes: [scopeAt257] }],
+  });
+  assert.equal(overLimit.ok, false);
+  assert.ok(
+    overLimit.errors.some((error) =>
+      error.includes("1-64 non-empty strings"),
+    ),
+  );
+});
+
 test("trust validation rejects extensions and future-dated artifacts", () => {
   const keypair = generateKeyPair();
   const now = new Date("2026-06-19T12:00:00.000Z");

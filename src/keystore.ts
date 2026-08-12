@@ -24,10 +24,21 @@ export interface StoredKeyPair {
   };
 }
 
+const MIN_PASSPHRASE_UNIQUE_CHARS = 8;
+
 function assertPassphrase(passphrase: string): void {
   const length = Buffer.byteLength(passphrase, "utf8");
   if (length < 16 || length > 1_024) {
     throw new Error("key passphrase must contain 16-1024 UTF-8 bytes");
+  }
+
+  // Length alone does not rule out "aaaaaaaaaaaaaaaa"-style passphrases that
+  // are trivially brute-forced offline despite passing the byte check above.
+  const uniqueChars = new Set(passphrase).size;
+  if (uniqueChars < MIN_PASSPHRASE_UNIQUE_CHARS) {
+    throw new Error(
+      `key passphrase has too little variation (fewer than ${String(MIN_PASSPHRASE_UNIQUE_CHARS)} distinct characters)`,
+    );
   }
 }
 

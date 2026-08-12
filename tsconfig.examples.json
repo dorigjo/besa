@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true,
+    "declaration": false,
+    "baseUrl": ".",
+    "paths": {
+      "@dorigjo/besa": ["./src/sdk.ts"]
+    }
+  },
+  "include": [
+    "examples/**/*.ts"
+  ]
+}

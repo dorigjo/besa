@@ -173,9 +173,34 @@ docs/*GTM*.md
 docs/*MRR*.md
 docs/*VC*.md
 
+# Internal session audits, phase reports, and dominance/roadmap speculation —
+# facts-only self-review docs written during development, not public-facing
+# product documentation. Keep this list in sync with what actually lands in
+# docs/ each session rather than relying on a single broad wildcard.
+docs/PHASE*.md
+docs/V1_ENDGAME_RELEASE_DECISION.md
+docs/V1_FINAL_RELEASE_AUDIT.md
+docs/V1_SECURITY_RELEASE_REVIEW.md
+docs/POST_V1_CODING_PLAN.md
+docs/POST_V1_DOMINANCE_REVIEW.md
+docs/BESA_FINAL_LEVEL_DOMINANCE_ARCHITECTURE.md
+docs/REGULATORY_INEVITABILITY_MAP.md
+docs/GATEGUARD_*.md
+docs/ECC_GATEGUARD_ANALYSIS.md
+
+# Personal research files that sometimes land in the repo root by accident
+*.pdf
+
 # Release notes are for GitHub Release copy-paste only — never committed
 # (.tgz tarballs are already ignored above)
 release-notes*.md
 
 # Internal launch/marketing drafts — never committed to the public repo
 LAUNCH_ASSETS.md
+
+# Internal pricing and financial models. The docs/ patterns above only cover
+# docs/ — these drafts land in the repo root, where a careless `git add -A`
+# would publish them. Keep both locations covered.
+PRICING_*.md
+FINANCIAL_MODEL_*.md
+FINANCIAL_MODEL_*.txt

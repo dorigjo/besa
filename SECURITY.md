@@ -1,14 +1,20 @@
 # Security Policy
 
-## Status: early access
+## Status: v1.0
 
-Besa is an early-access **developer preview** (`0.1.0`).
+As of `1.0.0`, the CLI surface, SDK exports (`sdk-surface.test.ts`'s frozen
+list), and signed-artifact formats (`SignedManifest`, `Receipt`,
+`KeyRotation`, `AdmissionAttestation`) are stable — a future breaking
+change to any of them requires a major version bump, and existing signed
+artifacts remain verifiable across minor/patch releases.
 
-The project is intended for local development, security review, and early integration feedback.
-
-**Do not use Besa to protect production systems or real secrets yet.**
-
-APIs, file formats, receipt formats, policy behavior, and CLI commands may change before a stable release.
+This is a narrower claim than "production-proven." **No independent
+third-party security audit has been performed** (self-authored review
+only — see `docs/V1_SECURITY_RELEASE_REVIEW.md`), and Besa has no known
+external production usage yet. Evaluate accordingly before relying on it
+to protect real secrets or production systems — the cryptographic
+primitive is stable and tested (`npm test`), but "stable API" and
+"independently verified for your threat model" are different claims.
 
 ## Key handling
 
@@ -87,13 +93,16 @@ Besa currently checks:
 * budget limits
 * receipt integrity
 
-## Current MVP limitations
+## Current v1.0 limitations
 
-This early-access release has important limitations:
+This release has important limitations:
 
 * local key storage only (AES-256-GCM encrypted at rest; no hosted key management or HSM)
 * local JSON-based meter state with single-host file locking
-* no hosted verifier API
+* a stateless hosted verifier (`besa serve`) and an opt-in, non-consuming
+  admission-attestation endpoint (`besa serve --trust`) exist — see
+  `docs/HOSTED_VERIFIER.md`/`docs/RUNTIME_ADMISSION.md` — but neither has
+  authentication; rate limiting is opt-in (`--rate-limit`)
 * no centralized receipt retention
 * no multi-user access control
 * no SSO
@@ -104,11 +113,11 @@ This early-access release has important limitations:
 * no formal compliance certification
 * no guarantee of regulatory compliance
 
-Do not represent this early-access release as SOC 2, ISO 27001, DORA, AI Act, or GDPR compliant.
+Do not represent this release as SOC 2, ISO 27001, DORA, AI Act, or GDPR compliant.
 
 ## Reporting a vulnerability
 
-This is a pre-release project.
+This project has not undergone an independent third-party security audit.
 
 If you find a security issue, do not open a public issue with sensitive details.
 

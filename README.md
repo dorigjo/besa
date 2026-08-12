@@ -1,6 +1,6 @@
 <h1 align="center">Besa</h1>
 
-<p align="center"><strong>The AI agent execution control plane.</strong></p>
+<p align="center"><strong>The cryptographic admission and evidence layer for AI-agent actions.</strong></p>
 
 <p align="center">
   Before an AI agent touches a tool, API, database, or deployment pipeline — Besa checks whether the action is declared, policy-approved, within budget, and attributable.
@@ -30,7 +30,7 @@ Most teams today cannot answer these questions. There is no gate. There is no re
 
 ## What Besa does
 
-Besa is the execution control plane for AI-agent tool calls.
+Besa is the cryptographic admission and evidence layer for AI-agent tool calls.
 
 **Gate before execution:** Besa checks whether the tool is declared in a signed manifest, policy-approved, within budget, and scoped to the requesting agent. Undeclared tools are denied. Destructive high-risk tools are blocked by default. Budget overruns are stopped.
 
@@ -38,7 +38,7 @@ Besa is the execution control plane for AI-agent tool calls.
 
 **Verify the chain:** The signed manifest, admission decision, and receipt form a complete, tamper-evident evidence chain. Any field change causes verification to fail closed.
 
-> **Early access.** `0.1.0` is the first public release — local, single-host tamper-evidence for AI-agent tool calls. Built for development, CI integration, and early runtime control. See [Limitations](#limitations).
+> **v1.0.** A stable cryptographic trust primitive — the CLI, SDK surface, and signed-artifact formats are frozen; a breaking change to any of them requires a major version bump. No independent third-party security audit has been performed yet. See [Limitations](#limitations).
 
 ---
 
@@ -87,7 +87,7 @@ npm install @dorigjo/besa
 Pin the exact version explicitly:
 
 ```bash
-npm install @dorigjo/besa@0.1.0
+npm install @dorigjo/besa@1.0.0
 ```
 
 Set the key passphrase before any signing operation:
@@ -216,7 +216,7 @@ if (decision.decision === "deny") return decision;
 // Only here: forward the call to the actual tool
 ```
 
-See [examples/agent-gateway/](examples/agent-gateway/) for a working skeleton.
+See [examples/agent-gateway/](examples/agent-gateway/) for a working gateway skeleton for verification and admission; signed receipt issuance requires an explicitly configured signing key.
 
 ---
 
@@ -236,9 +236,16 @@ See [examples/agent-gateway/](examples/agent-gateway/) for a working skeleton.
 | `besa admit <manifest> <tool>` | Gate: check policy + budget (fail-closed, dry-run) |
 | `besa receipt <tool> <manifest>` | Enforce budget and issue a signed execution receipt |
 | `besa verify-receipt <receipt> <manifest>` | Verify the receipt trust chain |
+| `besa export-evidence <manifest> <receipt>` | Export a manifest + receipt as an audit-facing evidence envelope (see `docs/EVIDENCE_ENVELOPE.md`) |
+| `besa serve [--port <n>]` | Run the hosted verifier over HTTP (signature checks only by default) |
 
 All commands accept `--trust <trust.json>` to use a consumer-side trust store.
 `admit` and `receipt` also accept `--agent <id> --grants <grants.yaml>`.
+`serve` also accepts `--trust <file>` (additionally enables `POST /v1/admit`,
+see [docs/RUNTIME_ADMISSION.md](docs/RUNTIME_ADMISSION.md)) and
+`--rate-limit <n>` (requests/minute per client, off by default). See
+[docs/HOSTED_VERIFIER.md](docs/HOSTED_VERIFIER.md) for the full endpoint
+reference.
 
 ---
 
@@ -246,6 +253,7 @@ All commands accept `--trust <trust.json>` to use a consumer-side trust store.
 
 ```json
 {
+  "artifactVersion": 1,
   "receiptId": "rcpt_2d7942c7-8f70-4984-9c3f-24876acfd860",
   "manifestHash": "ea7e9ca22d199f40281cdf9e5d6145440c6c7d6bfbe94157c4b1da5527054410",
   "toolName": "crm.lookup",
@@ -339,7 +347,7 @@ See [SECURITY.md](SECURITY.md) and [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md).
 ```bash
 npm ci
 npm run build
-npm test          # 56 tests
+npm test          # unit + integration suite
 npm run smoke     # end-to-end trust flow
 npm run test:package
 npm pack --dry-run
@@ -349,14 +357,20 @@ npm pack --dry-run
 
 ## Limitations
 
-Besa `0.1.0` is a **first public release (early access)**. The core execution control artifacts — signed manifests, signed execution receipts, and the verification chain — use standard cryptographic primitives and are designed for tamper-evident local verification. The surrounding infrastructure is not yet production-grade.
+Besa `1.0.0` is a **stable cryptographic trust primitive** — signed manifests, signed execution receipts, and the verification chain use standard cryptographic primitives and are designed for tamper-evident local verification, with a frozen CLI/SDK/artifact-format surface. No independent third-party security audit has been performed yet (see [docs/V1_SECURITY_RELEASE_REVIEW.md](docs/V1_SECURITY_RELEASE_REVIEW.md)), and the surrounding infrastructure (hosted components) remains early.
 
 Current limitations:
 - Local key storage only; no hosted key management or HSM integration
 - File-based meter and trust state; intended for single-host use
 - No distributed replay protection across machines or environments
 - No external trusted timestamp authority
-- No hosted verifier, receipt retention, or SIEM export
+- A stateless hosted verifier (`besa serve`) exists for signature checks over
+  HTTP, and an opt-in, non-consuming admission-attestation endpoint
+  (`besa serve --trust`) exists — see
+  [docs/HOSTED_VERIFIER.md](docs/HOSTED_VERIFIER.md) and
+  [docs/RUNTIME_ADMISSION.md](docs/RUNTIME_ADMISSION.md). Neither has
+  authentication; rate limiting is opt-in. No receipt retention or SIEM
+  export yet.
 - No production identity or multi-user authorization
 - No formal compliance certification (SOC 2, ISO 27001, EU AI Act)
 
@@ -366,11 +380,13 @@ The signed manifest, admission gate, and receipt chain are designed to remain fo
 
 ## Roadmap
 
-The path from local control plane to hosted infrastructure:
+The path from local admission-and-evidence layer to hosted infrastructure:
 
-1. **Today (0.1.0):** CLI gate, CI/CD integration, local enforcement, signed receipts
-2. **Next:** Hosted verifier API — consumers verify receipts without a local trust store
-3. **Then:** Hosted receipt retention — tamper-evident receipt log with export
+1. **Today (1.0.0):** CLI gate, CI/CD integration, local enforcement, signed receipts
+2. **Done:** Hosted verifier ([docs/HOSTED_VERIFIER.md](docs/HOSTED_VERIFIER.md)) — stateless signature
+   verification over HTTP, plus an opt-in, non-consuming admission-attestation
+   endpoint ([docs/RUNTIME_ADMISSION.md](docs/RUNTIME_ADMISSION.md))
+3. **Next:** Hosted receipt retention — tamper-evident receipt log with export
 4. **Then:** Runtime gateway — HTTP proxy that gates agent tool calls in production
 5. **Then:** Enterprise control plane — org-level policy, SIEM export, HSM signing, multi-user
 

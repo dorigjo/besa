@@ -58,6 +58,21 @@ proofs remain verifiable? Is this additive or breaking? -->
 <!-- What this request is explicitly NOT asking for. Besa is not a dashboard,
 hosted service, billing system, or general AI-security platform in this scope. -->
 
+## Priority
+
+<!-- Pick one: Critical security requirement / Required for adoption /
+Developer experience improvement / Nice-to-have -->
+
+## Standardization potential
+
+<!-- Could this become a stable, versioned part of the Besa artifact/protocol
+format itself, or is it an implementation-detail feature? -->
+
+## Evidence impact
+
+<!-- Does this feature produce, change, or consume trust evidence
+(manifests, receipts, evidence envelopes)? If not, say so. -->
+
 ## Additional context
 
 <!-- Links, references, prior art. No secrets or customer data. -->

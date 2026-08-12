@@ -3,22 +3,23 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Besa — The AI agent execution control plane</title>
-  <meta name="description" content="Besa is the AI agent execution control plane. Policy-gated tool calls, signed allow/deny decisions, and tamper-evident execution receipts — before the tool call happens." />
-  <meta name="theme-color" content="#fafafa" />
+  <title>Besa — Cryptographic admission &amp; evidence layer for AI agents</title>
+  <meta name="description" content="Besa is the cryptographic admission and evidence layer for AI-agent tool calls. Signed manifests, fail-closed admission decisions, and tamper-evident execution receipts — verifiable offline by any party." />
+  <meta name="theme-color" content="#1B3A2D" />
+  <meta name="color-scheme" content="light" />
   <link rel="canonical" href="https://dorigjo.github.io/besa/" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="stylesheet" href="styles.css" />
 
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Besa" />
-  <meta property="og:title" content="Besa — The AI agent execution control plane" />
-  <meta property="og:description" content="Policy-gated tool calls, signed allow/deny decisions, and tamper-evident execution receipts — before the tool call happens." />
+  <meta property="og:title" content="Besa — Cryptographic admission &amp; evidence layer for AI agents" />
+  <meta property="og:description" content="Signed manifests, fail-closed admission decisions, and tamper-evident execution receipts — verifiable offline by any party." />
   <meta property="og:url" content="https://dorigjo.github.io/besa/" />
   <meta property="og:image" content="https://dorigjo.github.io/besa/logo.svg" />
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="Besa — The AI agent execution control plane" />
-  <meta name="twitter:description" content="Policy-gated tool calls, signed allow/deny decisions, and tamper-evident execution receipts — before the tool call happens." />
+  <meta name="twitter:title" content="Besa — Cryptographic admission &amp; evidence layer for AI agents" />
+  <meta name="twitter:description" content="Signed manifests, fail-closed admission decisions, and tamper-evident execution receipts — verifiable offline by any party." />
   <meta name="twitter:image" content="https://dorigjo.github.io/besa/logo.svg" />
 </head>
 <body>
@@ -26,12 +27,12 @@
   <header class="site-header">
     <nav class="nav">
       <div class="nav-brand">
-        <img src="logo.svg" alt="Besa" class="nav-mark" width="44" height="40" loading="eager" />
+        <img src="logo.svg" alt="" class="nav-mark" width="40" height="40" loading="eager" decoding="async" />
         <span class="nav-word">Besa</span>
       </div>
-      <div class="lang-toggle">
-        <button id="btn-en" type="button" class="lang-btn active" onclick="setLang('en')">EN</button>
-        <button id="btn-de" type="button" class="lang-btn" onclick="setLang('de')">DE</button>
+      <div class="lang-toggle" role="group" aria-label="Language / Sprache">
+        <button id="btn-en" type="button" class="lang-btn active" aria-pressed="true" aria-label="English">EN</button>
+        <button id="btn-de" type="button" class="lang-btn" aria-pressed="false" aria-label="Deutsch">DE</button>
       </div>
     </nav>
   </header>
@@ -40,14 +41,14 @@
 
     <section class="hero">
       <span class="category-eyebrow"
-            data-en="AI Agent Execution Control Plane"
-            data-de="KI-Agenten-Ausführungskontrollebene">AI Agent Execution Control Plane</span>
+            data-en="Cryptographic Admission &amp; Evidence Layer"
+            data-de="Kryptografische Zulassungs- und Nachweisschicht">Cryptographic Admission &amp; Evidence Layer</span>
       <div class="hero-rule" aria-hidden="true"></div>
       <h1 class="hero-brand">Besa</h1>
       <p class="hero-claim"
-         data-en="The AI agent execution control plane."
-         data-de="Die KI-Agenten-Ausführungskontrollebene.">
-        The AI agent execution control plane.
+         data-en="The cryptographic admission and evidence layer for AI-agent actions."
+         data-de="Die kryptografische Zulassungs- und Nachweisschicht für KI-Agenten-Aktionen.">
+        The cryptographic admission and evidence layer for AI-agent actions.
       </p>
       <p class="hero-sub"
          data-en="Before an AI agent touches a tool, API, database, or pipeline — Besa checks whether the action is declared, policy-approved, within budget, and attributable. Fail-closed. Signed proof of every decision."
@@ -66,9 +67,8 @@
              id="install-cmd"
              role="button"
              tabindex="0"
-             aria-label="Copy install command"
-             onclick="copyInstall(this)"
-             onkeydown="if(event.key==='Enter'||event.key===' ')copyInstall(this)">npm install @dorigjo/besa</pre>
+             aria-label="Copy install command: npm install @dorigjo/besa">npm install @dorigjo/besa</pre>
+        <span id="copy-status" class="visually-hidden" role="status" aria-live="polite"></span>
         <a class="spec-link"
            href="https://github.com/dorigjo/besa"
            data-en="Read the spec →"
@@ -112,8 +112,8 @@
             data-de="Ob jeder Tool-Aufruf innerhalb der deklarierten Richtlinie lag">Whether each tool call was inside declared policy</li>
         <li data-en="Whether the call was admitted or denied — and the machine-readable reason"
             data-de="Ob der Aufruf zugelassen oder abgelehnt wurde – und der maschinenlesbare Grund">Whether the call was admitted or denied — and the machine-readable reason</li>
-        <li data-en="The exact request that triggered the decision"
-            data-de="Der genaue Request, der die Entscheidung ausgelöst hat">The exact request that triggered the decision</li>
+        <li data-en="A cryptographic fingerprint (SHA-256) of the request that triggered the decision"
+            data-de="Ein kryptografischer Fingerabdruck (SHA-256) des Requests, der die Entscheidung ausgelöst hat">A cryptographic fingerprint (SHA-256) of the request that triggered the decision</li>
         <li data-en="Which key signed the evidence — fully verifiable by any party"
             data-de="Welcher Schlüssel die Beweise signiert hat – von jeder Partei verifizierbar">Which key signed the evidence — fully verifiable by any party</li>
       </ul>
@@ -132,8 +132,8 @@ besa trust add examples/manifest.signed.json
 besa verify examples/manifest.signed.json
 besa admit examples/manifest.signed.json crm.lookup
 besa admit examples/manifest.signed.json crm.delete
-besa receipt crm.lookup examples/manifest.signed.json
-besa verify-receipt .besa/receipts/receipt.json examples/manifest.signed.json
+besa receipt crm.lookup examples/manifest.signed.json --request examples/request.json
+besa verify-receipt .besa/receipts/<id>.json examples/manifest.signed.json --request examples/request.json
 besa keys rotate</pre>
       </div>
     </section>
@@ -149,16 +149,17 @@ besa keys rotate</pre>
       </p>
       <div class="receipt-card">
         <pre>{
-  "receiptId":    "rcpt_2d7942c7-8f70-4984-9c3f-24876acfd860",
+  "artifactVersion": 1,
+  "receiptId": "rcpt_2d7942c7-8f70-4984-9c3f-24876acfd860",
   "manifestHash": "ea7e9ca22d199f40281cdf9e5d6145440c6c7d6bfbe94157c4b1da5527054410",
-  "toolName":     "crm.lookup",
-  "decision":     "allow",
-  "reasonCode":   "ALLOWED",
-  "timestamp":    "2026-06-18T10:00:00.000Z",
-  "requestHash":  "b27b80d1227c167a6fca199778645daa77d20a8087782fc48802d11d6281c920",
-  "publicKeyId":  "89f17bbd1da3fae8",
-  "algorithm":    "ed25519",
-  "signature":    "MEYCIQDkv2mN8rT..."
+  "toolName": "crm.lookup",
+  "decision": "allow",
+  "reasonCode": "ALLOWED",
+  "timestamp": "2026-06-19T10:00:00.000Z",
+  "requestHash": "b27b80d1227c167a6fca199778645daa77d20a8087782fc48802d11d6281c920",
+  "publicKeyId": "f68668614543c4896cf8cee418492f1a4df1f1acdba8850f94728b8a94cf90fe",
+  "algorithm": "ed25519",
+  "signature": "&lt;base64-ed25519-signature&gt;"
 }</pre>
       </div>
     </section>
@@ -166,9 +167,9 @@ besa keys rotate</pre>
     <section class="status reveal">
       <span class="section-label">Status</span>
       <p class="status-copy"
-         data-en="Early access (0.1.0). Local-first. The execution control artifacts — signed manifests, policy gates, signed receipts — are production-quality cryptography. Hosted infrastructure (verifier API, receipt retention, HSM) is on the roadmap."
-         data-de="Early Access (0.1.0). Local-first. Die Ausführungskontroll-Artefakte – signierte Manifeste, Policy-Gates, signierte Receipts – sind produktionsreife Kryptografie. Gehostete Infrastruktur (Verifier-API, Receipt-Aufbewahrung, HSM) ist in Planung.">
-        Early access (0.1.0). Local-first. The execution control artifacts — signed manifests, policy gates, signed receipts — are production-quality cryptography. Hosted infrastructure (verifier API, receipt retention, HSM) is on the roadmap.
+         data-en="v1.0.0. Local-first. Manifests and receipts are signed with standard cryptographic primitives — Ed25519 signatures over SHA-256 hashes — and can be verified offline by any party. Local signing keys are encrypted at rest (AES-256-GCM, scrypt-derived). No independent third-party security audit has been performed yet. Hosted infrastructure (verifier API, receipt retention, HSM-backed keys) is on the roadmap."
+         data-de="v1.0.0. Local-first. Manifeste und Receipts werden mit gängigen kryptografischen Primitiven signiert – Ed25519-Signaturen über SHA-256-Hashes – und sind von jeder Partei offline verifizierbar. Lokale Signierschlüssel werden im Ruhezustand verschlüsselt (AES-256-GCM, scrypt-abgeleitet). Es hat noch kein unabhängiges Sicherheitsaudit stattgefunden. Gehostete Infrastruktur (Verifier-API, Receipt-Aufbewahrung, HSM-gestützte Schlüssel) ist in Planung.">
+        v1.0.0. Local-first. Manifests and receipts are signed with standard cryptographic primitives — Ed25519 signatures over SHA-256 hashes — and can be verified offline by any party. Local signing keys are encrypted at rest (AES-256-GCM, scrypt-derived). No independent third-party security audit has been performed yet. Hosted infrastructure (verifier API, receipt retention, HSM-backed keys) is on the roadmap.
       </p>
       <a class="source-link"
          href="https://github.com/dorigjo/besa"
@@ -188,51 +189,17 @@ besa keys rotate</pre>
             data-de="© 2026 Besa. MIT-Lizenz.">© 2026 Besa. MIT License.</span>
     </div>
     <p class="footer-legal"
-       data-en="Besa does not guarantee regulatory compliance, prevent fines, or replace legal, security, or compliance counsel. It is a developer tool that produces cryptographic evidence artifacts."
-       data-de="Besa garantiert keine regulatorische Konformität, verhindert keine Bußgelder und ersetzt keine rechtliche, sicherheitsbezogene oder Compliance-Beratung. Es ist ein Entwicklertool, das kryptografische Beweisartefakte erzeugt.">
-      Besa does not guarantee regulatory compliance, prevent fines, or replace legal, security, or compliance counsel. It is a developer tool that produces cryptographic evidence artifacts.
+       data-en="Besa is an open-source developer tool that produces cryptographic evidence artifacts. There is no paid hosted service, support contract, or compliance guarantee yet. It does not by itself ensure regulatory compliance, prevent fines, or replace legal, security, or compliance counsel."
+       data-de="Besa ist ein quelloffenes Entwicklertool, das kryptografische Beweisartefakte erzeugt. Es gibt bislang keinen kostenpflichtigen gehosteten Dienst, keinen Support-Vertrag und keine Compliance-Garantie. Es stellt für sich genommen keine regulatorische Konformität sicher, verhindert keine Bußgelder und ersetzt keine rechtliche, sicherheitsbezogene oder Compliance-Beratung.">
+      Besa is an open-source developer tool that produces cryptographic evidence artifacts. There is no paid hosted service, support contract, or compliance guarantee yet. It does not by itself ensure regulatory compliance, prevent fines, or replace legal, security, or compliance counsel.
     </p>
-    <p class="footer-legal"
-       data-en="Legal &amp; privacy: This static site uses no contact forms, analytics scripts, advertising trackers, or custom cookies. Hosting providers may process technical access data under their own policies. Legal notice and privacy policy: not yet published, to be added before commercial operation. Security policy: see SECURITY.md."
-       data-de="Rechtliches &amp; Datenschutz: Diese statische Website verwendet keine Kontaktformulare, Analyse-Skripte, Werbe-Tracker oder eigene Cookies. Hosting-Anbieter können technische Zugriffsdaten gemäß ihren eigenen Richtlinien verarbeiten. Impressum und Datenschutzerklärung: noch nicht veröffentlicht, werden vor kommerziellem Betrieb ergänzt. Sicherheitsrichtlinie: siehe SECURITY.md.">
-      Legal &amp; privacy: This static site uses no contact forms, analytics scripts, advertising trackers, or custom cookies. Hosting providers may process technical access data under their own policies. Legal notice and privacy policy: not yet published, to be added before commercial operation. Security policy: see
-      <a class="source-link" href="https://github.com/dorigjo/besa/blob/main/SECURITY.md">SECURITY.md</a>.
+    <p class="footer-legal">
+      <span data-en="Legal &amp; privacy: This static site uses no contact forms, analytics scripts, advertising trackers, or custom cookies. Hosting providers may process technical access data under their own policies. Legal notice and privacy policy: not yet published, to be added before commercial operation. Security policy: see "
+            data-de="Rechtliches &amp; Datenschutz: Diese statische Website verwendet keine Kontaktformulare, Analyse-Skripte, Werbe-Tracker oder eigene Cookies. Hosting-Anbieter können technische Zugriffsdaten gemäß ihren eigenen Richtlinien verarbeiten. Impressum und Datenschutzerklärung: noch nicht veröffentlicht, werden vor kommerziellem Betrieb ergänzt. Sicherheitsrichtlinie: siehe ">Legal &amp; privacy: This static site uses no contact forms, analytics scripts, advertising trackers, or custom cookies. Hosting providers may process technical access data under their own policies. Legal notice and privacy policy: not yet published, to be added before commercial operation. Security policy: see </span><a class="source-link" href="https://github.com/dorigjo/besa/blob/main/SECURITY.md">SECURITY.md</a><span aria-hidden="true">.</span>
     </p>
   </footer>
 
-  <script>
-    function setLang(lang) {
-      document.documentElement.lang = lang;
-      document.querySelectorAll('[data-en]').forEach(function (el) {
-        el.textContent = lang === 'de' ? el.dataset.de : el.dataset.en;
-      });
-      document.getElementById('btn-en').classList.toggle('active', lang === 'en');
-      document.getElementById('btn-de').classList.toggle('active', lang === 'de');
-    }
-
-    function copyInstall(el) {
-      navigator.clipboard.writeText('npm install @dorigjo/besa').then(function () {
-        el.classList.add('copied');
-        setTimeout(function () { el.classList.remove('copied'); }, 1800);
-      }).catch(function () {});
-    }
-
-    var preferred = navigator.language && navigator.language.startsWith('de') ? 'de' : 'en';
-    setLang(preferred);
-
-    var observer = new IntersectionObserver(function (entries) {
-      entries.forEach(function (entry) {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('visible');
-          observer.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.08 });
-
-    document.querySelectorAll('.reveal').forEach(function (el) {
-      observer.observe(el);
-    });
-  </script>
+  <script src="app.js" defer></script>
 
 </body>
 </html>

@@ -139,8 +139,8 @@ The CI gate is the first step toward treating agent tool declarations as first-c
 
 ---
 
-## Limitations (0.1.0)
+## Limitations (v1.0)
 
 - The trust store and signing key are local. CI runs must either generate a key per run (non-persistent verification) or use a key committed to secrets (more persistent but not HSM-backed).
 - No distributed replay protection — duplicate build runs with the same manifest produce the same verification result, which is correct behavior for verification.
-- No hosted verifier — consumers without the Besa CLI cannot verify receipts independently (on the roadmap).
+- A hosted verifier now exists (`besa serve`, see `docs/HOSTED_VERIFIER.md`) for consumers without the Besa CLI to check cryptographic signature validity independently. It does not check trust-store membership or run admission policy — those remain CLI/local-only, so it does not replace the CI gate above.

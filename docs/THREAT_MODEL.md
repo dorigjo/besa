@@ -1,8 +1,19 @@
 # Besa Threat Model
 
-Status: early access (`0.1.0`).
+Status: v1.0 (`1.0.0`) — stable CLI/SDK/artifact-format surface; no independent third-party security audit performed yet (see `V1_SECURITY_RELEASE_REVIEW.md`).
 
 This document explains what Besa protects against today, what it does not protect against yet, and which risks still exist in the current MVP.
+
+For the `KeyProvider` seam specifically (per-attacker analysis of local vs.
+remote/simulated signing), see `PROVIDER_THREAT_MODEL.md` — it covers the
+same replay and key-leakage risks named below in more detail for that one
+subsystem; the facts in both documents agree.
+
+For the hosted verifier (`besa serve`, stateless signature checks) and the
+opt-in runtime admission service (`besa serve --trust`, which loads a
+signing key and issues signed `AdmissionAttestation`s), see
+`HOSTED_VERIFIER.md` and `RUNTIME_ADMISSION.md` respectively — both use the
+same per-attacker format as this document and agree with it.
 
 ## Assets
 
@@ -17,6 +28,9 @@ Besa currently protects or records the following assets:
 * **Admission decisions** — allow or deny decisions for requested tool usage.
 * **Receipts** — signed, tamper-evident records of admission decisions.
 * **Action meter state** — local usage counts used for budget checks.
+* **Admission attestations** — signed, non-consuming decision snapshots issued
+  by the opt-in runtime admission service (`besa serve --trust`); see
+  `RUNTIME_ADMISSION.md`.
 
 ## Trust boundaries
 
@@ -62,6 +76,8 @@ A realistic attacker may try to:
 10. Commit private keys or generated artifacts by mistake.
 11. Present a valid signature under an attacker-controlled, untrusted key.
 12. Continue new admissions after a signing key is retired or revoked.
+13. Forge or replay a signed admission attestation, or exhaust a shared
+    meter's remaining budget via the opt-in runtime admission service.
 
 ## Current mitigations
 
@@ -159,10 +175,11 @@ This creates a tamper-evident record of what Besa allowed or denied.
 
 ## Current MVP limitations
 
-This early-access release has important limitations:
+This release has important limitations:
 
 * local key storage only (AES-256-GCM encrypted at rest; no hosted key management or HSM)
-* no hosted verifier service
+* hosted verifier service exists (`besa serve`, stateless signature checks only; see `HOSTED_VERIFIER.md`) — has no authentication; rate limiting is opt-in (`--rate-limit <n>`, off by default)
+* opt-in runtime admission service exists (`besa serve --trust`; see `RUNTIME_ADMISSION.md`) — also has no authentication and the same opt-in rate limiting, and its process holds signing key material for its lifetime
 * no hardware-backed keys
 * no hardware-backed or centrally governed key lifecycle
 * no multi-user access control
@@ -209,7 +226,7 @@ Receipts include timestamps, but there is no shared nonce store, no global recei
 The local meter prevents concurrent over-consumption on one host, but it does
 not prevent replay across machines, environments, or after local state reset.
 
-## Out of scope for this early-access release
+## Out of scope for this release
 
 Besa does not currently provide:
 
@@ -232,7 +249,6 @@ Besa is a control and evidence layer, not a complete security platform.
 
 Planned or possible future mitigations include:
 
-* hosted verifier API
 * hosted receipt API
 * remote receipt retention
 * shared ActionMeter state
@@ -261,7 +277,7 @@ It helps answer questions such as:
 * Was the requested tool too risky?
 * Was the local budget exceeded?
 
-This early-access release is useful for development, integration testing, security
+This release is useful for development, integration testing, security
 review, and architecture validation.
 
 It is not yet production security infrastructure.

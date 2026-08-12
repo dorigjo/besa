@@ -4,6 +4,134 @@ All notable changes to this project are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2026-08-12
+
+First stable release. The CLI surface, SDK exports, and every signed-
+artifact format (`SignedManifest`, `Receipt`, `KeyRotation`,
+`AdmissionAttestation`) are now frozen — a future breaking change to any
+of them requires a major version bump. No independent third-party
+security audit has been performed (see `docs/V1_SECURITY_RELEASE_REVIEW.md`).
+
+### Added
+
+* `SPEC.md` and `conformance/golden-v1.json` now ship inside the published
+  npm package. The specification and its frozen test vectors were
+  previously repo-only, which meant anyone building an independent
+  verifier from the package alone had neither the normative rules nor a
+  way to self-check against real signed artifacts. Independent
+  implementability is the point of freezing a format, so the spec now
+  travels with the code.
+* `conformance/golden-v1.json` — publishable v1 conformance vectors
+  (canonical-ordering vector, public key, hashes, a signed manifest, and a
+  receipt). A test asserts the published file stays identical to the
+  frozen in-repo fixtures and that the published bytes themselves verify,
+  so the vectors external implementers receive can never drift from the
+  implementation.
+* `besa keys fingerprint` — prints the local signing key's SHA-256
+  fingerprint in colon-grouped hex, without needing to parse `besa keys`'
+  JSON output.
+* `besa keys export-public` — prints the local public key (base64 DER)
+  alone, for scripting and sharing.
+* Key passphrases (`sealKeyPair`/`openKeyPair`) now require at least 8
+  distinct characters in addition to the existing 16-1024 byte length
+  check, rejecting trivially-guessable low-entropy passphrases that
+  previously passed length validation alone.
+* Windows ACL hardening for `.besa/key.json` and archived rotation keys:
+  `icacls` now restricts the file to the current user (POSIX already did
+  this via `chmod 0600`; Windows had no equivalent until now).
+* `besa export-evidence <manifest> <receipt>` — exports an already-signed
+  manifest + receipt as a structured "Evidence Envelope" JSON document for
+  external audit / evidence-retention workflows (`docs/EVIDENCE_ENVELOPE.md`).
+  Reuses the existing `verify`/`verify-receipt` verification path; issues no
+  new signature and makes no new trust decision. Exported from the SDK as
+  `createEvidenceEnvelope`.
+* `npm run sbom` — generates a CycloneDX software bill of materials via the
+  native `npm sbom` command (no new dependency).
+* `besa serve` — a stateless hosted verifier over HTTP, wrapping the exact
+  signature-verification functions the CLI already uses
+  (`docs/HOSTED_VERIFIER.md`).
+* `besa serve --trust <file>` — opt-in, non-consuming runtime admission
+  endpoint (`POST /v1/admit`) issuing signed `AdmissionAttestation`s
+  without ever acquiring the local meter lock, so it cannot block the
+  server's event loop or be used to remotely exhaust budget
+  (`docs/RUNTIME_ADMISSION.md`).
+* `GET /metrics` on the hosted verifier — read-only, in-memory, per-process
+  request counters (`requestsTotal`, `requestsByRoute`, `requestsByStatus`,
+  `rateLimitedTotal`), reset on restart. Always available, no
+  authentication (matches the rest of the server's public-endpoint model).
+* `besa serve --rate-limit <n>` — opt-in, fixed-window rate limiting keyed
+  by client remote address, off by default. Rejects with `429` and a
+  `Retry-After` header before the request body is even read.
+* `besa serve --host <addr>` — explicit opt-in for binding beyond loopback
+  (see Security, below, for why this exists).
+* Structured JSON access logging (method/route/status/duration) to stdout
+  for every request the hosted verifier handles — metadata only, never
+  headers, bodies, keys, or signatures.
+* Graceful shutdown (`SIGINT`/`SIGTERM`) and a `clientError` handler for
+  `besa serve`, so malformed low-level HTTP or a signal closes the server
+  cleanly instead of dying mid-request.
+
+### Security
+
+* Fixed: `besa serve` bound to every network interface by default despite
+  its startup banner saying "listening on http://localhost:<port>" —
+  reachable from other machines on the same network without the operator
+  realizing it. Now binds to `127.0.0.1` (loopback-only) by default;
+  `--host` opts into a wider bind explicitly and prints a visible warning.
+* Fixed: `readJsonFile()` labeled every file-read error — including a
+  plain missing-file `ENOENT` — as `"invalid JSON at <path>"`, misleading
+  anyone who pointed the CLI at a typo'd or missing path into debugging a
+  JSON syntax error that didn't exist. A missing/unreadable file now
+  surfaces its own real error.
+
+### Documentation
+
+* Corrected several stale "not implemented" / "coming soon" claims in
+  `README.md`, `SECURITY.md`, `docs/THREAT_MODEL.md`, `docs/CI_GATE.md`,
+  `docs/RUNTIME_ADMISSION.md`, and `docs/AGENT_GATEWAY.md` that understated
+  what already exists (the hosted verifier, runtime admission, and
+  rate limiting shipped in this same release).
+* Replaced "early access, may change before a stable release" framing
+  with a precise v1.0 stability statement: CLI/SDK/artifact-format surface
+  is frozen; independent security audit and production track record are
+  separate, still-open items, named as such rather than implied.
+* New: `docs/V1_SECURITY_RELEASE_REVIEW.md` (cryptography/trust-model/
+  runtime/supply-chain review), `docs/PHASE9_ADOPTION_READINESS_AUDIT.md`,
+  `docs/PHASE10_EXTERNAL_VALIDATION_READINESS.md`.
+* `SPEC.md`: corrected a contradiction that would have broken any
+  independent implementation. The artifact sections stated "field order is
+  significant (it is the signed byte order)" while the canonicalization
+  section correctly described lexicographic key sorting. Only the latter
+  is true — `canonicalize` sorts keys — so an implementer who serialized
+  fields in table order and signed the result produced signatures this
+  implementation rejects. The tables are now labelled as documentation
+  order, with an explicit statement that lexicographic order determines
+  the signed bytes. No code or artifact bytes changed; the specification
+  was wrong, not the implementation.
+* `SPEC.md`: filled the remaining gaps that blocked independent
+  implementation — an ordered sign/verify algorithm, exact `publicKeyId`
+  derivation (base64-decode → SHA-256 → lowercase hex), the rule that an
+  absent request hashes the empty object, the requirement that absent
+  optional receipt fields are omitted rather than emitted as `null`, and
+  the previously undocumented `AdmissionAttestation` artifact (including
+  its `besa:admission-attestation:v1` signature domain) and
+  `EvidenceEnvelope` export format. The envelope is documented explicitly
+  as unsigned and therefore not evidence on its own.
+
+### Breaking Changes
+
+None. Every addition is opt-in or purely additive; a plain `besa serve`
+with no new flags is behaviorally unchanged except for the corrected
+default bind address (a security fix, not an API change) and the
+always-on `/metrics` route and access-log lines.
+
+### Notes
+
+* No new runtime dependencies. 167 tests pass (was 149 at the start of
+  this release cycle); build, smoke, `smoke:server` (extended with
+  metrics/performance/rate-limit checks against the real built binary),
+  and package checks are green.
+
 ## [0.1.0] - 2026-07-08
 
 First public release. Consolidates the beta series (beta.0 → beta.5) into a stable

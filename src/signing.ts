@@ -1,21 +1,18 @@
-import {
-  randomUUID,
-  sign as ed25519Sign,
-  verify as ed25519Verify,
-} from "node:crypto";
+import { randomUUID, verify as ed25519Verify } from "node:crypto";
 import type { Decision, Manifest, Receipt, SignedManifest } from "./types.js";
 import {
   canonicalize,
   isCanonicalBase64,
-  privateKeyFromDer,
   publicKeyFromDer,
   publicKeyId,
   sha256Hex,
+  signWithKeyPair,
   signatureMessage,
   validateKeyPair,
   type KeyPair,
 } from "./crypto.js";
 import { validateManifest } from "./manifest.js";
+import type { KeyProvider } from "./keys/provider.js";
 
 const SHA256_HEX = /^[a-f0-9]{64}$/;
 const KEY_ID = /^[a-f0-9]{64}$/;
@@ -313,35 +310,74 @@ export function hashRequest(request: unknown): string {
   return sha256Hex(`besa:request:v1\0${canonicalize(request)}`);
 }
 
-export function signManifest(manifest: Manifest, keypair: KeyPair): SignedManifest {
+// Shared by both signManifest (KeyPair, sync) and signManifestWithProvider
+// (KeyProvider, async): the only difference between the two signing paths is
+// where the signature bytes come from. Validation, canonicalization, and the
+// output shape are computed exactly once, here.
+function buildManifestBody(
+  manifest: Manifest,
+  publicKey: string,
+  publicKeyIdValue: string,
+): Omit<SignedManifest, "signature"> {
   const validation = validateManifest(manifest);
 
   if (!validation.ok || !validation.manifest) {
     throw new Error(`Invalid manifest:\n  - ${validation.errors.join("\n  - ")}`);
   }
 
+  return {
+    artifactVersion: 1,
+    manifest: validation.manifest,
+    manifestHash: hashManifest(validation.manifest),
+    algorithm: "ed25519",
+    publicKey,
+    publicKeyId: publicKeyIdValue,
+    signedAt: new Date().toISOString(),
+  };
+}
+
+export function signManifest(manifest: Manifest, keypair: KeyPair): SignedManifest {
   if (!validateKeyPair(keypair)) {
     throw new Error("invalid or mismatched Ed25519 key pair");
   }
 
-  const body = {
-    artifactVersion: 1 as const,
-    manifest: validation.manifest,
-    manifestHash: hashManifest(validation.manifest),
-    algorithm: "ed25519" as const,
-    publicKey: keypair.publicKeyDer,
-    publicKeyId: publicKeyId(keypair.publicKeyDer),
-    signedAt: new Date().toISOString(),
-  };
-  const signature = ed25519Sign(
-    null,
+  const body = buildManifestBody(
+    manifest,
+    keypair.publicKeyDer,
+    publicKeyId(keypair.publicKeyDer),
+  );
+  const signature = signWithKeyPair(
     signatureMessage("signed-manifest", manifestSignaturePayload(body)),
-    privateKeyFromDer(keypair.privateKeyDer),
+    keypair,
   );
 
   return {
     ...body,
     signature: signature.toString("base64"),
+  };
+}
+
+/**
+ * Provider-native counterpart of signManifest(). Identical canonicalization,
+ * signature domain, hash computation, and output shape — the only difference
+ * is that signing happens through a KeyProvider instead of a raw KeyPair.
+ * privateKeyDer is never read on this path; the provider is the only thing
+ * that ever sees private key material.
+ */
+export async function signManifestWithProvider(
+  manifest: Manifest,
+  provider: KeyProvider,
+): Promise<SignedManifest> {
+  const publicKey = await provider.getPublicKey();
+  const publicKeyIdValue = await provider.getKeyId();
+  const body = buildManifestBody(manifest, publicKey, publicKeyIdValue);
+  const signature = await provider.sign(
+    signatureMessage("signed-manifest", manifestSignaturePayload(body)),
+  );
+
+  return {
+    ...body,
+    signature: Buffer.from(signature).toString("base64"),
   };
 }
 
@@ -429,7 +465,7 @@ export function verifySignedManifest(value: unknown): VerifyResult {
   }
 }
 
-export function createReceipt(input: ReceiptInput, keypair: KeyPair): Receipt {
+function validateReceiptInput(input: ReceiptInput): void {
   if (!SHA256_HEX.test(input.manifestHash)) {
     throw new Error("manifestHash must be a lowercase SHA-256 hex digest");
   }
@@ -470,12 +506,17 @@ export function createReceipt(input: ReceiptInput, keypair: KeyPair): Receipt {
   if (input.grantReasonCode !== undefined && input.agentId === undefined) {
     throw new Error("grantReasonCode may only be present when agentId is present");
   }
+}
 
-  if (!validateKeyPair(keypair)) {
-    throw new Error("invalid or mismatched Ed25519 key pair");
-  }
+// Shared by both createReceipt (KeyPair, sync) and createReceiptWithProvider
+// (KeyProvider, async) — see buildManifestBody for the same rationale.
+function buildReceiptBody(
+  input: ReceiptInput,
+  publicKeyIdValue: string,
+): Omit<Receipt, "signature"> {
+  validateReceiptInput(input);
 
-  const body: Omit<Receipt, "signature"> = {
+  return {
     artifactVersion: 1,
     receiptId: "rcpt_" + randomUUID(),
     manifestHash: input.manifestHash,
@@ -488,19 +529,44 @@ export function createReceipt(input: ReceiptInput, keypair: KeyPair): Receipt {
     ...(input.grantReasonCode === undefined
       ? {}
       : { grantReasonCode: input.grantReasonCode }),
-    publicKeyId: publicKeyId(keypair.publicKeyDer),
+    publicKeyId: publicKeyIdValue,
     algorithm: "ed25519",
   };
+}
 
-  const signature = ed25519Sign(
-    null,
-    signatureMessage("receipt", body),
-    privateKeyFromDer(keypair.privateKeyDer),
-  );
+export function createReceipt(input: ReceiptInput, keypair: KeyPair): Receipt {
+  if (!validateKeyPair(keypair)) {
+    throw new Error("invalid or mismatched Ed25519 key pair");
+  }
+
+  const body = buildReceiptBody(input, publicKeyId(keypair.publicKeyDer));
+  const signature = signWithKeyPair(signatureMessage("receipt", body), keypair);
 
   return {
     ...body,
     signature: signature.toString("base64"),
+  };
+}
+
+/**
+ * Provider-native counterpart of createReceipt(). Identical validation,
+ * canonicalization, signature domain, and output shape — receiptId and
+ * timestamp are freshly generated per call exactly as they already are for
+ * two consecutive createReceipt() calls, so this is not byte-identical to
+ * any single legacy call, but every field's *format* and every validation
+ * rule are the same. privateKeyDer is never read on this path.
+ */
+export async function createReceiptWithProvider(
+  input: ReceiptInput,
+  provider: KeyProvider,
+): Promise<Receipt> {
+  const publicKeyIdValue = await provider.getKeyId();
+  const body = buildReceiptBody(input, publicKeyIdValue);
+  const signature = await provider.sign(signatureMessage("receipt", body));
+
+  return {
+    ...body,
+    signature: Buffer.from(signature).toString("base64"),
   };
 }
 

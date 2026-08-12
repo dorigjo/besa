@@ -2,6 +2,17 @@
 
 <!-- One paragraph or bullet list. Focus on why, not what. The diff shows what. -->
 
+## Threat model impact
+
+<!-- Does this change what is signed, verified, trusted, or admitted?
+Which risk does it reduce? Which new risk, if any, does it introduce?
+If neither applies (docs-only, tooling-only), say so explicitly. -->
+
+## Backward compatibility
+
+<!-- Do existing signed manifests, receipts, trust stores, and rotation
+proofs remain verifiable after this change? Additive or breaking? -->
+
 ## Checklist
 
 ### Build & tests

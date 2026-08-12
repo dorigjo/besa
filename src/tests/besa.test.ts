@@ -10,6 +10,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Worker } from "node:worker_threads";
+import type { MeterWorkerResult } from "./meter-worker.js";
 import {
 REASON,
 addTrustAnchor,
@@ -589,23 +590,53 @@ function runMeterWorker(input: MeterWorkerInput): Promise<number> {
   return new Promise((resolve, reject) => {
     const worker = new Worker(new URL("./meter-worker.js", import.meta.url), {
       workerData: input,
+      stdout: true,
+      stderr: true,
     });
 
-    let result: number | undefined;
+    let stdout = "";
+    let stderr = "";
+    worker.stdout.on("data", (chunk: Buffer) => {
+      stdout += chunk.toString("utf8");
+    });
+    worker.stderr.on("data", (chunk: Buffer) => {
+      stderr += chunk.toString("utf8");
+    });
 
-    worker.once("message", (value: number) => {
+    const streams = (): string => {
+      const parts: string[] = [];
+      if (stdout.trim()) parts.push(`stdout: ${stdout.trim()}`);
+      if (stderr.trim()) parts.push(`stderr: ${stderr.trim()}`);
+      return parts.length > 0 ? ` (${parts.join("; ")})` : "";
+    };
+
+    let result: MeterWorkerResult | undefined;
+
+    worker.once("message", (value: MeterWorkerResult) => {
       result = value;
     });
-    worker.once("error", reject);
+    worker.once("error", (error: Error) => {
+      reject(new Error(`meter worker errored: ${error.message}${streams()}`));
+    });
     // Resolve only after the worker has fully exited and released all file
-    // handles. Resolving on "message" alone causes ENOTEMPTY on Windows when
-    // rmSync runs while the worker process is still alive.
+    // handles. Resolving on "message" alone causes ENOTEMPTY / delete-pending
+    // races on Windows when rmSync runs while the worker thread is still alive.
     worker.once("exit", (code) => {
       if (code !== 0) {
-        reject(new Error(`meter worker exited with code ${String(code)}`));
-      } else {
-        resolve(result ?? 0);
+        reject(
+          new Error(`meter worker exited with code ${String(code)}${streams()}`),
+        );
+        return;
       }
+      if (result === undefined) {
+        reject(new Error(`meter worker exited without a result${streams()}`));
+        return;
+      }
+      if (!result.ok) {
+        reject(new Error(`meter worker failed: ${result.error}${streams()}`));
+        return;
+      }
+      resolve(result.allowed);
     });
   });
 }
@@ -614,7 +645,8 @@ test("parallel meter consumers cannot exceed the manifest budget", async () => {
   const directory = mkdtempSync(join(tmpdir(), "besa-meter-parallel-"));
   const path = join(directory, "meter.json");
   const manifest = sampleManifest();
-  manifest.tools[0].budgetLimit = 25;
+  const budgetLimit = 25;
+  manifest.tools[0].budgetLimit = budgetLimit;
   const manifestHash = hashManifest(manifest);
   const input: MeterWorkerInput = {
     path,
@@ -628,13 +660,37 @@ test("parallel meter consumers cannot exceed the manifest budget", async () => {
     const allowed = await Promise.all(
       Array.from({ length: 6 }, () => runMeterWorker(input)),
     );
+    const totalAdmitted = allowed.reduce((total, count) => total + count, 0);
     const state = loadMeter(path);
+    const metered = getCount(state, meterKey(manifestHash, "crm.lookup"));
+    const diagnostics =
+      `per-worker allowed=${JSON.stringify(allowed)} ` +
+      `totalAdmitted=${String(totalAdmitted)} metered=${String(metered)} ` +
+      `budget=${String(budgetLimit)}`;
 
-    assert.equal(allowed.reduce((total, count) => total + count, 0), 25);
-    assert.equal(getCount(state, meterKey(manifestHash, "crm.lookup")), 25);
+    // The invariant: 6 workers x 10 attempts = 60 requested admissions against a
+    // budget of 25 must admit exactly 25 — never more — and the persisted meter
+    // must agree. Exact equality both ways proves the check-and-increment stayed
+    // atomic under contention; the diagnostics surface the real counts on any
+    // regression instead of a bare "expected 25".
+    assert.equal(
+      totalAdmitted,
+      budgetLimit,
+      `parallel admissions must equal the budget: ${diagnostics}`,
+    );
+    assert.equal(
+      metered,
+      budgetLimit,
+      `persisted meter must equal the budget: ${diagnostics}`,
+    );
   } finally {
     // On Windows, the OS may release file handles slightly after the worker
     // "exit" event fires.  maxRetries lets Node.js retry on ENOTEMPTY.
-    rmSync(directory, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    rmSync(directory, {
+      recursive: true,
+      force: true,
+      maxRetries: 5,
+      retryDelay: 100,
+    });
   }
 });

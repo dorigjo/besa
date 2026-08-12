@@ -1,6 +1,6 @@
 # Release Checklist
 
-Release gate for `0.1.0`.
+Release gate for the current version in `package.json`.
 
 ## Quality
 
@@ -10,6 +10,9 @@ npx tsc --noEmit
 npm run build
 npm test
 npm run smoke
+npm run smoke:server
+npm run test:examples
+npm run test:docs
 npm run test:package
 npm audit --omit=dev
 ```
@@ -19,6 +22,11 @@ npm audit --omit=dev
 - [ ] Unit tests pass.
 - [ ] The isolated smoke test covers load, sign, verify, allow, deny, receipt,
       receipt verification, trust pinning, key rotation, and grant checks.
+- [ ] The hosted-verifier smoke test covers `/health`, `/v1/verify/*`,
+      `/v1/admit` (enabled and disabled), rate limiting, `/metrics`, and the
+      default loopback-only bind.
+- [ ] `examples/` type-checks against the current SDK surface.
+- [ ] The docs-receipt consistency check passes.
 - [ ] The packed tarball installs in an empty project and exposes its SDK and CLI.
 - [ ] Parallel worker tests prove local call budgets cannot be overspent.
 - [ ] Production dependency audit reports no vulnerabilities.
@@ -50,21 +58,25 @@ git diff --cached --name-only
 
 ## Version and documentation
 
-- [ ] `package.json` and `package-lock.json` both use `0.1.0`.
-- [ ] `README.md`, `SECURITY.md`, and `docs/THREAT_MODEL.md` say `0.1.0` (early access).
-- [ ] `CHANGELOG.md` describes the `0.1.0` release.
+- [ ] `package.json` and `package-lock.json` use the same version number.
+- [ ] `README.md`, `SECURITY.md`, and `docs/THREAT_MODEL.md` reference that
+      same version and describe current capability accurately (no existing
+      feature marked "not implemented," no planned feature marked as shipped).
+- [ ] `CHANGELOG.md` has a dated entry for this version.
 - [ ] PowerShell examples cover every CLI command.
-- [ ] Limitations still state that Besa is not production-ready.
+- [ ] Limitations accurately state what has (and has not) been independently
+      security-audited or run in production — never claim regulatory or
+      compliance certification.
 
 ## Publish
 
 Only after every gate is green:
 
 ```powershell
-git commit -m "chore: release v0.1.0"
-git tag v0.1.0
+git commit -m "chore: release v<version>"
+git tag v<version>
 git push origin main
-git push origin v0.1.0
+git push origin v<version>
 npm login          # authenticate first (2FA if enabled)
 npm publish --access public
 ```

@@ -1,13 +1,24 @@
 /**
  * Agent Gateway Skeleton
  *
- * This is a minimal, honest example of the runtime gateway pattern.
- * It is NOT production-ready. It demonstrates the correct call sequence:
- *   agent request → Besa policy check → allow/deny → signed receipt
+ * A minimal, honest example of the runtime gateway pattern. It is NOT
+ * production-ready. It demonstrates the correct call sequence:
+ *
+ *   agent request → verify trusted manifest → admit → allow/deny
+ *
+ * On allow, the tool call would be forwarded to the upstream system.
+ * On deny, the upstream call is blocked and never reaches the tool.
+ *
+ * This skeleton performs verification and admission only. It does NOT issue
+ * signed receipts: receipt issuance requires an explicitly configured signing
+ * key (see createReceipt(input, keypair) in @dorigjo/besa), and correct local
+ * key custody is out of scope for a transport-only skeleton. The gateway
+ * returns the structured admission decision and never claims to sign a receipt.
  *
  * What this skeleton does NOT include (and should not):
  *   - Authentication of the agent caller
- *   - Persistent receipt storage
+ *   - Signed receipt issuance (needs a configured signing key)
+ *   - Persistent, cross-restart call counters (the meter here is in-memory)
  *   - Key rotation or trust store management
  *   - Rate limiting or DDoS protection
  *   - Any actual tool forwarding (placeholder only)
@@ -16,12 +27,18 @@
  */
 
 import http from 'node:http'
-import { admit, createReceipt, hashRequest, verifyTrustedSignedManifest } from '@dorigjo/besa'
-import type { SignedManifest, TrustStore } from '@dorigjo/besa'
+import { admit, emptyTrustStore, verifyTrustedSignedManifest } from '@dorigjo/besa'
+import type { AdmissionDecision, SignedManifest, TrustStore } from '@dorigjo/besa'
 
-// Load trust store at startup — in production this would be persisted and rotated
-// For this skeleton, start with an empty trust store (no keys trusted)
-const trustStore: TrustStore = { keys: [] }
+// Load the trust store at startup. In production this would be persisted and
+// rotated; this skeleton starts empty, so no key is trusted until one is added
+// (e.g. via `besa trust add`). With an empty store, every manifest fails closed.
+const trustStore: TrustStore = emptyTrustStore()
+
+// In-memory ActionMeter. Demonstrates budget enforcement within a single
+// process; it resets on restart. Persistent, cross-process metering is the
+// Runtime Gateway surface (see admitAndConsume in @dorigjo/besa).
+const callCounts = new Map<string, number>()
 
 interface GatewayRequest {
   signedManifest: SignedManifest
@@ -32,8 +49,11 @@ interface GatewayRequest {
 interface GatewayResponse {
   decision: 'allow' | 'deny'
   reasonCode: string
-  receipt?: unknown
-  error?: string
+  toolName: string
+  detail: string
+  // 'forwarded (placeholder)' only when allowed. The skeleton does not actually
+  // call the tool; a real gateway forwards the upstream request here.
+  upstream: 'forwarded (placeholder)' | 'blocked'
 }
 
 function parseBody(req: http.IncomingMessage): Promise<unknown> {
@@ -53,6 +73,16 @@ function sendJson(res: http.ServerResponse, status: number, data: unknown): void
   res.end(json)
 }
 
+function denyResponse(decision: AdmissionDecision): GatewayResponse {
+  return {
+    decision: 'deny',
+    reasonCode: decision.reasonCode,
+    toolName: decision.toolName,
+    detail: decision.detail,
+    upstream: 'blocked',
+  }
+}
+
 const server = http.createServer(async (req, res) => {
   if (req.method !== 'POST' || req.url !== '/gate') {
     sendJson(res, 404, { error: 'Not found. POST /gate' })
@@ -67,57 +97,51 @@ const server = http.createServer(async (req, res) => {
     return
   }
 
-  const { signedManifest, toolName, requestPayload } = body as GatewayRequest
+  const { signedManifest, toolName } = body as GatewayRequest
 
   if (!signedManifest || !toolName) {
     sendJson(res, 400, { error: 'Missing signedManifest or toolName' })
     return
   }
 
-  // Step 1: Verify the manifest signature against the trust store
-  const verified = verifyTrustedSignedManifest(signedManifest, trustStore)
+  // Step 1: Verify the manifest signature against the trust store (fail-closed).
+  // purpose 'admit' rejects retired keys for new admissions.
+  const verified = verifyTrustedSignedManifest(signedManifest, trustStore, 'admit')
   if (!verified.valid) {
-    const response: GatewayResponse = {
+    sendJson(res, 403, {
       decision: 'deny',
-      reasonCode: verified.reasonCode ?? 'E_KEY_UNTRUSTED',
-    }
-    sendJson(res, 403, response)
+      reasonCode: verified.reasonCode,
+      toolName,
+      detail: verified.detail,
+      upstream: 'blocked',
+    } satisfies GatewayResponse)
     return
   }
 
-  // Step 2: Check admission policy (risk level, budget, scopes)
-  const currentCallCount = 0 // placeholder — real implementation needs persistent counter
+  // Step 2: Check admission policy (risk level, budget, scopes) using the
+  // in-memory call count for this manifest + tool.
+  const meterKey = `${signedManifest.manifestHash}:${toolName}`
+  const currentCallCount = callCounts.get(meterKey) ?? 0
   const decision = admit(signedManifest.manifest, toolName, currentCallCount)
 
-  // Step 3: Create a signed receipt regardless of outcome
-  const requestHash = hashRequest({ toolName, payload: requestPayload ?? null })
-  const receipt = createReceipt(
-    signedManifest,
-    toolName,
-    decision.decision,
-    decision.reason,
-    requestHash,
-  )
-
+  // Step 3: On deny, block the upstream call. The tool is never reached.
   if (decision.decision === 'deny') {
-    const response: GatewayResponse = {
-      decision: 'deny',
-      reasonCode: decision.reason,
-      receipt,
-    }
-    sendJson(res, 403, response)
+    sendJson(res, 403, denyResponse(decision))
     return
   }
 
-  // Step 4: Only here — the tool call is allowed
-  // In a real gateway, this is where you would forward the request to the actual tool.
-  // This skeleton returns the admission decision and receipt without forwarding.
-  const response: GatewayResponse = {
+  // Step 4: Only here — the tool call is allowed. Consume one unit of budget,
+  // then forward to the upstream system. This skeleton returns the decision
+  // without forwarding; a real gateway would call the tool at this point.
+  callCounts.set(meterKey, currentCallCount + 1)
+
+  sendJson(res, 200, {
     decision: 'allow',
-    reasonCode: 'ALLOWED',
-    receipt,
-  }
-  sendJson(res, 200, response)
+    reasonCode: decision.reasonCode,
+    toolName: decision.toolName,
+    detail: decision.detail,
+    upstream: 'forwarded (placeholder)',
+  } satisfies GatewayResponse)
 })
 
 const PORT = process.env.PORT ?? 3742

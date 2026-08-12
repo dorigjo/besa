@@ -1,11 +1,10 @@
-<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-  <path d="M 16,2 L 30,16 L 16,30 L 2,16 Z"
-        fill="none"
-        stroke="#003049"
-        stroke-width="2.5"
-        stroke-linejoin="round"/>
-  <line x1="7" y1="16" x2="25" y2="16"
-        stroke="#C1121F"
-        stroke-width="2.5"
-        stroke-linecap="round"/>
+<svg width="32" height="32" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Besa">
+  <title>Besa</title>
+  <!-- Solid seal with a sage rim so the mark survives dark browser tabs -->
+  <path d="M11.75 4.5 H28.25 L36.5 20 L28.25 35.5 H11.75 L3.5 20 Z"
+        fill="#1B3A2D" stroke="#A8D5B5" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M25 11 V29" stroke="#A8D5B5" stroke-width="3.4" stroke-linecap="round"/>
+  <path d="M13 13 L18.5 20 L13 27"
+        fill="none" stroke="#A8D5B5" stroke-width="3.4"
+        stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

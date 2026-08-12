@@ -48,6 +48,33 @@ function run(label, args, expectedCode, cwd = workspace) {
   return true;
 }
 
+function runStdin(label, args, stdinInput, expectedCode, cwd = workspace) {
+  console.log(`\n== ${label} (expect exit ${expectedCode}) ==`);
+
+  const result = spawnSync(node, args, {
+    cwd,
+    env: process.env, // deliberately withOUT BESA_KEY_PASSPHRASE: forces the
+    // --passphrase-file/stdin path under test, proving the env fallback is
+    // not silently used instead.
+    input: stdinInput,
+    encoding: "utf8",
+  });
+
+  console.log(result.stdout ?? "");
+  if (result.stderr) console.error(result.stderr);
+
+  const code = result.status ?? 1;
+
+  if (code !== expectedCode) {
+    console.error(
+      `SMOKE FAIL: ${label} exited ${code}, expected ${expectedCode}`,
+    );
+    return false;
+  }
+
+  return true;
+}
+
 function latestReceiptPath() {
   const receiptsDirectory = join(workspace, ".besa", "receipts");
   const receipt = readdirSync(receiptsDirectory)
@@ -259,6 +286,113 @@ try {
     if (!run(label, args, expectedCode)) {
       ok = false;
     }
+  }
+
+  // --- Secret hygiene: --key-file, --passphrase-file, stdin, env fallback,
+  // fail-closed on a wrong passphrase. Uses a dedicated key file so it never
+  // touches the default .besa/key.json exercised above.
+  const customKeyFile = "custom-key.json";
+  const correctPassphraseFile = "correct-passphrase.txt";
+  const wrongPassphraseFile = "wrong-passphrase.txt";
+  const correctPassphrase = randomBytes(24).toString("base64url");
+  const wrongPassphrase = randomBytes(24).toString("base64url");
+
+  writeFileSync(
+    join(workspace, correctPassphraseFile),
+    correctPassphrase + "\n",
+    "utf8",
+  );
+  writeFileSync(
+    join(workspace, wrongPassphraseFile),
+    wrongPassphrase + "\n",
+    "utf8",
+  );
+
+  const noEnvPassphrase = { ...process.env };
+  delete noEnvPassphrase.BESA_KEY_PASSPHRASE;
+
+  function runNoEnvPassphrase(label, args, expectedCode) {
+    console.log(`\n== ${label} (expect exit ${expectedCode}) ==`);
+    const result = spawnSync(node, args, {
+      cwd: workspace,
+      env: noEnvPassphrase,
+      stdio: "inherit",
+    });
+    const code = result.status ?? 1;
+    if (code !== expectedCode) {
+      console.error(
+        `SMOKE FAIL: ${label} exited ${code}, expected ${expectedCode}`,
+      );
+      return false;
+    }
+    return true;
+  }
+
+  if (
+    !runNoEnvPassphrase(
+      "keys --key-file + --passphrase-file creates a key at a custom path",
+      [cli, "keys", "--key-file", customKeyFile, "--passphrase-file", correctPassphraseFile],
+      0,
+    )
+  ) {
+    ok = false;
+  }
+
+  if (!existsSync(join(workspace, customKeyFile))) {
+    console.error("SMOKE FAIL: --key-file did not create the key at the custom path");
+    ok = false;
+  }
+
+  if (
+    !runNoEnvPassphrase(
+      "sign with a custom --key-file/--passphrase-file",
+      [cli, "sign", manifest, "--key-file", customKeyFile, "--passphrase-file", correctPassphraseFile],
+      0,
+    )
+  ) {
+    ok = false;
+  }
+
+  if (
+    !runStdin(
+      "load an existing --key-file's passphrase from stdin",
+      [cli, "keys", "--key-file", customKeyFile, "--passphrase-file", "-"],
+      correctPassphrase + "\n",
+      0,
+    )
+  ) {
+    ok = false;
+  }
+
+  if (
+    !runNoEnvPassphrase(
+      "wrong --passphrase-file against an existing key fails closed",
+      [cli, "keys", "--key-file", customKeyFile, "--passphrase-file", wrongPassphraseFile],
+      1,
+    )
+  ) {
+    ok = false;
+  }
+
+  if (
+    !runNoEnvPassphrase(
+      "no passphrase source at all fails closed",
+      [cli, "keys", "--key-file", customKeyFile],
+      1,
+    )
+  ) {
+    ok = false;
+  }
+
+  // BESA_KEY_PASSPHRASE env fallback still works when no --passphrase-file is given.
+  if (
+    !run(
+      "keys env-fallback passphrase still works without --passphrase-file",
+      [cli, "keys"],
+      0,
+    )
+  ) {
+    ok = false;
   }
 } finally {
   rmSync(workspace, { recursive: true, force: true });

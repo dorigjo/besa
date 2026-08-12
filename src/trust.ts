@@ -1,7 +1,4 @@
-import {
-  sign as ed25519Sign,
-  verify as ed25519Verify,
-} from "node:crypto";
+import { verify as ed25519Verify } from "node:crypto";
 import type {
   KeyRotation,
   SignedManifest,
@@ -11,14 +8,15 @@ import type {
 import {
   canonicalize,
   isCanonicalBase64,
-  privateKeyFromDer,
   publicKeyFromDer,
   publicKeyId,
+  signWithKeyPair,
   signatureMessage,
   validateKeyPair,
   type KeyPair,
 } from "./crypto.js";
 import { verifySignedManifest, type VerifyResult } from "./signing.js";
+import type { KeyProvider } from "./keys/provider.js";
 
 const KEY_ID = /^[a-f0-9]{64}$/;
 const MAX_CLOCK_SKEW_MS = 5 * 60 * 1_000;
@@ -275,6 +273,37 @@ export function revokeTrustAnchor(
 
 type RotationBody = Omit<KeyRotation, "signature">;
 
+// Shared by createKeyRotation (KeyPair, sync) and createKeyRotationWithProvider
+// (KeyProvider, async) — same rationale as buildManifestBody/buildReceiptBody
+// in signing.ts: validation and canonicalization happen exactly once, and the
+// only difference between the two callers is where the public key material
+// comes from.
+function buildRotationBody(
+  previousPublicKey: string,
+  previousPublicKeyId: string,
+  newPublicKey: string,
+  newPublicKeyId: string,
+  rotatedAt: string,
+): RotationBody {
+  if (!isIsoDate(rotatedAt)) {
+    throw new Error("rotatedAt must be a canonical ISO-8601 timestamp");
+  }
+
+  if (previousPublicKey === newPublicKey) {
+    throw new Error("key rotation requires a different new key");
+  }
+
+  return {
+    artifactVersion: 1,
+    algorithm: "ed25519",
+    previousPublicKey,
+    previousPublicKeyId,
+    newPublicKey,
+    newPublicKeyId,
+    rotatedAt,
+  };
+}
+
 export function createKeyRotation(
   previous: KeyPair,
   next: KeyPair,
@@ -284,30 +313,49 @@ export function createKeyRotation(
     throw new Error("key rotation requires valid Ed25519 key pairs");
   }
 
-  if (!isIsoDate(rotatedAt)) {
-    throw new Error("rotatedAt must be a canonical ISO-8601 timestamp");
-  }
-
-  if (previous.publicKeyDer === next.publicKeyDer) {
-    throw new Error("key rotation requires a different new key");
-  }
-
-  const body: RotationBody = {
-    artifactVersion: 1,
-    algorithm: "ed25519",
-    previousPublicKey: previous.publicKeyDer,
-    previousPublicKeyId: publicKeyId(previous.publicKeyDer),
-    newPublicKey: next.publicKeyDer,
-    newPublicKeyId: publicKeyId(next.publicKeyDer),
+  const body = buildRotationBody(
+    previous.publicKeyDer,
+    publicKeyId(previous.publicKeyDer),
+    next.publicKeyDer,
+    publicKeyId(next.publicKeyDer),
     rotatedAt,
-  };
-  const signature = ed25519Sign(
-    null,
+  );
+  const signature = signWithKeyPair(
     signatureMessage("key-rotation", body),
-    privateKeyFromDer(previous.privateKeyDer),
+    previous,
   );
 
   return { ...body, signature: signature.toString("base64") };
+}
+
+/**
+ * Provider-native counterpart of createKeyRotation(). Identical validation,
+ * canonicalization, and signature domain — the rotation proof is signed by
+ * the previous KeyProvider, so a key held in a KMS/HSM/Vault tier can be
+ * rotated away from without ever exporting its private key material to a
+ * KeyPair. Closes the gap where signManifestWithProvider/
+ * createReceiptWithProvider were provider-native but rotation was not.
+ */
+export async function createKeyRotationWithProvider(
+  previous: KeyProvider,
+  next: KeyProvider,
+  rotatedAt = new Date().toISOString(),
+): Promise<KeyRotation> {
+  const previousPublicKey = await previous.getPublicKey();
+  const previousPublicKeyId = await previous.getKeyId();
+  const newPublicKey = await next.getPublicKey();
+  const newPublicKeyId = await next.getKeyId();
+
+  const body = buildRotationBody(
+    previousPublicKey,
+    previousPublicKeyId,
+    newPublicKey,
+    newPublicKeyId,
+    rotatedAt,
+  );
+  const signature = await previous.sign(signatureMessage("key-rotation", body));
+
+  return { ...body, signature: Buffer.from(signature).toString("base64") };
 }
 
 export function verifyKeyRotation(value: unknown): VerifyResult {

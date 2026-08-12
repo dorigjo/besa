@@ -3,6 +3,7 @@ import {
   createPrivateKey,
   createPublicKey,
   generateKeyPairSync,
+  sign as ed25519Sign,
   timingSafeEqual,
   type KeyObject,
 } from "node:crypto";
@@ -123,10 +124,6 @@ export function sha256Hex(data: string | Uint8Array): string {
     : hash.update(data).digest("hex");
 }
 
-export function hashObject(value: unknown): string {
-  return sha256Hex(canonicalize(value));
-}
-
 export function generateKeyPair(): KeyPair {
   const { publicKey, privateKey } = generateKeyPairSync("ed25519");
 
@@ -201,6 +198,19 @@ export function signatureMessage(domain: string, value: unknown): Buffer {
     `besa:${domain}:v1\0${canonicalize(value)}`,
     "utf8",
   );
+}
+
+// The single Ed25519 signing primitive for locally-held keys. Both the
+// legacy KeyPair-based signing API (signManifest/createReceipt) and
+// LocalKeyProvider.sign() call this exact function — there is exactly one
+// place in the codebase that reads privateKeyDer and invokes node:crypto's
+// sign(), not two parallel implementations.
+export function signWithKeyPair(payload: Uint8Array, keypair: KeyPair): Buffer {
+  if (!validateKeyPair(keypair)) {
+    throw new Error("invalid or mismatched Ed25519 key pair");
+  }
+
+  return ed25519Sign(null, payload, privateKeyFromDer(keypair.privateKeyDer));
 }
 
 export function validateKeyPair(value: unknown): value is KeyPair {

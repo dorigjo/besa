@@ -1,6 +1,6 @@
 {
   "name": "@dorigjo/besa",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Cryptographic execution evidence for AI-agent tool calls: signed manifests, admission decisions, and tamper-evident receipts.",
   "type": "module",
   "main": "./dist/sdk.js",
@@ -17,8 +17,13 @@
   "scripts": {
     "build": "tsc",
     "test": "npm run build && node dist/tests/run.js",
+    "test:examples": "tsc -p tsconfig.examples.json",
+    "test:docs": "node scripts/docs-receipt-check.mjs",
     "smoke": "node scripts/smoke.mjs",
+    "smoke:server": "node scripts/server-smoke.mjs",
     "test:package": "node scripts/package-smoke.mjs",
+    "sbom": "npm sbom --sbom-format=cyclonedx",
+    "verify:package-surface": "node scripts/verify-package-surface.mjs",
     "prepack": "npm run build"
   },
   "keywords": [
@@ -53,9 +58,15 @@
   "files": [
     "dist/*.js",
     "dist/*.d.ts",
+    "dist/keys/*.js",
+    "dist/keys/*.d.ts",
+    "dist/server/*.js",
+    "dist/server/*.d.ts",
     "examples/manifest.yaml",
     "examples/grants.yaml",
-    "examples/request.json"
+    "examples/request.json",
+    "SPEC.md",
+    "conformance/golden-v1.json"
   ],
   "bugs": {
     "url": "https://github.com/dorigjo/besa/issues"

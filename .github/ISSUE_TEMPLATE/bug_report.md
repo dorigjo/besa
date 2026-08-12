@@ -16,6 +16,17 @@ follow the private process in SECURITY.md instead.
 
 <!-- One sentence: what is broken? -->
 
+## Severity
+
+<!-- Pick one: Low / Medium / High / Critical -->
+
+## Security impact
+
+<!-- Answer explicitly, even if "no":
+Can a wrong or tampered signature be accepted as valid?
+Can a blocked/denied action still execute?
+Can a trust boundary (trust store, key rotation, admission) be bypassed? -->
+
 ## Which surface is involved?
 
 <!-- Keep the ones that apply, delete the rest. -->
@@ -66,6 +77,11 @@ Use synthetic values only — no real keys, tokens, receipts, or customer data.
 1.
 2.
 3.
+
+## Regression
+
+<!-- Last version where this worked correctly, and first version where it
+broke, if known. Leave blank if this never worked / is not a regression. -->
 
 ## Additional context
 

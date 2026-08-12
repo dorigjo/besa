@@ -207,6 +207,23 @@ function sleep(milliseconds: number): void {
   Atomics.wait(signal, 0, 0, milliseconds);
 }
 
+function isLockContended(code: string | undefined): boolean {
+  // A busy lock reports EEXIST from an exclusive create. On Windows a lock file
+  // that is mid-deletion (delete-pending) transiently reports EPERM/EACCES from
+  // both open and stat while another holder unlinks it. That is contention, not
+  // a hard failure: we back off and retry within the timeout budget instead of
+  // crashing the caller. The lock is only ever granted on a *successful*
+  // exclusive create, so absorbing these codes never weakens mutual exclusion —
+  // a genuinely unwritable path still fails closed via the acquisition timeout.
+  if (code === "EEXIST") {
+    return true;
+  }
+
+  return (
+    process.platform === "win32" && (code === "EPERM" || code === "EACCES")
+  );
+}
+
 function acquireMeterLock(
   path: string,
   options: MeterLockOptions,
@@ -259,7 +276,13 @@ function acquireMeterLock(
             unlinkSync(lockPath);
           }
         } catch (error) {
-          if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+          const code = (error as NodeJS.ErrnoException).code;
+          // Cleanup is best-effort: the lock is already gone (ENOENT) or the OS
+          // is mid-deletion on Windows (EPERM/EACCES). Only our own token-owned
+          // lock is ever removed, so skipping a transient cleanup never releases
+          // another holder's lock — and a throw here (inside a finally) would
+          // mask the admission decision and crash the caller.
+          if (code !== "ENOENT" && !isLockContended(code)) {
             throw error;
           }
         }
@@ -267,7 +290,7 @@ function acquireMeterLock(
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code;
 
-      if (code !== "EEXIST") {
+      if (!isLockContended(code)) {
         throw error;
       }
 
@@ -282,10 +305,16 @@ function acquireMeterLock(
           continue;
         }
       } catch (statError) {
-        if ((statError as NodeJS.ErrnoException).code === "ENOENT") {
+        const statCode = (statError as NodeJS.ErrnoException).code;
+        if (statCode === "ENOENT") {
+          // Lock vanished between open and stat; retry immediately.
           continue;
         }
-        throw statError;
+        if (!isLockContended(statCode)) {
+          throw statError;
+        }
+        // Windows delete-pending during stat/rename: fall through to bounded
+        // backoff rather than crashing the caller.
       }
 
       if (Date.now() - startedAt >= timeoutMs) {

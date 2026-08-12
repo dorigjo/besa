@@ -90,6 +90,21 @@ export interface TrustStore {
   keys: TrustAnchor[];
 }
 
+export interface AdmissionAttestation {
+  artifactVersion: 1;
+  attestationId: string;
+  manifestHash: string;
+  toolName: string;
+  decision: Decision;
+  reasonCode: string;
+  detail: string;
+  meterCountAtCheck: number;
+  timestamp: string;
+  publicKeyId: string;
+  algorithm: "ed25519";
+  signature: string;
+}
+
 export interface KeyRotation {
   artifactVersion: 1;
   algorithm: "ed25519";

@@ -1,11 +1,14 @@
 #!/usr/bin/env node
 
+import { execFileSync } from "node:child_process";
 import {
   chmodSync,
   existsSync,
   lstatSync,
   mkdirSync,
+  readFileSync,
 } from "node:fs";
+import { userInfo } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type {
@@ -23,6 +26,11 @@ import {
 } from "./crypto.js";
 import { loadManifest } from "./manifest.js";
 import {
+  createHostedVerifierServer,
+  type HostedVerifierAdmissionOptions,
+  type HostedVerifierRateLimitOptions,
+} from "./server/hosted-verifier.js";
+import {
   createReceipt,
   hashRequest,
   signManifest,
@@ -31,6 +39,7 @@ import {
   verifyReceiptDetailed,
   verifySignedManifest,
 } from "./signing.js";
+import { createEvidenceEnvelope } from "./evidence.js";
 import {
   admit,
   admitAndConsume,
@@ -52,6 +61,7 @@ import {
 } from "./trust.js";
 import {
   readJsonFile,
+  readUtf8File,
   writeJsonAtomic,
   writeJsonExclusive,
 } from "./io.js";
@@ -74,12 +84,18 @@ const FLAGS_WITH_VALUES = new Set([
   "--grants",
   "--request",
   "--trust",
+  "--key-file",
+  "--passphrase-file",
+  "--port",
+  "--meter",
+  "--rate-limit",
+  "--host",
 ]);
 const COMMAND_FLAGS: Record<string, ReadonlySet<string>> = {
-  keys: new Set(["--trust"]),
+  keys: new Set(["--trust", "--key-file", "--passphrase-file"]),
   trust: new Set(["--trust"]),
   load: new Set(),
-  sign: new Set(["--trust"]),
+  sign: new Set(["--trust", "--key-file", "--passphrase-file"]),
   verify: new Set(["--trust"]),
   admit: new Set(["--trust", "--agent", "--grants"]),
   receipt: new Set([
@@ -87,8 +103,20 @@ const COMMAND_FLAGS: Record<string, ReadonlySet<string>> = {
     "--request",
     "--agent",
     "--grants",
+    "--key-file",
+    "--passphrase-file",
   ]),
   "verify-receipt": new Set(["--trust", "--request"]),
+  "export-evidence": new Set(["--trust"]),
+  serve: new Set([
+    "--port",
+    "--host",
+    "--trust",
+    "--key-file",
+    "--passphrase-file",
+    "--meter",
+    "--rate-limit",
+  ]),
 };
 
 function readJson<T>(path: string): T {
@@ -115,28 +143,84 @@ function protectKeyFile(path = KEY_PATH): void {
     throw new Error(`refusing to use symbolic-link key file at ${path}`);
   }
 
-  if (process.platform !== "win32") chmodSync(path, 0o600);
-}
+  if (process.platform !== "win32") {
+    chmodSync(path, 0o600);
+    return;
+  }
 
-function keyPassphrase(): string {
-  const passphrase = process.env.BESA_KEY_PASSPHRASE;
-  if (!passphrase) {
-    throw new Error(
-      "BESA_KEY_PASSPHRASE is required and must contain at least 16 UTF-8 bytes",
+  // POSIX chmod has no effect on Windows; restrict the ACL to the current
+  // user instead. Best-effort: a failure here (no icacls, exotic filesystem)
+  // must not block key operations, since the file is still scrypt+AES-GCM
+  // sealed at rest — but it is surfaced, not swallowed silently.
+  try {
+    const { username } = userInfo();
+    execFileSync(
+      "icacls",
+      [path, "/inheritance:r", "/grant:r", `${username}:F`],
+      { stdio: "ignore" },
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(
+      `WARNING: could not restrict Windows ACL on ${terminalText(path)}: ${terminalText(message)}`,
     );
   }
+}
+
+function selectedKeyPath(): string {
+  const path = flagValue("--key-file") ?? KEY_PATH;
+  if (!path.endsWith(".json")) {
+    throw new Error(`key file path must end in .json: ${terminalText(path)}`);
+  }
+  return path;
+}
+
+// Reads a passphrase from a file, stripping exactly one trailing line
+// terminator (as a text editor or `echo` would add). Never logs the path's
+// contents; a symbolic link is rejected the same way protectKeyFile() rejects
+// one for the key file itself.
+function readPassphraseFile(path: string): string {
+  if (lstatSync(path).isSymbolicLink()) {
+    throw new Error(`refusing to read passphrase through symbolic link at ${path}`);
+  }
+  return readUtf8File(path).replace(/\r?\n$/, "");
+}
+
+function readPassphraseStdin(): string {
+  return readFileSync(0, "utf8").replace(/\r?\n$/, "");
+}
+
+// Priority order: --passphrase-file <path> (or "-" for stdin), then the
+// BESA_KEY_PASSPHRASE environment variable as a fallback. The passphrase
+// value itself is never logged, printed, or included in any error message.
+function keyPassphrase(): string {
+  const passphraseFile = flagValue("--passphrase-file");
+
+  const passphrase =
+    passphraseFile === "-"
+      ? readPassphraseStdin()
+      : (passphraseFile ? readPassphraseFile(passphraseFile) : undefined) ??
+        process.env.BESA_KEY_PASSPHRASE;
+
+  if (!passphrase) {
+    throw new Error(
+      "a key passphrase is required: pass --passphrase-file <path>, --passphrase-file - (stdin), " +
+        "or set BESA_KEY_PASSPHRASE (at least 16 UTF-8 bytes)",
+    );
+  }
+
   return passphrase;
 }
 
-function loadExistingKeyPair(): KeyPair {
-  if (!existsSync(KEY_PATH)) {
-    throw new Error(`no signing key found at ${KEY_PATH}; run besa keys first`);
+function loadExistingKeyPair(path = selectedKeyPath()): KeyPair {
+  if (!existsSync(path)) {
+    throw new Error(`no signing key found at ${path}; run besa keys first`);
   }
 
   ensureBesaDir();
-  protectKeyFile();
+  protectKeyFile(path);
 
-  const stored = readJson<unknown>(KEY_PATH);
+  const stored = readJson<unknown>(path);
   const passphrase = keyPassphrase();
 
   if (isStoredKeyPair(stored)) {
@@ -144,34 +228,35 @@ function loadExistingKeyPair(): KeyPair {
   }
 
   if (!validateKeyPair(stored)) {
-    throw new Error(`invalid or mismatched Ed25519 key pair at ${KEY_PATH}`);
+    throw new Error(`invalid or mismatched Ed25519 key pair at ${path}`);
   }
 
-  writeJson(KEY_PATH, sealKeyPair(stored, passphrase), 0o600);
+  writeJson(path, sealKeyPair(stored, passphrase), 0o600);
   return stored;
 }
 
 function loadOrCreateKeyPair(): KeyPair {
   ensureBesaDir();
+  const path = selectedKeyPath();
 
-  if (existsSync(KEY_PATH)) {
-    return loadExistingKeyPair();
+  if (existsSync(path)) {
+    return loadExistingKeyPair(path);
   }
 
   const keypair = generateKeyPair();
   try {
     writeJsonExclusive(
-      KEY_PATH,
+      path,
       sealKeyPair(keypair, keyPassphrase()),
       0o600,
     );
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "EEXIST") {
-      return loadExistingKeyPair();
+      return loadExistingKeyPair(path);
     }
     throw error;
   }
-  protectKeyFile();
+  protectKeyFile(path);
   return keypair;
 }
 
@@ -323,7 +408,8 @@ function requireSignedManifest(value: unknown): SignedManifest {
 }
 
 function cmdRotateKeys(): void {
-  const previous = loadExistingKeyPair();
+  const keyPath = selectedKeyPath();
+  const previous = loadExistingKeyPair(keyPath);
   const next = generateKeyPair();
   const rotation = createKeyRotation(previous, next);
   const previousId = rotation.previousPublicKeyId;
@@ -349,8 +435,8 @@ function cmdRotateKeys(): void {
   writeJson(archivePath, sealedPrevious, 0o600);
   protectKeyFile(archivePath);
   writeJson(rotationPath, rotation);
-  writeJson(KEY_PATH, sealedNext, 0o600);
-  protectKeyFile();
+  writeJson(keyPath, sealedNext, 0o600);
+  protectKeyFile(keyPath);
   saveTrustStore(rotatedStore, path);
 
   printJson("keyRotation", rotation);
@@ -361,9 +447,45 @@ function cmdRotateKeys(): void {
   console.log("NEXT: re-sign active manifests with the new key");
 }
 
+function formatFingerprint(hex: string): string {
+  const pairs: string[] = [];
+  for (let index = 0; index < hex.length; index += 2) {
+    pairs.push(hex.slice(index, index + 2));
+  }
+  return pairs.join(":");
+}
+
+function cmdKeyFingerprint(): void {
+  if (flagValue("--trust")) {
+    throw new Error("--trust is only supported by keys rotate");
+  }
+
+  const keypair = loadExistingKeyPair();
+  console.log(formatFingerprint(publicKeyId(keypair.publicKeyDer)));
+}
+
+function cmdExportPublicKey(): void {
+  if (flagValue("--trust")) {
+    throw new Error("--trust is only supported by keys rotate");
+  }
+
+  const keypair = loadExistingKeyPair();
+  console.log(keypair.publicKeyDer);
+}
+
 function cmdKeys(action?: string): void {
   if (action === "rotate") {
     cmdRotateKeys();
+    return;
+  }
+
+  if (action === "fingerprint") {
+    cmdKeyFingerprint();
+    return;
+  }
+
+  if (action === "export-public") {
+    cmdExportPublicKey();
     return;
   }
 
@@ -375,15 +497,16 @@ function cmdKeys(action?: string): void {
     throw new Error("--trust is only supported by keys rotate");
   }
 
+  const path = selectedKeyPath();
   const keypair = loadOrCreateKeyPair();
 
   printJson("keypair", {
     publicKeyDer: keypair.publicKeyDer,
-    privateKeyDerPath: KEY_PATH,
+    privateKeyDerPath: path,
   });
 
   console.log("");
-  console.log("OK: keypair ready at " + KEY_PATH);
+  console.log("OK: keypair ready at " + path);
 }
 
 function cmdTrustAdd(file: string): void {
@@ -515,6 +638,86 @@ function cmdVerify(file: string): void {
   console.log("OK: " + result.detail);
 }
 
+const DEFAULT_SERVE_PORT = 8787;
+const DEFAULT_SERVE_HOST = "127.0.0.1";
+
+function cmdServe(): void {
+  const portFlag = flagValue("--port");
+  const port = portFlag !== undefined ? Number(portFlag) : DEFAULT_SERVE_PORT;
+
+  if (!Number.isSafeInteger(port) || port < 0 || port > 65535) {
+    throw new Error(`--port must be an integer between 0 and 65535, got '${portFlag ?? ""}'`);
+  }
+
+  // Bind to loopback only by default: Node's http.Server.listen(port) with
+  // no host argument binds every interface, which silently exposed this
+  // server to the local network even though the startup banner below says
+  // "localhost." --host opts in to a wider bind explicitly.
+  const host = flagValue("--host") ?? DEFAULT_SERVE_HOST;
+
+  // Admission is opt-in: only enabled when --trust is explicitly given.
+  // Without it, `besa serve` is byte-identical to Phase 5 behavior (no key
+  // ever loaded, no trust store ever touched). loadExistingKeyPair() is
+  // used deliberately instead of loadOrCreateKeyPair() — a server process
+  // must never silently mint a new signing identity on startup.
+  const trustFlag = flagValue("--trust");
+  let admission: HostedVerifierAdmissionOptions | undefined;
+
+  if (trustFlag !== undefined) {
+    const trustStore = loadTrustStore(trustFlag);
+    const keypair = loadExistingKeyPair();
+    const meterPath = flagValue("--meter") ?? METER_PATH;
+    admission = { trustStore, meterPath, keyPair: keypair };
+  }
+
+  const rateLimitFlag = flagValue("--rate-limit");
+  let rateLimit: HostedVerifierRateLimitOptions | undefined;
+  if (rateLimitFlag !== undefined) {
+    const limit = Number(rateLimitFlag);
+    if (!Number.isSafeInteger(limit) || limit <= 0) {
+      throw new Error(`--rate-limit must be a positive integer, got '${rateLimitFlag}'`);
+    }
+    rateLimit = { limit };
+  }
+
+  const server = createHostedVerifierServer({ admission, rateLimit });
+
+  server.listen(port, host, () => {
+    const address = server.address();
+    const boundPort = typeof address === "object" && address !== null ? address.port : port;
+    console.log(`Besa hosted verifier listening on http://${host}:${String(boundPort)}`);
+    if (host !== DEFAULT_SERVE_HOST) {
+      console.log(`WARNING: bound to ${host}, not loopback-only — reachable beyond this machine.`);
+    }
+    console.log("");
+
+    if (admission) {
+      console.log("Admission attestation ENABLED: POST /v1/admit issues signed,");
+      console.log("non-consuming AdmissionAttestations. This process holds signing");
+      console.log("key material in memory for the lifetime of the server.");
+      console.log("See docs/RUNTIME_ADMISSION.md for the guarantee/non-guarantee statement.");
+    } else {
+      console.log("Signature verification only: no trust-store check, no admission,");
+      console.log("no receipt issuance. Never loads a signing key.");
+    }
+
+    if (rateLimit) {
+      console.log(`Rate limiting ENABLED: ${String(rateLimit.limit)} requests/min per client.`);
+    }
+    console.log("GET /metrics exposes aggregate request counters.");
+    console.log("See docs/HOSTED_VERIFIER.md for the endpoint reference and limitations.");
+  });
+
+  // Ensure Ctrl+C / a process manager's SIGTERM closes listening sockets
+  // cleanly instead of the process dying mid-request; also stops the event
+  // loop from lingering on an open server handle.
+  const shutdown = (): void => {
+    server.close(() => process.exit(0));
+  };
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
+}
+
 function denyFromVerification(
   toolName: string,
   reasonCode: string,
@@ -528,7 +731,7 @@ function denyFromVerification(
   };
 }
 
-export function grantGate(toolName: string): AdmissionDecision | undefined {
+function grantGate(toolName: string): AdmissionDecision | undefined {
   const grantsPath = flagValue("--grants");
   const agentId = flagValue("--agent");
 
@@ -801,6 +1004,44 @@ function cmdVerifyReceipt(receiptFile: string, manifestFile?: string): void {
   console.log("OK: receipt and signed manifest form a valid trust chain");
 }
 
+// Exports an already-signed manifest + receipt as a structured, auditor-
+// facing document (see docs/EVIDENCE_ENVELOPE.md). Reuses the same
+// verification path as `verify`/`verify-receipt`; issues no new signature
+// and mints no new trust decision — it is a read-only formatting step over
+// already-verifiable evidence.
+function cmdExportEvidence(manifestFile: string, receiptFile: string): void {
+  const signed = requireSignedManifest(readJson<unknown>(manifestFile));
+  const receiptValidation = validateReceipt(readJson<unknown>(receiptFile));
+
+  if (!receiptValidation.ok || !receiptValidation.receipt) {
+    throw new Error(
+      `invalid receipt:\n  - ${receiptValidation.errors.join("\n  - ")}`,
+    );
+  }
+
+  const trustStore = loadTrustStore();
+  const envelope = createEvidenceEnvelope(
+    signed,
+    receiptValidation.receipt,
+    trustStore,
+  );
+  const outPath = receiptFile.endsWith(".json")
+    ? receiptFile.slice(0, -5) + ".evidence.json"
+    : receiptFile + ".evidence.json";
+
+  writeJson(outPath, envelope);
+  printJson("evidenceEnvelope", envelope);
+  console.log("");
+  console.log("OK: evidence envelope written to " + terminalText(outPath));
+
+  if (!envelope.verification.manifestTrusted || !envelope.verification.receiptSignatureValid) {
+    console.log(
+      "WARNING: this envelope's verification block reports a FAILURE — inspect it before relying on this export.",
+    );
+    process.exitCode = 1;
+  }
+}
+
 function readVersion(): string {
   try {
     const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -825,6 +1066,8 @@ function usage(): void {
       "Commands:",
       "  keys                 Show the local signing key, generating one if absent",
       "  keys rotate          Rotate the signing key and emit a signed rotation proof",
+      "  keys fingerprint     Print the local public key's SHA-256 fingerprint",
+      "  keys export-public   Print the local public key (base64 DER) alone",
       "  trust add            Anchor a signed manifest's public key in a trust store",
       "  trust apply          Apply a signed rotation proof to a trust store",
       "  trust revoke         Revoke a public key in a trust store",
@@ -835,6 +1078,10 @@ function usage(): void {
       "  admit                Check whether a tool call is allowed (dry-run)",
       "  receipt              Enforce budget and issue a signed execution receipt",
       "  verify-receipt       Verify a receipt and its manifest trust chain",
+      "  export-evidence      Export a signed manifest + receipt as an audit-facing",
+      "                       evidence envelope (see docs/EVIDENCE_ENVELOPE.md)",
+      "  serve                Run the hosted verifier (signature checks only by default;",
+      "                       pass --trust to also enable POST /v1/admit)",
       "",
       "Options:",
       "  --trust <file>       Trust store path (default: .besa/trust.json)",
@@ -842,6 +1089,18 @@ function usage(): void {
       "  --grants <file>      Grant set for agent-scoped admission (admit, receipt)",
       "  --request <file>     Request payload hashed into the receipt (receipt);",
       "                       re-checked against receipt.requestHash (verify-receipt)",
+      "  --key-file <file>    Signing key path (default: .besa/key.json)",
+      "                       (keys, sign, receipt)",
+      "  --passphrase-file <file>",
+      "                       Read the key passphrase from a file, or from stdin",
+      "                       if <file> is '-' (keys, sign, receipt); falls back",
+      "                       to BESA_KEY_PASSPHRASE if omitted",
+      "  --port <n>           Port for the hosted verifier (default: 8787) (serve)",
+      "  --host <addr>        Bind address for the hosted verifier (default: 127.0.0.1,",
+      "                       loopback-only; serve)",
+      "  --meter <file>       Meter state path for admission checks (serve; default: .besa/meter.json)",
+      "                       (serve, requires --trust to take effect)",
+      "  --rate-limit <n>     Max requests per minute per client address (serve)",
       "",
       "Examples:",
       "  besa keys",
@@ -853,6 +1112,10 @@ function usage(): void {
       "  besa receipt crm.lookup examples/manifest.signed.json --request examples/request.json",
       "  besa verify-receipt .besa/receipts/<receipt-id>.json examples/manifest.signed.json",
       "  besa verify-receipt .besa/receipts/<receipt-id>.json examples/manifest.signed.json --request examples/request.json",
+      "  besa export-evidence examples/manifest.signed.json .besa/receipts/<receipt-id>.json",
+      "  besa serve --port 8787",
+      "  besa serve --port 8787 --trust .besa/trust.json",
+      "  besa serve --port 8787 --rate-limit 60",
       "",
       "Security:",
       "  Local early-access developer preview. Private keys are encrypted at rest (AES-256-GCM + scrypt).",
@@ -924,6 +1187,16 @@ function main(argv: string[]): void {
       case "verify-receipt":
         requireArgs(args, 1, command, 2);
         cmdVerifyReceipt(args[0] ?? "", args[1]);
+        break;
+
+      case "export-evidence":
+        requireArgs(args, 2, command);
+        cmdExportEvidence(args[0] ?? "", args[1] ?? "");
+        break;
+
+      case "serve":
+        requireArgs(args, 0, command, 0);
+        cmdServe();
         break;
 
       case "version":

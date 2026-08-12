@@ -33,6 +33,45 @@ function rejectSymlink(path: string): void {
   }
 }
 
+function sleepMs(milliseconds: number): void {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, milliseconds);
+}
+
+function renameReplace(from: string, to: string): void {
+  // The rename is the atomic replace. On Windows, MoveFileEx transiently fails
+  // with EPERM/EACCES/EBUSY when a virus scanner, search indexer, or filesystem
+  // filter holds a short-lived handle on the destination it just watched being
+  // created — a single-writer OS artifact, not write contention (callers such as
+  // the meter serialize writes behind a lock). We retry the same atomic replace
+  // a bounded number of times; this preserves atomicity and never widens any
+  // window in which a partial file is observable. Non-Windows renames once and
+  // surfaces any error immediately. This mirrors Node's own fs.rm retry policy.
+  if (process.platform !== "win32") {
+    renameSync(from, to);
+    return;
+  }
+
+  const maxAttempts = 10;
+  const backoffMs = 10;
+
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      renameSync(from, to);
+      return;
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      const transient =
+        code === "EPERM" || code === "EACCES" || code === "EBUSY";
+
+      if (!transient || attempt >= maxAttempts) {
+        throw error;
+      }
+
+      sleepMs(backoffMs);
+    }
+  }
+}
+
 function fsyncParentDirectory(path: string): void {
   // Durably persist the directory entry after rename/create. Directory fsync is
   // a POSIX durability guarantee; Windows cannot fsync a directory handle, so
@@ -99,8 +138,15 @@ export function readUtf8File(
 }
 
 export function readJsonFile(path: string): unknown {
+  // Read and parse are separate try/catch blocks so a missing file, a
+  // permission error, or an oversized/non-regular file surfaces with its
+  // own already-clear message instead of being mislabeled "invalid JSON" —
+  // a caller hitting ENOENT should be told the file doesn't exist, not
+  // sent looking for a JSON syntax error that isn't there.
+  const contents = readUtf8File(path);
+
   try {
-    return JSON.parse(readUtf8File(path)) as unknown;
+    return JSON.parse(contents) as unknown;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(`invalid JSON at ${path}: ${message}`);
@@ -129,7 +175,7 @@ export function writeJsonAtomic(
     fsyncSync(descriptor);
     closeSync(descriptor);
     descriptor = undefined;
-    renameSync(temporaryPath, path);
+    renameReplace(temporaryPath, path);
 
     try {
       chmodSync(path, mode);

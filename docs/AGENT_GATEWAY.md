@@ -13,16 +13,14 @@ agent request
     ↓
 POST /gate { signedManifest, toolName, requestPayload }
     ↓
-verifyTrustedSignedManifest(manifest, trustStore)
+verifyTrustedSignedManifest(manifest, trustStore, "admit")
     ↓ (reject if signature invalid or key untrusted)
 admit(manifest, toolName, currentCallCount)
     ↓ (check risk level, budget, scopes)
-createReceipt(...)
-    ↓
-200 { decision: "allow", receipt } or 403 { decision: "deny", receipt }
+200 { decision: "allow", ... } or 403 { decision: "deny", ... }
 ```
 
-Every request produces a signed receipt — whether allowed or denied. This is intentional. The receipt is the audit evidence.
+Every request returns a structured admission decision — allow or deny. The gateway performs verification and admission only; it does not issue signed receipts. Receipt issuance requires an explicitly configured signing key (`createReceipt(input, keypair)`), which is out of scope for a transport-only skeleton.
 
 ---
 
@@ -55,14 +53,9 @@ Expected response:
 {
   "decision": "allow",
   "reasonCode": "ALLOWED",
-  "receipt": {
-    "id": "...",
-    "toolName": "crm.lookup",
-    "decision": "allow",
-    "reasonCode": "ALLOWED",
-    "signature": "...",
-    "timestamp": "..."
-  }
+  "toolName": "crm.lookup",
+  "detail": "tool call admitted",
+  "upstream": "forwarded (placeholder)"
 }
 ```
 
@@ -86,21 +79,21 @@ Then load `examples/agent-gateway/trust.json` in the server instead of the empty
 | Feature | Status | Notes |
 |---|---|---|
 | Agent authentication | Not implemented | Who is calling the gateway? |
-| Persistent call counters | Placeholder (always 0) | Budget enforcement requires persistence |
+| Persistent call counters | In-memory only | Resets on restart; cross-process metering needs persistence |
 | Trust store management | Manual | Hardcoded in server startup |
 | Actual tool forwarding | Placeholder | Returns decision without calling the tool |
-| Receipt persistence | Not implemented | Receipts returned but not stored |
+| Signed receipt issuance | Not implemented | Needs an explicitly configured signing key |
 | Rate limiting | Not implemented | Needed before any public exposure |
 | TLS | Not implemented | Use a reverse proxy in front |
 
-These features are the Runtime Gateway surface — on the roadmap, not in 0.1.0.
+These features are the Runtime Gateway surface — on the roadmap, not in this example skeleton.
 
 ---
 
 ## How it fits the roadmap
 
 ```
-Today (0.1.0):
+Today (v1.0):
   CLI → sign → verify → admit → receipt (local, file-based)
 
 This skeleton adds:
@@ -114,10 +107,10 @@ The skeleton proves the call sequence is correct and the SDK is composable. The 
 
 ---
 
-## Limitations (0.1.0)
+## Limitations (this example skeleton)
 
 - Trust store is in-memory only — restart resets it
-- Call counter is hardcoded to 0 — budget enforcement does not work correctly
+- Call counter is in-memory only — budget resets on restart and is not shared across processes
 - No authentication — any caller can POST to /gate
 - No TLS — do not expose to a network without a terminating proxy
-- Receipts are returned but not persisted — no audit trail across restarts
+- No signed receipt issuance — receipts require an explicitly configured signing key
