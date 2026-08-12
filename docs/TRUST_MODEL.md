@@ -124,7 +124,8 @@ a revoked key even for historical verification. Revocation is local to a
 trust store — it is a statement "I no longer trust artifacts under this
 key," not a signed, distributable proof the way rotation is. There is
 intentionally no notion of a global revocation list; that is exactly the
-kind of hosted registry the MVP scope excludes (see project `CLAUDE.md`).
+kind of hosted registry the MVP scope excludes (see the project's founder
+constraints document).
 
 ### Recovery
 There is no key recovery. Losing `.besa/key.json` and its passphrase means

@@ -33,7 +33,7 @@ the request lifecycle* the check happens.
 
 ## Why this matters
 
-Besa's MVP scope (`CLAUDE.md`) forbids a "full agent runtime." MCP
+Besa's MVP scope (its founder constraints document) forbids a "full agent runtime." MCP
 integration is not that — it is a place to attach an *existing* runtime's
 tool-call boundary to Besa's admission and receipt primitives, which already
 work independently of any transport. This document describes that

@@ -49,9 +49,9 @@ above holds exactly as stated.
 
 This is a deliberate scope cut, not an oversight: the user's own
 "Infrastructure Development" authorization named "Hosted Verifier"
-specifically, and `CLAUDE.md`'s "smallest credible implementation" +
-"no fake enterprise functionality" rules stay in force for everything this
-authorization didn't explicitly name. The Authorization API, Policy Engine,
+specifically, and the founder constraints document's "smallest credible
+implementation" + "no fake enterprise functionality" rules stay in force
+for everything this authorization didn't explicitly name. The Authorization API, Policy Engine,
 and Trust Ledger nodes each need their own separate scope decision and plan
 before being built.
 

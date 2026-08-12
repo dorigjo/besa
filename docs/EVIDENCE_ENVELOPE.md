@@ -26,8 +26,8 @@ cryptography, no new signing, no new trust decision is introduced.
   the envelope file by itself.
 - **Not a batch/multi-receipt export.** v1.0 exports exactly one manifest +
   one receipt pair per invocation. Aggregating many receipts into a single
-  register-style export is a named, unimplemented Future Opportunity (see
-  `docs/V1_ENDGAME_RELEASE_DECISION.md`).
+  register-style export is a named, unimplemented Future Opportunity from
+  an internal, non-public release-scoping note.
 
 ## Shape
 

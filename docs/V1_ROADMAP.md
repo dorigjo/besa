@@ -60,13 +60,14 @@ Verifier                <- DONE: docs/HOSTED_VERIFIER.md, `besa serve`
 
 This was the first phase that would introduce a hosted/networked component
 at all — everything in Phase 0/1 runs entirely locally, with no server Besa
-operates. Per the project's founder constraints (`CLAUDE.md`: "no hosted
+operates. Per the project's founder constraints document ("no hosted
 registry," "no multi-tenant SaaS," "no complex policy engine"), this phase
 was explicitly gated behind "a deliberate, separate decision to expand MVP
 scope" — that decision was made on 2026-07-19, scoped narrowly to the
 **Verifier** node first (stateless cryptographic signature verification
 over HTTP — see `docs/HOSTED_VERIFIER.md`), then extended on 2026-07-22
-("Phase 7 — Runtime Admission Infrastructure" in the Endgame numbering) to
+("Phase 7 — Runtime Admission Infrastructure" in an earlier internal
+phase-numbering scheme) to
 a narrow, opt-in slice of the **Authorization API** node: `POST /v1/admit`
 reuses the existing `admit()`/trust-verification/signing logic to issue a
 signed, non-consuming `AdmissionAttestation` — see
@@ -77,18 +78,17 @@ nodes remain unimplemented and are not authorized by either decision.
 Building either of the remaining two nodes needs its own separate scope
 decision and plan, exactly as these two did.
 
-## Phase 3 — Enterprise Trust Infrastructure ("Phase 6 — Enterprise Trust Plane" in the 2026-07-19 Endgame execution numbering)
+## Phase 3 — Enterprise Trust Infrastructure ("Phase 6 — Enterprise Trust Plane" in an earlier internal execution numbering)
 
 **Not implemented.** Architecture direction and candidate scope only — this
-section absorbs the 2026-07-19 "Feature Radar" briefing, translated out of
-its original marketing framing (star ratings, "Hectocorn-These," "Killer-
-Argument") into technical candidates, each mapped to the existing gap or
-document that already names it. Nothing below is authorized for
-implementation by appearing here — each candidate needs its own FACTS-first
-plan, exactly like the Hosted Verifier (Phase 5) did, before any code is
-written.
+section absorbs an earlier internal feature-scoping pass, translated out of
+its original pitch-style framing into technical candidates, each mapped to
+the existing gap or document that already names it. Nothing below is
+authorized for implementation by appearing here — each candidate needs its
+own FACTS-first plan, exactly like the Hosted Verifier (Phase 5) did,
+before any code is written.
 
-**Numbering note:** the Endgame prompt's own phase chain (Phase 5 Hosted
+**Numbering note:** an earlier internal phase chain (Phase 5 Hosted
 Verifier → Phase 6 Enterprise Trust Plane → Phase 7 Runtime Admission
 Infrastructure → Phase 8 Release Candidate) is a different numbering scheme
 than this roadmap's Phase 0–4. "Phase 6" in that chain is this document's
@@ -109,17 +109,17 @@ two silently-conflicting truths.
 - Revocation (extending local trust-store revocation toward the
   cross-organization gap identified in `TRUST_MODEL.md` §3)
 
-### Candidates from the 2026-07-19 Feature Radar
+### Candidates from the 2026-07-19 scoping pass
 
 Each is stated as an engineering question, not a pitch. "Fit" notes where
-it lands relative to `CLAUDE.md`'s constraints and the 2026-07-19
+it lands relative to the founder constraints document and the 2026-07-19
 Infrastructure Development authorization (Hosted Verifier / Enterprise
 Trust Plane / Runtime Admission Infrastructure permitted "when implemented
 incrementally and backed by tests, documentation and security review" —
 every other constraint, including "no fake enterprise functionality" and
 "smallest credible implementation," still applies).
 
-- **Extended receipt provenance** (Radar: "AI Liability Ledger"). Technical
+- **Extended receipt provenance** (earlier working name: "AI Liability Ledger"). Technical
   shape: additional fields on the existing `Receipt` artifact —
   policy version, model identifier/hash, and the permission state the
   decision was made under — chained via hashes the way `manifestHash`
@@ -129,7 +129,7 @@ every other constraint, including "no fake enterprise functionality" and
   versioning, not just algorithm versioning. Smallest-scope candidate of
   the five: extends an existing, already-tested artifact type rather than
   introducing new infrastructure.
-- **Cross-consumer revocation propagation** (Radar: "Kill Switch Network").
+- **Cross-consumer revocation propagation** (earlier working name: "Kill Switch Network").
   This is the exact gap `TRUST_MODEL.md` §3 and `TRUST_GUARANTEES.md`
   non-guarantee #6 already name: today, a compromised key can only be
   revoked one trust store at a time, with no mechanism to push that
@@ -137,18 +137,18 @@ every other constraint, including "no fake enterprise functionality" and
   shared, persistent, multi-party state (a ledger or registry) — this is
   the highest-scope, highest-risk candidate of the five: it is the one
   that most resembles the "hosted registry" / "multi-tenant SaaS" shape
-  `CLAUDE.md` named explicitly, and needs the most scrutiny before any
+  the founder constraints document names explicitly, and needs the most scrutiny before any
   plan is written for it, specifically on the questions of who operates
   the shared state, how consumers authenticate to it, and what happens
   when it is unavailable (must still fail closed locally).
-- **Standardized evidence export format** (Radar: "Evidence Envelope").
+- **Standardized evidence export format** (earlier working name: "Evidence Envelope").
   Technical shape: a documented, versioned serialization bundling fields
   Besa already produces (`agentId`, `manifestHash`, `publicKeyId`,
   `timestamp`, `signature`, the receipt itself) into one exportable
   document for auditors/insurers/regulators. Mostly a formatting/export
   layer over existing data, not new trust logic — second-smallest-scope
   candidate.
-- **Read-only trust status query** (Radar: "Trust Score API"). Technical
+- **Read-only trust status query** (earlier working name: "Trust Score API"). Technical
   shape: a `GET` endpoint answering questions the trust store and
   `checkTrustedKey` can already answer locally (is this key active/
   retired/revoked) plus fields that do not exist yet (`last_audit`,
@@ -157,7 +157,7 @@ every other constraint, including "no fake enterprise functionality" and
   candidate for the existing Hosted Verifier; the audit-history/risk-score
   part is new state and needs its own scope decision — do not conflate the
   two into one feature.
-- **Per-agent cryptographic identity** (Radar: "Agent Passport"). This is
+- **Per-agent cryptographic identity** (earlier working name: "Agent Passport"). This is
   precisely the "agent identity as a verified principal, not a
   caller-supplied label" gap `TRUST_MODEL.md` §1 already flags as "a
   natural next step... explicitly out of scope for this document." Largest
@@ -187,5 +187,5 @@ it, per this roadmap's own stated purpose.
 
 No dates, no version numbers beyond "v1.0," no team sizing, no pricing. A
 phase appearing here is not authorization to start building it — Phase 2–4
-require their own explicit scope decision, exactly as `CLAUDE.md`'s founder
-constraints require for anything beyond the current MVP.
+require their own explicit scope decision, exactly as the project's founder
+constraints document requires for anything beyond the current MVP.

@@ -40,4 +40,4 @@ proofs remain verifiable after this change? Additive or breaking? -->
 - [ ] `CHANGELOG.md` updated if this is a user-visible change
 - [ ] `SECURITY.md` / `docs/THREAT_MODEL.md` updated if this touches security behavior
 - [ ] Public copy contains no unsupported compliance, enterprise, bank-ready, DORA, AI Act, SOC2, ISO, or production-proven claims
-- [ ] No Claude, Codex, Anthropic, AI-author, `Co-authored-by`, or session-trace metadata added
+- [ ] No automated code-generation or review tool attribution, AI-author, `Co-authored-by`, or session-trace metadata added
