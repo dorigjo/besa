@@ -4,6 +4,21 @@ All notable changes to this project are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-08-12
+
+Positioning patch. No protocol, artifact, or API changes.
+
+### Changed
+
+* Aligned CLI positioning with Besa's cryptographic admission and evidence
+  infrastructure category (`besa --help` tagline).
+* Removed outdated early-access wording from the CLI security guidance.
+  Preserved explicit production security guidance (encrypted-at-rest keys,
+  never commit `.besa/`) and added a pointer to review `SECURITY.md` and
+  the trust model before production deployment.
+* Synced `package-lock.json`'s version field, which had been left at
+  `0.1.0` since before the 1.0.0 release.
+
 ## [1.0.0] - 2026-08-12
 
 First stable release. The CLI surface, SDK exports, and every signed-

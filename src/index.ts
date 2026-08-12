@@ -1057,7 +1057,7 @@ function readVersion(): string {
 function usage(): void {
   console.log(
     [
-      "Besa - signed trust infrastructure for AI-agent tools",
+      "Besa - cryptographic admission and evidence infrastructure for AI-agent execution",
       "",
       "Usage:",
       "  besa <command> [arguments] [options]",
@@ -1118,8 +1118,9 @@ function usage(): void {
       "  besa serve --port 8787 --rate-limit 60",
       "",
       "Security:",
-      "  Local early-access developer preview. Private keys are encrypted at rest (AES-256-GCM + scrypt).",
-      "  Never commit the .besa/ directory. Not hardened for production use yet.",
+      "  Private keys are encrypted at rest (AES-256-GCM + scrypt).",
+      "  Never commit the .besa/ directory.",
+      "  Review SECURITY.md and the trust model before production deployment.",
     ].join("\n"),
   );
 }
