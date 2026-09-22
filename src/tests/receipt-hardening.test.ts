@@ -12,6 +12,7 @@ import {
   generateKeyPair,
   signManifest,
   validateReceipt,
+  verifyReceiptDetailed,
   type Manifest,
 } from "../sdk.js";
 
@@ -39,6 +40,24 @@ function manifest(): Manifest {
 }
 
 // --- Unit tests: createReceipt fails closed on malformed semantics ---
+
+test("receipt verification returns a structured failure for a malformed public key", () => {
+  const keypair = generateKeyPair();
+  const receipt = createReceipt(
+    {
+      manifestHash: MANIFEST_HASH,
+      toolName: "crm.lookup",
+      decision: "allow",
+      reasonCode: "ALLOWED",
+      request: {},
+    },
+    keypair,
+  );
+
+  const result = verifyReceiptDetailed(receipt, "!");
+  assert.equal(result.valid, false);
+  assert.equal(result.reasonCode, "E_SIGNATURE_CHECK_FAILED");
+});
 
 test("createReceipt rejects a toolName with control characters", () => {
   const keypair = generateKeyPair();

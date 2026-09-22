@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Besa — Cryptographic admission &amp; evidence layer for AI agents</title>
-  <meta name="description" content="Besa is the cryptographic admission and evidence layer for AI-agent tool calls. Signed manifests, fail-closed admission decisions, and tamper-evident execution receipts — verifiable offline by any party." />
+  <title>Besa — Exact-action admission &amp; evidence for AI agents</title>
+  <meta name="description" content="Besa binds principal, agent, authority, operation, resource, constraints, expiry, and nonce into signed capabilities and evidence for consequential AI-agent actions." />
   <meta name="theme-color" content="#1B3A2D" />
   <meta name="color-scheme" content="light" />
   <link rel="canonical" href="https://dorigjo.github.io/besa/" />
@@ -13,13 +13,13 @@
 
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Besa" />
-  <meta property="og:title" content="Besa — Cryptographic admission &amp; evidence layer for AI agents" />
-  <meta property="og:description" content="Signed manifests, fail-closed admission decisions, and tamper-evident execution receipts — verifiable offline by any party." />
+  <meta property="og:title" content="Besa — Exact-action admission &amp; evidence for AI agents" />
+  <meta property="og:description" content="Signed, fail-closed authorization and evidence for the exact action an AI agent is about to execute." />
   <meta property="og:url" content="https://dorigjo.github.io/besa/" />
   <meta property="og:image" content="https://dorigjo.github.io/besa/logo.svg" />
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="Besa — Cryptographic admission &amp; evidence layer for AI agents" />
-  <meta name="twitter:description" content="Signed manifests, fail-closed admission decisions, and tamper-evident execution receipts — verifiable offline by any party." />
+  <meta name="twitter:title" content="Besa — Exact-action admission &amp; evidence for AI agents" />
+  <meta name="twitter:description" content="Signed, fail-closed authorization and evidence for the exact action an AI agent is about to execute." />
   <meta name="twitter:image" content="https://dorigjo.github.io/besa/logo.svg" />
 </head>
 <body>
@@ -41,26 +41,26 @@
 
     <section class="hero">
       <span class="category-eyebrow"
-            data-en="Cryptographic Admission &amp; Evidence Layer"
-            data-de="Kryptografische Zulassungs- und Nachweisschicht">Cryptographic Admission &amp; Evidence Layer</span>
+            data-en="Exact-Action Admission &amp; Evidence"
+            data-de="Zulassung und Nachweis exakter Aktionen">Exact-Action Admission &amp; Evidence</span>
       <div class="hero-rule" aria-hidden="true"></div>
       <h1 class="hero-brand">Besa</h1>
       <p class="hero-claim"
-         data-en="The cryptographic admission and evidence layer for AI-agent actions."
-         data-de="Die kryptografische Zulassungs- und Nachweisschicht für KI-Agenten-Aktionen.">
-        The cryptographic admission and evidence layer for AI-agent actions.
+         data-en="Exact-action authorization before consequential AI-agent execution."
+         data-de="Autorisierung exakter Aktionen vor folgenreicher KI-Agenten-Ausführung.">
+        Exact-action authorization before consequential AI-agent execution.
       </p>
       <p class="hero-sub"
-         data-en="Before an AI agent touches a tool, API, database, or pipeline — Besa checks whether the action is declared, policy-approved, within budget, and attributable. Fail-closed. Signed proof of every decision."
-         data-de="Bevor ein KI-Agent ein Tool, eine API, eine Datenbank oder eine Pipeline berührt – prüft Besa, ob die Aktion deklariert, richtlinienkonform, im Budget und zurechenbar ist. Fail-closed. Signierter Nachweis jeder Entscheidung.">
-        Before an AI agent touches a tool, API, database, or pipeline — Besa checks whether the action is declared, policy-approved, within budget, and attributable. Fail-closed. Signed proof of every decision.
+         data-en="After identity and before the side effect, Besa binds the principal, agent, authority, operation, resource, constraints, expiry, and nonce. It issues a signed allow or deny capability, then links the result to signed evidence."
+         data-de="Nach der Identitätsprüfung und vor dem Seiteneffekt bindet Besa Principal, Agent, Autorität, Operation, Ressource, Constraints, Ablaufzeit und Nonce. Es stellt eine signierte Allow- oder Deny-Capability aus und verknüpft anschließend das Ergebnis mit signiertem Nachweis.">
+        After identity and before the side effect, Besa binds the principal, agent, authority, operation, resource, constraints, expiry, and nonce. It issues a signed allow or deny capability, then links the result to signed evidence.
       </p>
       <div class="pipeline-card">
-        <pre class="pipeline-flow">manifest.yaml
-  ↓  besa sign         →  signed-manifest.json
-  ↓  besa verify
-  ↓  besa admit crm.lookup   →  ✓ admitted
-  ↓  besa receipt crm.lookup →  receipt.json</pre>
+        <pre class="pipeline-flow">ActionEnvelopeV1
+  ↓  exact policy + narrowed delegation
+  ↓  signed ActionCapability → allow / deny
+  ↓  replay-enforced execution
+  ↓  signed EvidenceEnvelope → independently verifiable</pre>
       </div>
       <div class="hero-cta">
         <pre class="install-cmd"
@@ -81,9 +81,9 @@
             data-en="The problem"
             data-de="Das Problem">The problem</span>
       <p class="problem-copy"
-         data-en="AI agents are calling CRMs, payment APIs, deployment pipelines, and databases. When something goes wrong — or when compliance asks — your team needs to answer: What was this agent authorized to do? Was the action inside policy? Can you prove it? Most teams today cannot."
-         data-de="KI-Agenten rufen CRMs, Zahlungs-APIs, Deployment-Pipelines und Datenbanken auf. Wenn etwas schiefgeht – oder wenn Compliance fragt – muss Ihr Team antworten: Was war dieser Agent berechtigt zu tun? War die Aktion richtlinienkonform? Können Sie es beweisen? Die meisten Teams können das heute nicht.">
-        AI agents are calling CRMs, payment APIs, deployment pipelines, and databases. When something goes wrong — or when compliance asks — your team needs to answer: What was this agent authorized to do? Was the action inside policy? Can you prove it? Most teams today cannot.
+         data-en="Authentication says who connected. Tool permissions say what may be called. Neither proves whether this exact payment, deployment, message, or database mutation was authorized under these exact constraints, nor links the outcome to that decision."
+         data-de="Authentifizierung sagt, wer verbunden ist. Tool-Berechtigungen sagen, was aufgerufen werden darf. Beides beweist nicht, ob genau diese Zahlung, dieses Deployment, diese Nachricht oder Datenbankmutation unter genau diesen Constraints autorisiert war, und verknüpft das Ergebnis nicht mit dieser Entscheidung.">
+        Authentication says who connected. Tool permissions say what may be called. Neither proves whether this exact payment, deployment, message, or database mutation was authorized under these exact constraints, nor links the outcome to that decision.
       </p>
     </section>
 
@@ -95,9 +95,9 @@
           data-en="Approve. Enforce. Prove."
           data-de="Genehmigen. Durchsetzen. Beweisen.">Approve. Enforce. Prove.</h2>
       <p class="category-desc"
-         data-en="Besa gives every AI-agent tool call a policy gate and a signed audit record. Declare what your agents are allowed to do. Enforce that policy before each call. Issue a cryptographic receipt for every decision — allow or deny."
-         data-de="Besa gibt jedem KI-Agenten-Tool-Aufruf ein Policy-Gate und einen signierten Audit-Nachweis. Legen Sie fest, was Ihre Agenten dürfen. Setzen Sie diese Richtlinie vor jedem Aufruf durch. Stellen Sie für jede Entscheidung – Zulassung oder Ablehnung – einen kryptografischen Receipt aus.">
-        Besa gives every AI-agent tool call a policy gate and a signed audit record. Declare what your agents are allowed to do. Enforce that policy before each call. Issue a cryptographic receipt for every decision — allow or deny.
+         data-en="Besa sits after identity and before the side effect. It evaluates exact action envelopes, verifies narrowed delegation, fails closed on mismatch or replay, and signs capabilities plus post-action evidence."
+         data-de="Besa sitzt nach der Identitätsprüfung und vor dem Seiteneffekt. Es bewertet exakte Action Envelopes, prüft eingeschränkte Delegation, schlägt bei Abweichung oder Replay geschlossen fehl und signiert Capabilities sowie nachgelagerte Ausführungsnachweise.">
+        Besa sits after identity and before the side effect. It evaluates exact action envelopes, verifies narrowed delegation, fails closed on mismatch or replay, and signs capabilities plus post-action evidence.
       </p>
     </section>
 
@@ -106,35 +106,32 @@
             data-en="What Besa proves"
             data-de="Was Besa beweist">What Besa proves</span>
       <ul class="proof-list">
-        <li data-en="What your agent was authorized to do — by signed declaration"
-            data-de="Was Ihr Agent berechtigt war zu tun – durch signierte Deklaration">What your agent was authorized to do — by signed declaration</li>
-        <li data-en="Whether each tool call was inside declared policy"
-            data-de="Ob jeder Tool-Aufruf innerhalb der deklarierten Richtlinie lag">Whether each tool call was inside declared policy</li>
-        <li data-en="Whether the call was admitted or denied — and the machine-readable reason"
-            data-de="Ob der Aufruf zugelassen oder abgelehnt wurde – und der maschinenlesbare Grund">Whether the call was admitted or denied — and the machine-readable reason</li>
-        <li data-en="A cryptographic fingerprint (SHA-256) of the request that triggered the decision"
-            data-de="Ein kryptografischer Fingerabdruck (SHA-256) des Requests, der die Entscheidung ausgelöst hat">A cryptographic fingerprint (SHA-256) of the request that triggered the decision</li>
-        <li data-en="Which key signed the evidence — fully verifiable by any party"
-            data-de="Welcher Schlüssel die Beweise signiert hat – von jeder Partei verifizierbar">Which key signed the evidence — fully verifiable by any party</li>
+        <li data-en="Which declared principal, agent, and authority the signed capability binds"
+            data-de="Welche deklarierten Principal-, Agent- und Autoritätswerte die signierte Capability bindet">Which declared principal, agent, and authority the signed capability binds</li>
+        <li data-en="The exact tool, operation, resource, scopes, constraints, expiry, and nonce admitted"
+            data-de="Welches exakte Tool, welche Operation, Ressource, Scopes, Constraints, Ablaufzeit und Nonce zugelassen wurden">The exact tool, operation, resource, scopes, constraints, expiry, and nonce admitted</li>
+        <li data-en="Whether policy and every narrowed delegation link authorized that exact action"
+            data-de="Ob Policy und jedes eingeschränkte Delegationsglied genau diese Aktion autorisierten">Whether policy and every narrowed delegation link authorized that exact action</li>
+        <li data-en="Whether enforced replay protection accepted the action nonce only once"
+            data-de="Ob der erzwungene Replay-Schutz die Action-Nonce nur einmal akzeptierte">Whether enforced replay protection accepted the action nonce only once</li>
+        <li data-en="Which signed result evidence links the action, capability, and execution outcome"
+            data-de="Welcher signierte Nachweis Aktion, Capability und Ausführungsergebnis verknüpft">Which signed result evidence links the action, capability, and execution outcome</li>
       </ul>
     </section>
 
     <section class="cli reveal">
-      <span class="section-label">CLI</span>
+      <span class="section-label">CLI + Self-hosted Verifier</span>
       <div class="terminal-card">
         <pre>npm install @dorigjo/besa
 
 npx besa --help
 
-besa keys
-besa sign examples/manifest.yaml
-besa trust add examples/manifest.signed.json
-besa verify examples/manifest.signed.json
-besa admit examples/manifest.signed.json crm.lookup
-besa admit examples/manifest.signed.json crm.delete
-besa receipt crm.lookup examples/manifest.signed.json --request examples/request.json
-besa verify-receipt .besa/receipts/<id>.json examples/manifest.signed.json --request examples/request.json
-besa keys rotate</pre>
+besa serve --port 8787 --action-trust verifier-trust.json
+
+# Admission mode also requires BESA_ADMISSION_TOKEN
+besa serve --port 8787 --trust issuer-trust.json \
+  --key-file .besa/key.json \
+  --action-policy examples/action-policy.yaml</pre>
       </div>
     </section>
 
@@ -143,9 +140,9 @@ besa keys rotate</pre>
             data-en="The artifact"
             data-de="Das Artefakt">The artifact</span>
       <p class="artifact-desc"
-         data-en="Every admission decision — allow or deny — produces a signed audit receipt. Not a log. Proof."
-         data-de="Jede Zulassungsentscheidung – Erlaubnis oder Ablehnung – erzeugt einen signierten Audit-Nachweis. Kein Log. Beweis.">
-        Every admission decision — allow or deny — produces a signed audit receipt. Not a log. Proof.
+         data-en="v1.1 adds signed action capabilities and linked result evidence without changing the stable v1 receipt below. Existing verifiers remain compatible."
+         data-de="v1.1 ergänzt signierte Action Capabilities und verknüpfte Ergebnisnachweise, ohne den stabilen v1-Receipt unten zu verändern. Bestehende Verifier bleiben kompatibel.">
+        v1.1 adds signed action capabilities and linked result evidence without changing the stable v1 receipt below. Existing verifiers remain compatible.
       </p>
       <div class="receipt-card">
         <pre>{
@@ -167,9 +164,9 @@ besa keys rotate</pre>
     <section class="status reveal">
       <span class="section-label">Status</span>
       <p class="status-copy"
-         data-en="v1.0.0. Local-first. Manifests and receipts are signed with standard cryptographic primitives — Ed25519 signatures over SHA-256 hashes — and can be verified offline by any party. Local signing keys are encrypted at rest (AES-256-GCM, scrypt-derived). No independent third-party security audit has been performed yet. Hosted infrastructure (verifier API, receipt retention, HSM-backed keys) is on the roadmap."
-         data-de="v1.0.0. Local-first. Manifeste und Receipts werden mit gängigen kryptografischen Primitiven signiert – Ed25519-Signaturen über SHA-256-Hashes – und sind von jeder Partei offline verifizierbar. Lokale Signierschlüssel werden im Ruhezustand verschlüsselt (AES-256-GCM, scrypt-abgeleitet). Es hat noch kein unabhängiges Sicherheitsaudit stattgefunden. Gehostete Infrastruktur (Verifier-API, Receipt-Aufbewahrung, HSM-gestützte Schlüssel) ist in Planung.">
-        v1.0.0. Local-first. Manifests and receipts are signed with standard cryptographic primitives — Ed25519 signatures over SHA-256 hashes — and can be verified offline by any party. Local signing keys are encrypted at rest (AES-256-GCM, scrypt-derived). No independent third-party security audit has been performed yet. Hosted infrastructure (verifier API, receipt retention, HSM-backed keys) is on the roadmap.
+         data-en="v1.1.0. Local library, MCP middleware, and a production-oriented self-hosted HTTP verifier with health/readiness probes, request limits, rate limiting, token-protected admission, keyless verification mode, Docker deployment, tests, and conformance vectors. Besa does not operate an official public verifier instance. No independent third-party security audit has been performed yet."
+         data-de="v1.1.0. Lokale Library, MCP-Middleware und ein produktionsnaher, selbst hostbarer HTTP-Verifier mit Health-/Readiness-Probes, Request-Limits, Rate-Limiting, token-geschützter Admission, keylosem Verifikationsmodus, Docker-Deployment, Tests und Conformance-Vektoren. Besa betreibt keine offizielle öffentliche Verifier-Instanz. Ein unabhängiges Sicherheitsaudit wurde noch nicht durchgeführt.">
+        v1.1.0. Local library, MCP middleware, and a production-oriented self-hosted HTTP verifier with health/readiness probes, request limits, rate limiting, token-protected admission, keyless verification mode, Docker deployment, tests, and conformance vectors. Besa does not operate an official public verifier instance. No independent third-party security audit has been performed yet.
       </p>
       <a class="source-link"
          href="https://github.com/dorigjo/besa"
@@ -189,9 +186,9 @@ besa keys rotate</pre>
             data-de="© 2026 Besa. MIT-Lizenz.">© 2026 Besa. MIT License.</span>
     </div>
     <p class="footer-legal"
-       data-en="Besa is an open-source developer tool that produces cryptographic evidence artifacts. There is no paid hosted service, support contract, or compliance guarantee yet. It does not by itself ensure regulatory compliance, prevent fines, or replace legal, security, or compliance counsel."
-       data-de="Besa ist ein quelloffenes Entwicklertool, das kryptografische Beweisartefakte erzeugt. Es gibt bislang keinen kostenpflichtigen gehosteten Dienst, keinen Support-Vertrag und keine Compliance-Garantie. Es stellt für sich genommen keine regulatorische Konformität sicher, verhindert keine Bußgelder und ersetzt keine rechtliche, sicherheitsbezogene oder Compliance-Beratung.">
-      Besa is an open-source developer tool that produces cryptographic evidence artifacts. There is no paid hosted service, support contract, or compliance guarantee yet. It does not by itself ensure regulatory compliance, prevent fines, or replace legal, security, or compliance counsel.
+       data-en="Besa is open-source software for cryptographic admission and evidence. v1.1 includes a self-hostable service, but no Besa-operated public verifier, support contract, or compliance guarantee. It does not by itself ensure regulatory compliance or replace legal, security, or compliance counsel."
+       data-de="Besa ist Open-Source-Software für kryptografische Zulassung und Nachweise. v1.1 enthält einen selbst hostbaren Dienst, aber keinen von Besa betriebenen öffentlichen Verifier, Support-Vertrag oder Compliance-Garantie. Es stellt für sich genommen keine regulatorische Konformität sicher und ersetzt keine rechtliche, sicherheitsbezogene oder Compliance-Beratung.">
+      Besa is open-source software for cryptographic admission and evidence. v1.1 includes a self-hostable service, but no Besa-operated public verifier, support contract, or compliance guarantee. It does not by itself ensure regulatory compliance or replace legal, security, or compliance counsel.
     </p>
     <p class="footer-legal">
       <span data-en="Legal &amp; privacy: This static site uses no contact forms, analytics scripts, advertising trackers, or custom cookies. Hosting providers may process technical access data under their own policies. Legal notice and privacy policy: not yet published, to be added before commercial operation. Security policy: see "

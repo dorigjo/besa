@@ -27,9 +27,11 @@ import {
 import { loadManifest } from "./manifest.js";
 import {
   createHostedVerifierServer,
+  type HostedVerifierActionAdmissionOptions,
   type HostedVerifierAdmissionOptions,
   type HostedVerifierRateLimitOptions,
 } from "./server/hosted-verifier.js";
+import { loadActionPolicy } from "./action-policy-io.js";
 import {
   createReceipt,
   hashRequest,
@@ -89,6 +91,8 @@ const FLAGS_WITH_VALUES = new Set([
   "--port",
   "--meter",
   "--rate-limit",
+  "--action-policy",
+  "--action-trust",
   "--host",
 ]);
 const COMMAND_FLAGS: Record<string, ReadonlySet<string>> = {
@@ -116,6 +120,8 @@ const COMMAND_FLAGS: Record<string, ReadonlySet<string>> = {
     "--passphrase-file",
     "--meter",
     "--rate-limit",
+    "--action-policy",
+    "--action-trust",
   ]),
 };
 
@@ -661,13 +667,36 @@ function cmdServe(): void {
   // used deliberately instead of loadOrCreateKeyPair() — a server process
   // must never silently mint a new signing identity on startup.
   const trustFlag = flagValue("--trust");
+  const actionPolicyFlag = flagValue("--action-policy");
+  const actionTrustFlag = flagValue("--action-trust");
+  const actionTrustStore = actionTrustFlag === undefined
+    ? undefined
+    : loadTrustStore(actionTrustFlag);
   let admission: HostedVerifierAdmissionOptions | undefined;
+  let actionAdmission: HostedVerifierActionAdmissionOptions | undefined;
+  let signingKeyPair: KeyPair | undefined;
 
   if (trustFlag !== undefined) {
     const trustStore = loadTrustStore(trustFlag);
-    const keypair = loadExistingKeyPair();
+    signingKeyPair = loadExistingKeyPair();
+    const apiToken = process.env.BESA_ADMISSION_TOKEN;
+    if (apiToken === undefined) {
+      throw new Error("BESA_ADMISSION_TOKEN is required when --trust enables hosted admission");
+    }
     const meterPath = flagValue("--meter") ?? METER_PATH;
-    admission = { trustStore, meterPath, keyPair: keypair };
+    admission = { trustStore, meterPath, keyPair: signingKeyPair, apiToken };
+
+    if (actionPolicyFlag !== undefined) {
+      actionAdmission = {
+        trustStore,
+        policy: loadActionPolicy(actionPolicyFlag),
+        keyPair: signingKeyPair,
+        issuerId: process.env.BESA_ADMISSION_ISSUER_ID ?? "besa:hosted-verifier",
+        apiToken,
+      };
+    }
+  } else if (actionPolicyFlag !== undefined) {
+    throw new Error("--action-policy requires --trust so capability and delegation issuers are trusted");
   }
 
   const rateLimitFlag = flagValue("--rate-limit");
@@ -680,7 +709,14 @@ function cmdServe(): void {
     rateLimit = { limit };
   }
 
-  const server = createHostedVerifierServer({ admission, rateLimit });
+  let acceptingRequests = true;
+  const server = createHostedVerifierServer({
+    admission,
+    actionAdmission,
+    actionTrustStore,
+    rateLimit,
+    readiness: () => acceptingRequests,
+  });
 
   server.listen(port, host, () => {
     const address = server.address();
@@ -692,7 +728,7 @@ function cmdServe(): void {
     console.log("");
 
     if (admission) {
-      console.log("Admission attestation ENABLED: POST /v1/admit issues signed,");
+      console.log("Admission attestation ENABLED: POST /v1/admit requires a bearer token and issues signed,");
       console.log("non-consuming AdmissionAttestations. This process holds signing");
       console.log("key material in memory for the lifetime of the server.");
       console.log("See docs/RUNTIME_ADMISSION.md for the guarantee/non-guarantee statement.");
@@ -701,8 +737,13 @@ function cmdServe(): void {
       console.log("no receipt issuance. Never loads a signing key.");
     }
 
-    if (rateLimit) {
-      console.log(`Rate limiting ENABLED: ${String(rateLimit.limit)} requests/min per client.`);
+    console.log(`Rate limiting ENABLED: ${String(rateLimit?.limit ?? 120)} requests/min per client.`);
+    if (actionAdmission) {
+      console.log("Action admission ENABLED: POST /v1/actions/admit requires a bearer token and");
+      console.log("issues signed ALLOW/DENY ActionCapability artifacts from the local action policy.");
+    } else if (actionTrustStore) {
+      console.log("Action verification ENABLED: v1.1 capability, delegation, and evidence routes");
+      console.log("use the supplied public trust store and do not load a signing key.");
     }
     console.log("GET /metrics exposes aggregate request counters.");
     console.log("See docs/HOSTED_VERIFIER.md for the endpoint reference and limitations.");
@@ -711,7 +752,11 @@ function cmdServe(): void {
   // Ensure Ctrl+C / a process manager's SIGTERM closes listening sockets
   // cleanly instead of the process dying mid-request; also stops the event
   // loop from lingering on an open server handle.
+  let shuttingDown = false;
   const shutdown = (): void => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    acceptingRequests = false;
     server.close(() => process.exit(0));
   };
   process.on("SIGINT", shutdown);
@@ -1101,6 +1146,14 @@ function usage(): void {
       "  --meter <file>       Meter state path for admission checks (serve; default: .besa/meter.json)",
       "                       (serve, requires --trust to take effect)",
       "  --rate-limit <n>     Max requests per minute per client address (serve)",
+      "  --action-policy <file>",
+      "                       JSON/YAML ActionPolicyV1 for POST /v1/actions/admit (serve; requires --trust)",
+      "  --action-trust <file>",
+      "                       Public trust store for v1.1 capability/delegation/evidence verification",
+      "                       (serve; does not load a signing key or enable admission)",
+      "  BESA_ADMISSION_TOKEN Bearer token required whenever --trust enables hosted admission (environment)",
+      "  BESA_ADMISSION_ISSUER_ID",
+      "                       Capability issuer id for action admission (environment; default: besa:hosted-verifier)",
       "",
       "Examples:",
       "  besa keys",
@@ -1115,6 +1168,7 @@ function usage(): void {
       "  besa export-evidence examples/manifest.signed.json .besa/receipts/<receipt-id>.json",
       "  besa serve --port 8787",
       "  besa serve --port 8787 --trust .besa/trust.json",
+      "  besa serve --port 8787 --action-trust verifier-trust.json",
       "  besa serve --port 8787 --rate-limit 60",
       "",
       "Security:",

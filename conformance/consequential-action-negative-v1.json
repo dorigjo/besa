@@ -1,0 +1,72 @@
+{
+  "$comment": "Negative cases for consequential-action-v1.json. Apply each mutation to that base vector only. The expected reason codes are part of the v1.1 interoperability contract. These are public test inputs, not policy guidance.",
+  "specVersion": 1,
+  "baseVector": "consequential-action-v1.json",
+  "cases": [
+    {
+      "id": "action-unknown-field",
+      "target": "action",
+      "mutation": { "unexpected": true },
+      "at": "2030-01-01T00:00:03.000Z",
+      "expected": { "valid": false, "reasonCode": "SCHEMA_ACTION_INVALID" }
+    },
+    {
+      "id": "action-resource-substitution",
+      "target": "capability",
+      "actionMutation": { "resource": "payment:merchant-999" },
+      "at": "2030-01-01T00:00:03.000Z",
+      "expected": { "valid": false, "reasonCode": "ACTION_CAPABILITY_MISMATCH" }
+    },
+    {
+      "id": "action-constraint-substitution",
+      "target": "capability",
+      "actionMutation": {
+        "constraints": { "amountEur": 10000, "merchantId": "merchant-123" }
+      },
+      "at": "2030-01-01T00:00:03.000Z",
+      "expected": { "valid": false, "reasonCode": "ACTION_CAPABILITY_MISMATCH" }
+    },
+    {
+      "id": "capability-signature-corruption",
+      "target": "capability",
+      "mutation": {
+        "signature": "TeL61ujF2kDY0oOTikMP/dsJ38IHAwg/pRaBQDgg81BNkrhvlZ0TOPQu9xnEAykf5ceaylnEwDVd8+prmx0dDA=="
+      },
+      "at": "2030-01-01T00:00:03.000Z",
+      "expected": { "valid": false, "reasonCode": "SIGNATURE_CAPABILITY_INVALID" }
+    },
+    {
+      "id": "capability-unknown-field",
+      "target": "capability",
+      "mutation": { "unexpected": true },
+      "at": "2030-01-01T00:00:03.000Z",
+      "expected": { "valid": false, "reasonCode": "SCHEMA_CAPABILITY_INVALID" }
+    },
+    {
+      "id": "action-expiry",
+      "target": "action",
+      "at": "2030-01-02T00:00:00.000Z",
+      "expected": { "valid": false, "reasonCode": "EXPIRY_ACTION_EXPIRED" }
+    },
+    {
+      "id": "delegation-unknown-field",
+      "target": "delegation",
+      "mutation": { "unexpected": true },
+      "at": "2030-01-01T00:00:03.000Z",
+      "expected": { "valid": false, "reasonCode": "SCHEMA_DELEGATION_INVALID" }
+    },
+    {
+      "id": "delegation-action-not-granted",
+      "target": "delegation",
+      "actionMutation": { "resource": "payment:merchant-999" },
+      "at": "2030-01-01T00:00:03.000Z",
+      "expected": { "valid": false, "reasonCode": "DELEGATION_ACTION_NOT_GRANTED" }
+    },
+    {
+      "id": "replay-same-nonce",
+      "target": "runtime",
+      "at": "2030-01-01T00:00:03.000Z",
+      "expected": { "valid": false, "reasonCode": "REPLAY_DETECTED" }
+    }
+  ]
+}

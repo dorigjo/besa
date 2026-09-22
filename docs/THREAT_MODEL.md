@@ -1,283 +1,117 @@
-# Besa Threat Model
+# Besa v1.1 Threat Model
 
-Status: v1.0 (`1.0.0`) — stable CLI/SDK/artifact-format surface; no independent third-party security audit performed yet (see `V1_SECURITY_RELEASE_REVIEW.md`).
-
-This document explains what Besa protects against today, what it does not protect against yet, and which risks still exist in the current MVP.
-
-For the `KeyProvider` seam specifically (per-attacker analysis of local vs.
-remote/simulated signing), see `PROVIDER_THREAT_MODEL.md` — it covers the
-same replay and key-leakage risks named below in more detail for that one
-subsystem; the facts in both documents agree.
-
-For the hosted verifier (`besa serve`, stateless signature checks) and the
-opt-in runtime admission service (`besa serve --trust`, which loads a
-signing key and issues signed `AdmissionAttestation`s), see
-`HOSTED_VERIFIER.md` and `RUNTIME_ADMISSION.md` respectively — both use the
-same per-attacker format as this document and agree with it.
+Status: v1.1 protocol and self-hosted distribution. No independent third-party
+security audit has been completed. This document describes technical properties,
+not compliance or risk certification.
 
 ## Assets
 
-Besa currently protects or records the following assets:
-
-* **Trust anchors** - pinned public keys and their lifecycle status.
-* **Rotation proofs** - old-key-signed transitions to replacement keys.
-
-* **Tool manifests** — declared tools, capabilities, risks, scopes, budgets, and server metadata.
-* **Signing keys** — the local Ed25519 key pair stored at `.besa/key.json`.
-* **Signed manifests** — manifests combined with `manifestHash`, `signature`, `publicKey`, and `publicKeyId`.
-* **Admission decisions** — allow or deny decisions for requested tool usage.
-* **Receipts** — signed, tamper-evident records of admission decisions.
-* **Action meter state** — local usage counts used for budget checks.
-* **Admission attestations** — signed, non-consuming decision snapshots issued
-  by the opt-in runtime admission service (`besa serve --trust`); see
-  `RUNTIME_ADMISSION.md`.
+- Trusted public keys, lifecycle state, and rotation/revocation artifacts.
+- Encrypted signing keys and their passphrases.
+- Frozen v1.0 signed manifests, receipts, rotations, and attestations.
+- v1.1 Action Envelopes, delegations, capabilities, action evidence, and
+  replay state.
+- Hosted verifier availability and configured policy/trust inputs.
+- Append-only evidence logs and supplied execution-result data.
 
 ## Trust boundaries
 
-### Untrusted inputs
-
-Besa treats the following inputs as untrusted:
-
-* raw manifest files
-* signed manifest JSON files
-* tool names passed to the CLI
-* request metadata
-* user-provided file paths
-* generated signed manifest artifacts
-
-These inputs must be validated or verified before they are trusted.
-
-### Trusted components in the current MVP
-
-The current MVP assumes the following local components are trusted:
-
-* the machine running the CLI
-* the operator running the CLI
-* the local `.besa/key.json` file
-* the local `.besa/trust.json` file
-* the local `.besa/meter.json` file
-* the local filesystem
-
-This is acceptable for a local developer preview, but not enough for production or multi-user environments.
-
-## Attacker goals
-
-A realistic attacker may try to:
-
-1. Modify a manifest after it was signed.
-2. Replace a manifest with a different one.
-3. Use a tool that should be denied.
-4. Forge a signed manifest.
-5. Forge or modify a receipt.
-6. Swap the public key or public key ID.
-7. Bypass or reset budget limits.
-8. Reuse old receipts or signed manifests.
-9. Steal the local signing key.
-10. Commit private keys or generated artifacts by mistake.
-11. Present a valid signature under an attacker-controlled, untrusted key.
-12. Continue new admissions after a signing key is retired or revoked.
-13. Forge or replay a signed admission attestation, or exhaust a shared
-    meter's remaining budget via the opt-in runtime admission service.
-
-## Current mitigations
-
-### Manifest tampering
-
-Besa calculates a stable hash of the manifest.
-
-If the manifest changes after signing, verification recomputes the hash and fails closed with:
-
-```text
-E_MANIFEST_HASH_MISMATCH
-```
-
-This protects against silent changes to declared tools, scopes, capabilities, risks, budgets, or server metadata.
-
-### Signature tampering
-
-Besa signs the complete manifest envelope with Ed25519, including the manifest,
-manifest hash, algorithm, public key, public key ID, and signing timestamp.
-
-If the signature is changed, malformed, or does not match the manifest, verification fails with:
-
-```text
-E_SIGNATURE_INVALID
-```
-
-### Public key mismatch
-
-Besa checks that the declared `publicKeyId` matches the included public key.
-
-If the key ID does not match, verification fails with:
-
-```text
-E_PUBLIC_KEY_ID_MISMATCH
-```
-
-This helps detect key swapping.
-
-### Trust anchors and key continuity
-
-A cryptographically valid signature is accepted only when its public key is in
-the selected trust store. A rotation proof must be signed by the previously
-trusted key before a consumer can promote the replacement key.
-
-Retired keys remain valid only for artifacts timestamped before retirement and
-cannot authorize new admissions. Revoked keys are rejected for all artifacts.
-
-Artifact timestamps are covered by signatures but are supplied by the signing
-host. Besa does not currently provide an external trusted timestamp authority.
-
-### Unsupported algorithms
-
-The current MVP only supports Ed25519.
-
-If a signed manifest declares another algorithm, verification fails with:
-
-```text
-E_ALGORITHM_UNSUPPORTED
-```
-
-### Dangerous tool usage
-
-The default policy denies destructive high-risk tools.
-
-For example, a tool with:
-
-```text
-capability: destructive
-risk: high
-```
-
-is denied by default.
-
-### Unknown tools
-
-If a requested tool does not exist in the signed manifest, Besa denies the request.
-
-### Budget limits
-
-Besa can deny a tool request when the configured local usage budget is exceeded.
-
-Budget checks and increments are serialized with a local file lock. Meter
-updates use atomic replacement so concurrent local processes cannot spend the
-same remaining call.
-
-This remains local-only and is not production-grade distributed rate limiting.
-
-### Receipt tampering
-
-Besa signs receipts.
-
-If a receipt is modified after creation, receipt verification fails.
-
-This creates a tamper-evident record of what Besa allowed or denied.
-
-## Current MVP limitations
-
-This release has important limitations:
-
-* local key storage only (AES-256-GCM encrypted at rest; no hosted key management or HSM)
-* hosted verifier service exists (`besa serve`, stateless signature checks only; see `HOSTED_VERIFIER.md`) — has no authentication; rate limiting is opt-in (`--rate-limit <n>`, off by default)
-* opt-in runtime admission service exists (`besa serve --trust`; see `RUNTIME_ADMISSION.md`) — also has no authentication and the same opt-in rate limiting, and its process holds signing key material for its lifetime
-* no hardware-backed keys
-* no hardware-backed or centrally governed key lifecycle
-* no multi-user access control
-* no caller identity binding
-* no authentication layer
-* no centralized receipt storage
-* no distributed replay protection
-* no shared production-grade meter state
-* no dashboard
-* no policy language beyond the current basic rules
-* no formal compliance certification
-
-## Key leakage risk
-
-The private key is stored locally at:
-
-```text
-.besa/key.json
-```
-
-If an active key leaks, an attacker may be able to sign malicious manifests or
-receipts until consumers apply a revocation or trusted rotation.
-
-Current protections:
-
-* `.besa/` is ignored by Git.
-* Private keys are encrypted at rest with AES-256-GCM + scrypt KDF (N=32768)
-  and require the `BESA_KEY_PASSPHRASE` environment variable to decrypt.
-* Local rotation proofs preserve public-key continuity.
-* Consumers can mark compromised public keys as revoked.
-* Key files are protected against symlink substitution.
-
-This is not production key management.
-
-Future versions should use stronger protections such as hosted key management,
-hardware-backed signing, and governed rotation policies.
-
-## Replay risk
-
-The current MVP does not provide full distributed replay protection.
-
-Receipts include timestamps, but there is no shared nonce store, no global receipt registry, and no distributed replay database.
-
-The local meter prevents concurrent over-consumption on one host, but it does
-not prevent replay across machines, environments, or after local state reset.
-
-## Out of scope for this release
-
-Besa does not currently provide:
-
-* secrecy of tool payloads
-* encryption of business data
-* production identity management
-* production authorization management
-* enterprise audit retention
-* SIEM integration
-* compliance certification
-* legal compliance guarantees
-* prevention of all malicious agent behavior
-* sandboxing of tool execution
-* malware detection
-* data loss prevention
-
-Besa is a control and evidence layer, not a complete security platform.
-
-## Future mitigations
-
-Planned or possible future mitigations include:
-
-* hosted receipt API
-* remote receipt retention
-* shared ActionMeter state
-* replay-resistant metering
-* remotely distributed revocation and rotation state
-* HSM-backed or hosted signing
-* caller identity binding
-* agent identity binding
-* declarative policy files
-* approval workflows
-* audit export
-* SIEM export
-* organization-level controls
-* production-grade dashboard
-
-## Summary
-
-Besa currently provides local tamper-evidence for tool manifests and admission receipts.
-
-It helps answer questions such as:
-
-* Was this tool definition changed after signing?
-* Was this tool actually allowed or denied?
-* Was this receipt modified?
-* Did the requested tool exist in the signed manifest?
-* Was the requested tool too risky?
-* Was the local budget exceeded?
-
-This release is useful for development, integration testing, security
-review, and architecture validation.
-
-It is not yet production security infrastructure.
+Inputs are untrusted until strict validation and cryptographic verification
+succeed. The principal, agent, upstream identity system, policy authority,
+capability issuer, executor, recorder, replay-store operator, hosted-verifier
+operator, and independent verifier may all be different parties.
+
+Cryptographic validity is not trust. A verifier must pin or otherwise obtain a
+trusted public key through an authenticated out-of-band process. An executor
+that can issue arbitrary capabilities with a trusted key has already crossed
+the meaningful authorization boundary.
+
+## Protected by the protocol
+
+| Threat | Control |
+|---|---|
+| Action field substitution after issuance | Canonical Action Envelope hashing plus signed capability fields bind principal, agent, authority, tool, operation, resource, constraints hash, expiry, and nonce. |
+| Capability/evidence modification | Domain-separated Ed25519 signatures over strict artifact bodies fail verification. |
+| Signature-domain confusion | Each artifact has a distinct `besa:<domain>:v1` signature or hash domain. |
+| Unknown security-sensitive fields | Strict schemas reject extensions rather than accepting ambiguous data. |
+| Delegation widening | Chain verification requires child identity, operation, resource, scope, constraint, and time window to narrow the parent. |
+| Expired action/capability/delegation use | Canonical timestamps and verification-time checks fail closed. |
+| Untrusted, retired, or revoked issuer use | Trust-store checks reject keys according to artifact time and requested purpose. |
+| MCP tool/argument substitution | `withBesaMcp` requires the action tool and request hash to equal the actual call. |
+| Local in-process replay | An enforced replay store consumes action-hash-plus-nonce before handler execution. |
+| Basic hosted HTTP abuse | Body/header bounds, timeouts, rate limits, method/content-type checks, query rejection, and non-sensitive error responses bound common request abuse. |
+| Evidence-log path substitution | The local log rejects symlink/non-regular targets, uses no-follow where available, serializes in-process appends, and fsyncs records. |
+
+## Detectable but not prevented by Besa alone
+
+| Condition | What Besa can show | What it cannot stop |
+|---|---|---|
+| Executor lies about a result | A trusted recorder signed the supplied result hash and links. | An untrusted recorder fabricating an external effect. |
+| Capability replay in another process or host | The nonce/action binding is visible in artifacts. | Reuse unless an external shared replay store atomically consumes it. |
+| Post-write log manipulation | A deleted/altered record can be detected only if another copy, export, or external retention control exists. | An operator with filesystem authority deleting the sole local log. |
+| Clock manipulation | Signed timestamps and local verification time are inspectable. | A compromised clock without an external trusted timestamp source. |
+| Policy/key compromise | A resulting signed decision identifies its issuer. | A trusted compromised signer issuing malicious capabilities. |
+| TOCTOU after admission | Capability expiry/nonce are bound before handler call. | A downstream executor ignoring the capability or changing its own semantics. |
+
+## Requires customer control or external state
+
+- Upstream agent authentication, identity truth, and authorization context.
+- TLS termination, ingress filtering, reverse-proxy rate limits, DNS, and
+  host/network isolation for `besa serve`.
+- Secret delivery, key custody, rotation, revocation distribution, backup, and
+  incident response.
+- A durable atomic replay provider for multi-process or multi-host one-time use.
+- Evidence-log retention, external archival, access control, and forensic
+  correlation to real executor or payment-rail events.
+- Policy review. A syntactically valid deterministic policy can still be too
+  broad for the intended business risk.
+
+## Out of scope
+
+Besa does not provide IAM, OAuth, agent identity, MCP transport security, a
+tool gateway, execution sandbox, payment processing, cloud authorization,
+secrets management, malware detection, SIEM, monitoring platform, KYC, legal
+review, compliance certification, or a Besa-operated cloud control plane.
+
+It makes no claim that the EU AI Act, SOC 2, DORA, NIS2, or another framework
+requires or is satisfied by Besa. Machine-verifiable artifacts may be useful
+technical evidence in a customer-controlled audit or governance workflow.
+
+## Hosted verifier threats
+
+### Unauthenticated verification callers
+
+Public verification and health endpoints are intentionally unauthenticated.
+They receive bounded processing and default per-address rate limiting. Public
+deployment still needs reverse-proxy controls because address-based in-process
+limits cannot prevent distributed flooding and may see only a proxy address.
+
+### Protected admission callers
+
+`/v1/admit` and `/v1/actions/admit` require a 32-4096-character non-whitespace
+bearer token. Compare is digest-based and timing-safe. Authentication does not
+replace authorization: the signed Action Capability is the artifact binding the
+exact action. Use a dedicated secret manager and rotate tokens; Besa does not
+provide user accounts or token issuance.
+
+### Signing-key process compromise
+
+Keyless `--action-trust` verification avoids loading a private key. Admission
+mode necessarily holds a decrypted signing key for process lifetime. Separate
+that workload from untrusted executors and prefer independent key custody where
+the deployment requires it. A compromised admission signer can issue trusted
+capabilities until consumers revoke or replace its key.
+
+### Input and parsing attacks
+
+The protocol rejects non-finite values, non-canonical text, accessors, invalid
+base64/key material, excessive canonical JSON, unknown fields, malformed JSON,
+and bounded-but-invalid artifacts. Tests cover canonicalization, Unicode,
+accessors, oversized input, nested input, key lifecycle, server request bounds,
+and v1.1 conformance mutations.
+
+## Security reporting
+
+Use `SECURITY.md` for private reporting. Include version, deployment mode,
+preconditions, reproduction steps, and actual versus expected behavior. Do not
+include keys, tokens, customer actions, or sensitive evidence in public issues.

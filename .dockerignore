@@ -1,0 +1,14 @@
+.besa
+.git
+.github
+node_modules
+dist
+coverage
+n8n-nodes-besa
+personal
+docs
+site
+examples
+conformance
+*.log
+*.tgz

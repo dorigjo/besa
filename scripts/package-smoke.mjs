@@ -5,6 +5,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   readdirSync,
   rmSync,
   writeFileSync,
@@ -15,6 +16,7 @@ import { join, resolve } from "node:path";
 process.env.BESA_KEY_PASSPHRASE ??= randomBytes(32).toString("base64url");
 
 const repositoryRoot = resolve(".");
+const UPGRADE_BASE_COMMIT = "082157830006d8497bf2ba5c162e8503772b4a9b";
 const workspace = mkdtempSync(join(tmpdir(), "besa-package-smoke-"));
 const installRoot = join(workspace, "consumer");
 const executionRoot = join(installRoot, "run");
@@ -126,7 +128,10 @@ try {
       "--eval",
       "const b = await import('@dorigjo/besa'); " +
         "if (typeof b.signManifest !== 'function' || " +
-        "typeof b.verifyTrustedSignedManifest !== 'function') process.exit(1);",
+        "typeof b.verifyTrustedSignedManifest !== 'function' || " +
+        "typeof b.withBesa !== 'function' || " +
+        "typeof b.withBesaMcp !== 'function' || " +
+        "typeof b.verifyActionCapability !== 'function') process.exit(1);",
     ],
     installRoot,
   );
@@ -138,6 +143,29 @@ try {
     "besa",
     "examples",
   );
+  const installedPackage = join(installRoot, "node_modules", "@dorigjo", "besa");
+  for (const relativePath of [
+    "Dockerfile",
+    "ARCHITECTURE.md",
+    "AUDIT_SCOPE.md",
+    "SECURITY.md",
+    "docs/AGENT_GATEWAY.md",
+    "docs/BENCHMARKS.md",
+    "docs/EVIDENCE_ENVELOPE.md",
+    "docs/HOSTED_VERIFIER.md",
+    "docs/RUNTIME_ADMISSION.md",
+    "docs/THREAT_MODEL.md",
+    "examples/action-policy.yaml",
+    "examples/consequential-mcp-middleware.ts",
+    "examples/hosted-verifier.env.example",
+    "conformance/golden-v1.json",
+    "conformance/consequential-action-v1.json",
+    "conformance/consequential-action-negative-v1.json",
+  ]) {
+    if (!existsSync(join(installedPackage, relativePath))) {
+      throw new Error(`installed package is missing ${relativePath}`);
+    }
+  }
   for (const name of ["manifest.yaml", "request.json"]) {
     copyFileSync(
       join(installedExamples, name),
@@ -174,7 +202,62 @@ try {
     ["verify-receipt", latestReceipt(), signed],
   );
 
-  console.log("PACKAGE SMOKE OK: tarball SDK and CLI are installable");
+  const upgradeRoot = join(workspace, "upgrade");
+  const v1Source = join(workspace, "v1-source");
+  const v1Archive = join(workspace, "v1-source.tar");
+  mkdirSync(v1Source, { recursive: true });
+  run(
+    "archive immutable Besa 1.0.1 source",
+    "git",
+    ["archive", "--format=tar", `--output=${v1Archive}`, UPGRADE_BASE_COMMIT],
+    repositoryRoot,
+  );
+  run("extract immutable Besa 1.0.1 source", "tar", ["-xf", v1Archive, "-C", v1Source], repositoryRoot);
+  runNpm(
+    "install v1 build dependencies",
+    ["ci", "--ignore-scripts", "--no-audit", "--no-fund"],
+    v1Source,
+  );
+  runNpm("pack immutable Besa 1.0.1 source", ["pack", "--silent", "--pack-destination", workspace], v1Source);
+  const v1Tarball = readdirSync(workspace)
+    .filter((entry) => entry.endsWith("-1.0.1.tgz"))
+    .map((entry) => join(workspace, entry))
+    .at(0);
+  if (!v1Tarball) {
+    throw new Error("pinned upgrade base did not produce a Besa 1.0.1 tarball");
+  }
+
+  mkdirSync(upgradeRoot, { recursive: true });
+  writeFileSync(
+    join(upgradeRoot, "package.json"),
+    JSON.stringify({ private: true, type: "module" }, null, 2) + "\n",
+    "utf8",
+  );
+  runNpm(
+    "install repository v1 tarball",
+    ["install", "--ignore-scripts", "--no-audit", "--no-fund", v1Tarball],
+    upgradeRoot,
+  );
+  const upgradePackageJson = join(
+    upgradeRoot,
+    "node_modules",
+    "@dorigjo",
+    "besa",
+    "package.json",
+  );
+  if (JSON.parse(readFileSync(upgradePackageJson, "utf8")).version !== "1.0.1") {
+    throw new Error("upgrade fixture did not install Besa 1.0.1");
+  }
+  runNpm(
+    "upgrade v1 to local tarball",
+    ["install", "--ignore-scripts", "--no-audit", "--no-fund", tarball],
+    upgradeRoot,
+  );
+  if (JSON.parse(readFileSync(upgradePackageJson, "utf8")).version !== "1.1.0") {
+    throw new Error("local tarball did not upgrade Besa to 1.1.0");
+  }
+
+  console.log("PACKAGE SMOKE OK: tarball SDK/CLI install and v1 upgrade passed");
 } finally {
   rmSync(workspace, { recursive: true, force: true });
 }

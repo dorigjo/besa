@@ -353,3 +353,147 @@ policy above:
 - The verification contract and reason codes.
 - The public SDK export surface (enforced by `src/tests/sdk-surface.test.ts`).
 - The CLI commands and flags.
+
+---
+
+# Consequential action artifacts (v1.1, additive)
+
+These artifacts add a new protocol surface. They do not modify, reinterpret,
+or invalidate any frozen v1.0 artifact. Every v1.1 object rejects unknown
+fields, uses canonical JSON, and has `artifactVersion: 1` where it is a signed
+artifact. Timestamps are canonical UTC ISO-8601 strings.
+
+## Canonical domains
+
+All strings below append canonical JSON after a NUL byte. Signatures use the
+existing `signatureMessage(domain, value)` construction:
+
+| Purpose | Domain |
+|---|---|
+| Action identity | `besa:action-envelope:v1` |
+| Action constraints identity | `besa:action-constraints:v1` |
+| Delegation signature | `besa:delegation:v1` |
+| Delegation artifact identity | `besa:delegation-artifact:v1` |
+| Delegation-chain identity | `besa:delegation-chain:v1` |
+| Capability signature | `besa:action-capability:v1` |
+| Capability artifact identity | `besa:action-capability-artifact:v1` |
+| Execution-result identity | `besa:execution-result:v1` |
+| Evidence signature | `besa:action-evidence:v1` |
+| Evidence artifact identity | `besa:action-evidence-artifact:v1` |
+| Replay key | `besa:replay-key:v1` |
+
+## Action Envelope (`ActionEnvelopeV1`)
+
+The canonical proposed action answers: who is requesting which operation on
+which resource, under which declared authority and constraints, until when.
+
+| Field | Required | Type / constraint |
+|---|---|---|
+| `artifactVersion` | yes | `1` |
+| `principalId`, `agentId`, `authority` | yes | bounded NFC text |
+| `tool`, `operation` | yes | stable ASCII machine name |
+| `resource` | yes | bounded NFC text |
+| `requestHash` | yes | 64-character lowercase SHA-256 hex |
+| `scopes` | yes | sorted, unique bounded NFC strings |
+| `constraints` | yes | bounded canonical JSON object |
+| `expiresAt` | yes | canonical UTC timestamp |
+| `nonce` | yes | 16-128 base64url characters |
+| `riskClass` | yes | `low`, `medium`, or `high` |
+| `contextHash` | no | 64-character lowercase SHA-256 hex |
+
+`hashActionEnvelope()` returns the action-identity domain hash.
+`checkActionEnvelope()` additionally rejects action expiry at the supplied
+verification time.
+
+## Delegation (`DelegationV1`)
+
+A delegation carries `delegationId`, issuer and subject IDs/public keys/key IDs,
+sorted `allowedOperations`, `allowedResources`, and `scopes`, constraints with
+`exact` and numeric `maximums`, `issuedAt`, `notBefore`, `expiresAt`, optional
+`parentDelegationHash`, `algorithm: "ed25519"`, and `signature`.
+
+The first chain member must be signed by a trusted root. Each child must name
+the parent hash and parent subject as issuer, and must narrow—not broaden—the
+parent's allowed operations, resources, scopes, constraints, and time interval.
+`verifyActionDelegation()` additionally requires that the exact action matches
+the root principal, leaf agent, leaf permissions, constraints, and expiry.
+
+## Action Capability (`ActionCapabilityV1`)
+
+A signed allow/deny contract contains `capabilityId`, `actionHash`, redundant
+principal/agent/authority/tool/operation/resource values, `constraintsHash`,
+`expiresAt`, `nonce`, `policyId`, `delegationChainHash`, `decision`,
+`reasonCode`, issuer identity/public key/key ID, `issuedAt`, `algorithm`, and
+`signature`.
+
+An allow must use `ACTION_ALLOWED`; a signed deny remains cryptographically
+valid but never authorizes a runtime handler. Verification checks the signature,
+trusted issuer, timestamp interval, and exact supplied action. A capability for
+one resource, nonce, constraint set, or request hash cannot authorize another.
+
+## Action Evidence (`ActionEvidenceV1`)
+
+Evidence contains `evidenceId`, `actionHash`, `capabilityHash`,
+`delegationChainHash`, optional `receiptHash`, `resultHash`, `outcome`,
+`executorId`, `startedAt`, `completedAt`, recorder identity/public key/key ID,
+`recordedAt`, `algorithm`, and `signature`.
+
+Verification checks recorder trust, timestamp ordering, the linked action and
+capability, and a caller-supplied result. It proves that a trusted recorder
+signed the supplied linked data; it does **not** independently prove that an
+external deployment, deletion, or payment happened.
+
+## Action Policy (`ActionPolicyV1`)
+
+The deterministic policy file contains `version: 1`, `policyId`,
+`delegationRequired`, and strict rules. Each rule binds sorted principal, agent,
+tool, operation, resource, and scope sets, a maximum risk class, and exact or
+numeric-maximum constraints. It has no wildcards, callbacks, remote lookups,
+or model-generated decisions.
+
+## Replay contract
+
+Replay keys bind the action hash and nonce. `ReplayStore` has explicit
+`verification-only` and `enforced` modes. A runtime configured with
+`replayRequirement: "enforce"` must obtain atomic `consumed` status before
+calling the handler; reuse or unavailability fails closed. Global one-time use
+requires a customer-controlled shared store and is not implied by signatures.
+
+## v1.1 reason-code families
+
+Existing v1.0 codes remain frozen. v1.1 adds stable codes in these families:
+
+- `SCHEMA_ACTION_INVALID`, `ACTION_VALID`, `EXPIRY_ACTION_EXPIRED`.
+- `ACTION_ALLOWED`, `ACTION_NOT_GRANTED`, `ACTION_TOOL_NOT_GRANTED`,
+  `ACTION_SCOPE_NOT_GRANTED`, `ACTION_RISK_EXCEEDED`,
+  `ACTION_CAPABILITY_MISMATCH`, `ACTION_REQUEST_MISMATCH`,
+  `SCHEMA_POLICY_INVALID`.
+- `IDENTITY_PRINCIPAL_NOT_GRANTED`, `IDENTITY_AGENT_NOT_GRANTED`,
+  `RESOURCE_NOT_GRANTED`, `CONSTRAINT_VIOLATION`.
+- `DELEGATION_VALID`, `DELEGATION_EMPTY_CHAIN`,
+  `SCHEMA_DELEGATION_INVALID`, `SIGNATURE_DELEGATION_INVALID`,
+  `TRUST_DELEGATION_ROOT_UNTRUSTED`, `DELEGATION_WIDENING`,
+  `DELEGATION_ACTION_NOT_GRANTED`, `DELEGATION_PARENT_MISMATCH`,
+  `EXPIRY_DELEGATION_NOT_ACTIVE`, `DELEGATION_REQUIRED`.
+- `CAPABILITY_VALID`, `SCHEMA_CAPABILITY_INVALID`,
+  `SIGNATURE_CAPABILITY_INVALID`, `TRUST_CAPABILITY_ISSUER_UNTRUSTED`,
+  `EXPIRY_CAPABILITY_NOT_ACTIVE`.
+- `EVIDENCE_VALID`, `SCHEMA_EVIDENCE_INVALID`,
+  `SIGNATURE_EVIDENCE_INVALID`,
+  `TRUST_EVIDENCE_RECORDER_UNTRUSTED`, `EVIDENCE_LINK_MISMATCH`,
+  `EVIDENCE_CAPABILITY_INVALID`, `EXPIRY_EVIDENCE_TIME_INVALID`.
+- `REPLAY_CONSUMED`, `REPLAY_DETECTED`, `REPLAY_NOT_ENFORCED`,
+  `REPLAY_STORE_UNAVAILABLE`, `REPLAY_INPUT_INVALID`.
+- `SCHEMA_MCP_CALL_INVALID`, `ACTION_TOOL_MISMATCH`,
+  `ACTION_REQUEST_INVALID`, `ACTION_REQUEST_MISMATCH`.
+- `RUNTIME_CLOCK_INVALID`, `CAPABILITY_RESOLUTION_FAILED`,
+  `EVIDENCE_CREATION_FAILED`, `EVIDENCE_RECORD_FAILED`,
+  `ACTION_HANDLER_FAILED`.
+
+## Conformance
+
+`conformance/golden-v1.json` remains the immutable v1.0 vector.
+`conformance/consequential-action-v1.json` is the immutable v1.1 positive
+chain. `conformance/consequential-action-negative-v1.json` names the expected
+failure codes for mutation, expiry, schema, delegation, and replay cases.
+`npm run conformance` verifies all published bytes through the public SDK.

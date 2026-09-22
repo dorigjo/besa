@@ -1,0 +1,23 @@
+version: 1
+policyId: policy:payments-transfer:v1
+delegationRequired: true
+rules:
+  - ruleId: allow-exact-merchant-transfer
+    principals:
+      - principal:acme
+    agents:
+      - agent:payments
+    tools:
+      - payments.transfer
+    operations:
+      - transfer
+    resources:
+      - payment:merchant-123
+    allowedScopes:
+      - payments:transfer
+    maxRisk: high
+    constraints:
+      exact:
+        merchantId: merchant-123
+      maximums:
+        amountEur: 100

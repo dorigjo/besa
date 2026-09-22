@@ -1,141 +1,91 @@
 # Security Policy
 
-## Status: v1.0
+## Supported release
 
-As of `1.0.0`, the CLI surface, SDK exports (`sdk-surface.test.ts`'s frozen
-list), and signed-artifact formats (`SignedManifest`, `Receipt`,
-`KeyRotation`, `AdmissionAttestation`) are stable — a future breaking
-change to any of them requires a major version bump, and existing signed
-artifacts remain verifiable across minor/patch releases.
+The current supported line is `1.1.x`.
 
-This is a narrower claim than "production-proven." **No independent
-third-party security audit has been performed** (self-authored review
-only — see `docs/V1_SECURITY_RELEASE_REVIEW.md`), and Besa has no known
-external production usage yet. Evaluate accordingly before relying on it
-to protect real secrets or production systems — the cryptographic
-primitive is stable and tested (`npm test`), but "stable API" and
-"independently verified for your threat model" are different claims.
+Besa v1.1 is additive. The frozen v1.0 signed formats (`SignedManifest`,
+`Receipt`, `KeyRotation`, and `AdmissionAttestation`), their canonicalization,
+signature domains, CLI behavior, and existing SDK exports remain compatible.
+v1.1 adds versioned Action Envelope, Delegation, Capability, and Evidence
+artifacts; it does not reinterpret legacy signed bytes.
 
-## Key handling
+No independent third-party security audit has been completed. The repository
+includes self-authored tests, conformance vectors, a threat model, and audit
+scope to make review easier, but those are not substitutes for an assessment of
+your deployment and threat model.
 
-`besa sign` creates a local Ed25519 key pair at:
+## Security properties
 
-```text
-.besa/key.json
-```
+Besa provides cryptographic tamper-evidence and deterministic admission for
+supplied artifacts. It validates strict schemas, hashes canonical JSON, uses
+domain-separated Ed25519 signatures, checks pinned key lifecycle state, and
+binds a v1.1 capability to an exact action, resource, constraints, expiry, and
+nonce.
 
-This key is for local development only.
+It does not provide secrecy, agent identity, upstream authentication, payment
+settlement, tool sandboxing, real-world execution observation, compliance
+certification, or distributed replay prevention without a customer-controlled
+atomic replay store. See `docs/THREAT_MODEL.md` for the complete boundary.
 
-`besa keys rotate` archives the previous private key under `.besa/keys/`,
-creates a signed public rotation proof under `.besa/rotations/`, and updates
-`.besa/trust.json`. Archived private keys remain sensitive.
+## Key and secret handling
 
-Important rules:
+- Never commit `.besa/`, private keys, key passphrases, bearer tokens, trust
+  stores containing operational metadata, receipts, or evidence logs.
+- Local Ed25519 keys are encrypted at rest with AES-256-GCM and scrypt, but
+  local storage is not a replacement for a production secret manager or HSM.
+- `besa keys rotate` provides signed continuity; it does not independently
+  distribute revocation, secure archived keys, or govern who can authorize a
+  rotation.
+- `besa serve --action-trust` is the verification-only deployment and loads no
+  private key. `--trust` enables a signing process and requires both
+  `BESA_KEY_PASSPHRASE` and `BESA_ADMISSION_TOKEN`.
+- Keep passphrases and bearer tokens in a deployment platform secret store. The
+  provided `.env` example is documentation only; Besa never loads it.
+- Do not expose a signing admission process to an untrusted executor when
+  separation of duty is required.
 
-* Never commit `.besa/`.
-* Never commit `.besa/key.json`.
-* Never reuse a demo key across environments.
-* Delete archived demo keys when historical receipt signing is no longer needed.
-* Do not treat the local MVP key store as production key management.
+## Hosted verifier operation
 
-The current MVP does not include hosted key management, hardware-backed keys,
-multi-user access control, or enterprise secret storage. Its rotation mechanism
-provides signed key continuity, not secure custody.
+The self-hosted verifier has bounded JSON requests, header and request
+timeouts, default per-address rate limits, secure response headers,
+health/readiness probes, and token-protected admission routes. Operators still
+must provide TLS termination, ingress authorization, network policy,
+reverse-proxy limits, monitoring, backups, log retention, and incident
+response. The container runs non-root and is tested read-only in CI.
 
-## Files that must never be committed
+`/metrics` and public verification endpoints are intentionally unauthenticated.
+Use a reverse proxy or private network when their availability or metadata is
+sensitive. See `docs/HOSTED_VERIFIER.md` for exact routes and configuration.
 
-The following files and folders must stay out of Git:
+## Replay and evidence limits
 
-```text
-.besa/
-.besa/key.json
-.besa/keys/
-.besa/trust.json
-.besa/rotations/
-.besa/meter.json
-.besa/receipts/
-examples/manifest.signed.json
-dist/
-node_modules/
-```
+An Action Envelope nonce is cryptographically bound but does not by itself make
+an action globally one-time. `InMemoryReplayStore` enforces reuse only inside
+one process and does not survive restarts. Use an atomic, durable
+customer-operated `ReplayStore` for stronger guarantees.
 
-These files are ignored by default where appropriate.
+`ActionEvidenceV1` proves a trusted recorder signed the supplied action,
+capability, result hash, and timestamps. It does not prove an external side
+effect occurred unless that recorder is independently trusted to observe it.
+`AppendOnlyEvidenceLog` is a local fsyncing JSONL sink, not an immutable,
+cross-process, retained ledger.
 
-Before committing, run:
+## Not a compliance claim
 
-```bash
-git status --short
-git diff --cached --name-only
-```
-
-Confirm that no generated keys, signed manifests, receipts, local meters, build outputs, or dependencies are staged.
-
-## Security model
-
-Besa provides **tamper-evidence**, not secrecy.
-
-A signed manifest proves that the declared tool capabilities, scopes, risks, and metadata have not changed since signing.
-
-A signed receipt creates a tamper-evident record of an admission decision.
-
-Besa currently checks:
-
-* manifest hash integrity
-* Ed25519 signature validity
-* public key ID consistency
-* explicit public-key trust status
-* signed key-rotation continuity
-* whole-envelope manifest signatures, including `signedAt`
-* supported signing algorithm
-* declared tool capability
-* declared risk level
-* basic policy decisions
-* budget limits
-* receipt integrity
-
-## Current v1.0 limitations
-
-This release has important limitations:
-
-* local key storage only (AES-256-GCM encrypted at rest; no hosted key management or HSM)
-* local JSON-based meter state with single-host file locking
-* a stateless hosted verifier (`besa serve`) and an opt-in, non-consuming
-  admission-attestation endpoint (`besa serve --trust`) exist — see
-  `docs/HOSTED_VERIFIER.md`/`docs/RUNTIME_ADMISSION.md` — but neither has
-  authentication; rate limiting is opt-in (`--rate-limit`)
-* no centralized receipt retention
-* no multi-user access control
-* no SSO
-* no hardware-backed key storage
-* no replay protection across distributed systems
-* no externally trusted timestamp authority
-* no hardware-backed or centrally governed key rotation
-* no formal compliance certification
-* no guarantee of regulatory compliance
-
-Do not represent this release as SOC 2, ISO 27001, DORA, AI Act, or GDPR compliant.
+Do not represent Besa as SOC 2, ISO 27001, DORA, NIS2, GDPR, or EU AI Act
+compliant, required, or certified. Its machine-verifiable artifacts may be
+useful technical evidence in a customer-controlled security or audit workflow.
 
 ## Reporting a vulnerability
 
-This project has not undergone an independent third-party security audit.
+Do not disclose sensitive vulnerabilities, keys, tokens, evidence, or customer
+data in a public issue. Use GitHub Private Vulnerability Reporting for this
+repository: open the Security tab and select **Report a vulnerability**. Include
+the affected version, deployment mode, prerequisites, a minimal reproducer,
+impact, and expected versus actual behavior.
 
-If you find a security issue, do not open a public issue with sensitive details.
-
-Please report vulnerabilities privately using GitHub Private Vulnerability Reporting for this repository: open the Security tab and choose "Report a vulnerability".
-
-Maintainers should enable Private Vulnerability Reporting in the repository Security settings before making the repository public.
-
-## Threat model
-
-A full threat model is maintained in:
-
-```text
-docs/THREAT_MODEL.md
-```
-
-The short version:
-
-Besa is designed to help teams prove what an AI agent was allowed to do, what was blocked, and whether tool definitions or receipts were tampered with.
-
-Besa does not yet replace production identity, authorization, key management,
-audit storage, or compliance systems.
+Maintainers should acknowledge reports promptly, coordinate a fix privately,
+add a regression test where feasible, and publish a changelog/security note
+after a fix is available. If Private Vulnerability Reporting is unavailable,
+contact the repository owner privately before opening a public issue.

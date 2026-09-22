@@ -4,6 +4,89 @@ All notable changes to this project are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-09-22
+
+Consequential Action Admission release. This release is additive: existing v1
+signed artifacts, CLI behavior, and SDK exports remain compatible. Migration
+for v1.0/v1.0.1 users is **not required**.
+
+### Added
+
+* `ActionEnvelopeV1`: a strict, bounded canonical representation of an exact
+  principal/agent/tool/operation/resource/request/constraint/expiry/nonce
+  tuple, with deterministic domain-separated identity.
+* `ActionPolicyV1`: a small strict YAML/JSON policy format and deterministic
+  allow/deny engine for exact principals, agents, tools, operations, resources,
+  scopes, risk, exact constraints, and numeric maximums.
+* `DelegationV1`: signed root-to-agent delegation chains with enforced
+  operation, resource, scope, constraint, and validity-window narrowing.
+* `ActionCapabilityV1`: signed ALLOW/DENY contracts bound to the exact Action
+  Envelope hash, redundant action fields, constraints, nonce, expiry, policy,
+  delegation chain, and issuer identity.
+* `ActionEvidenceV1`: signed linkage between an exact action, allow capability,
+  optional legacy receipt, supplied execution-result hash, executor, recorder,
+  and ordered timestamps.
+* Explicit replay architecture: `ReplayStore`, verification-only mode,
+  bounded atomic in-process enforcement, replay-key domain separation, and
+  fail-closed runtime requirements for customer-provided durable stores.
+* `withBesa(config, handler)` and `withBesaMcp(config, handler)`. The wrappers
+  verify exact authorization and consume replay state before handler execution,
+  then append signed success or failure evidence. MCP calls additionally bind
+  the exact tool name and canonical arguments hash.
+* `AppendOnlyEvidenceLog`, a bounded canonical JSONL sink with in-process
+  serialization, regular-file/symlink checks, no-follow where supported, and
+  fsync after each append.
+* Four consequence demos (deployment, destructive database action, external
+  payment-rail mock, privileged MCP call) through `npm run demo`.
+* Published v1.1 positive and negative conformance vectors plus
+  `npm run conformance`; deterministic fuzz-style security tests cover parser
+  totality and action-identity mutation invariants.
+* `npm run benchmark` reports machine, Node/OS, methodology, iterations,
+  median, p95, and p99 for canonicalization, hashing, signature verification,
+  admission, and full action-chain verification.
+* A self-hosted v1.1 Hosted Verifier distribution with action schema,
+  capability, delegation, evidence, and signed action-admission endpoints;
+  independent `--action-trust` verification does not load a private key.
+* Non-root multi-stage Dockerfile, constrained build context, read-only
+  container smoke test in CI, strict action-policy and environment examples,
+  architecture/audit/contribution documents, and deployment instructions.
+
+### Changed
+
+* Hosted Verifier security defaults now include a 120 requests/minute
+  per-address limit, 1 MiB body bound, request/header/keep-alive timeouts,
+  bounded headers and requests per socket, JSON media-type enforcement,
+  query/expectation rejection, secure response headers, health/readiness,
+  aggregate metrics, and structured metadata-only access logs.
+* `/v1/admit` and `/v1/actions/admit` require a 32-4096-character
+  non-whitespace bearer token whenever signing admission is enabled. Token
+  comparison hashes both values and uses timing-safe equality.
+* README, specification, security policy, threat model, runtime guide, and
+  hosted-verifier guide now describe exact-action admission, trust boundaries,
+  deployment modes, and non-guarantees consistently.
+
+### Security
+
+* Canonical array traversal now inspects property descriptors and rejects
+  accessor-backed indices without invoking getters, closing an input-side
+  effect and ambiguity gap while preserving sparse-array JSON behavior.
+* Detailed manifest and admission-attestation verification now converts
+  malformed public-key parsing into stable fail-closed verification results
+  instead of allowing an exception to escape.
+* Trusted v1.1 verification is separated from signing admission, allowing a
+  least-privilege verifier to load public trust only.
+
+### Limitations
+
+* No independent third-party security audit has been completed.
+* Signatures bind a nonce but global one-time execution requires an external
+  atomic replay store. The built-in in-memory store is process-local.
+* Signed Action Evidence proves links to supplied result data, not independent
+  observation of a real-world side effect.
+* The self-hosted server does not provide TLS, identity, managed keys, durable
+  evidence retention, multi-tenant authorization, or a Besa-operated public
+  instance. Operators own those controls.
+
 ## [1.0.1] - 2026-08-12
 
 Positioning patch. No protocol, artifact, or API changes.

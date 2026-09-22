@@ -609,18 +609,17 @@ export function verifyReceiptDetailed(
   }
 
   const receipt = validation.receipt;
-
-  if (publicKeyId(publicKeyDer) !== receipt.publicKeyId) {
-    return {
-      valid: false,
-      reasonCode: "E_PUBLIC_KEY_ID_MISMATCH",
-      detail: "receipt publicKeyId does not match public key",
-    };
-  }
-
   const { signature, ...body } = receipt;
 
   try {
+    if (publicKeyId(publicKeyDer) !== receipt.publicKeyId) {
+      return {
+        valid: false,
+        reasonCode: "E_PUBLIC_KEY_ID_MISMATCH",
+        detail: "receipt publicKeyId does not match public key",
+      };
+    }
+
     const valid = ed25519Verify(
       null,
       signatureMessage("receipt", body),

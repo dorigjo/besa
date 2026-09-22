@@ -295,18 +295,17 @@ export function verifyAdmissionAttestationDetailed(
   }
 
   const attestation = validation.attestation;
-
-  if (publicKeyId(publicKeyDer) !== attestation.publicKeyId) {
-    return {
-      valid: false,
-      reasonCode: "E_PUBLIC_KEY_ID_MISMATCH",
-      detail: "attestation publicKeyId does not match public key",
-    };
-  }
-
   const { signature, ...body } = attestation;
 
   try {
+    if (publicKeyId(publicKeyDer) !== attestation.publicKeyId) {
+      return {
+        valid: false,
+        reasonCode: "E_PUBLIC_KEY_ID_MISMATCH",
+        detail: "attestation publicKeyId does not match public key",
+      };
+    }
+
     const valid = ed25519Verify(
       null,
       signatureMessage("admission-attestation", body),

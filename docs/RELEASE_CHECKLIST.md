@@ -1,85 +1,112 @@
 # Release Checklist
 
-Release gate for the current version in `package.json`.
+Release gate for the exact version in `package.json`. Run from a clean clone or
+fresh worktree with the committed lockfile.
 
-## Quality
+## Code and protocol gates
 
 ```powershell
 npm ci
 npx tsc --noEmit
 npm run build
 npm test
-npm run smoke
-npm run smoke:server
+npm run conformance
+npm run demo
+npm run benchmark
 npm run test:examples
 npm run test:docs
+npm run smoke
+npm run smoke:server
+```
+
+- [ ] Node 20, 22, and 24 CI jobs pass.
+- [ ] Full tests include strict schemas, malformed keys, mutation, expiry,
+      replay, delegation narrowing, runtime failures, and HTTP abuse cases.
+- [ ] Frozen v1.0 plus v1.1 positive and negative conformance vectors pass.
+- [ ] All four consequence demos produce the expected allow/deny behavior.
+- [ ] Benchmark output records environment, method, median, p95, and p99.
+- [ ] Compile-checked examples use only the public SDK.
+- [ ] The canonical v1 Receipt remains identical on every public surface.
+
+## Hosted Verifier and container
+
+- [ ] `smoke:server` covers keyless `--action-trust`, signed action admission,
+      bearer authentication, capability verification, rate limiting, metrics,
+      health/readiness, and loopback default binding.
+- [ ] Admission routes cannot start with an invalid key, policy, token, issuer,
+      or trust store.
+- [ ] Docker image builds from the pinned Node base image.
+- [ ] Image config runs as `node`; a read-only container with only `/tmp` as a
+      constrained tmpfs returns healthy and ready.
+- [ ] Admission deployment instructions keep keys/config read-only and secrets
+      outside image layers.
+
+CI runs the container checks. If Docker is available locally, reproduce them
+before release rather than relying only on CI.
+
+## Package and upgrade
+
+```powershell
 npm run test:package
-npm audit --omit=dev
-```
-
-- [ ] Clean install succeeds from `package-lock.json`.
-- [ ] TypeScript compilation succeeds.
-- [ ] Unit tests pass.
-- [ ] The isolated smoke test covers load, sign, verify, allow, deny, receipt,
-      receipt verification, trust pinning, key rotation, and grant checks.
-- [ ] The hosted-verifier smoke test covers `/health`, `/v1/verify/*`,
-      `/v1/admit` (enabled and disabled), rate limiting, `/metrics`, and the
-      default loopback-only bind.
-- [ ] `examples/` type-checks against the current SDK surface.
-- [ ] The docs-receipt consistency check passes.
-- [ ] The packed tarball installs in an empty project and exposes its SDK and CLI.
-- [ ] Parallel worker tests prove local call budgets cannot be overspent.
-- [ ] Production dependency audit reports no vulnerabilities.
-
-## Package
-
-```powershell
+npm run verify:package-surface
 npm pack --dry-run
+npm publish --dry-run --access public
 ```
 
-- [ ] Package contains root `dist/*.js` and `dist/*.d.ts`.
-- [ ] Package contains the three files in `examples/`.
-- [ ] Package contains `README.md`, `LICENSE`, and `package.json`.
-- [ ] Package excludes `dist/tests/`, `src/`, `.besa/`, signed manifests,
-      receipts, `node_modules/`, and local tool directories.
+- [ ] Packed SDK and `besa` CLI install in an empty project.
+- [ ] Upgrade smoke installs the immutable previous Git version, then the local
+      v1.1 tarball, and confirms legacy plus additive exports.
+- [ ] Required Docker, documentation, examples, launch notes, and conformance
+      files are present.
+- [ ] `src/`, `dist/tests/`, `.besa/`, private keys, operational trust stores,
+      receipts, evidence logs, local projects, and tarballs are absent.
+- [ ] Dry-run names exactly `@dorigjo/besa@1.1.0` and reports no bin warning.
 
-## Trust artifacts
+## Supply chain
 
 ```powershell
+npm audit --omit=dev
+npm run --silent sbom > "$env:TEMP\besa-sbom.cdx.json"
+node -e "const s=require(process.env.TEMP + '/besa-sbom.cdx.json'); if(s.bomFormat!=='CycloneDX') process.exit(1)"
+```
+
+- [ ] Production dependency audit has no known vulnerabilities.
+- [ ] CycloneDX SBOM parses and identifies the release package/version.
+- [ ] GitHub Actions are pinned to full commit SHAs and have read-only default
+      permissions.
+- [ ] No provenance, signing, audit, or compliance claim is made unless the
+      corresponding external evidence actually exists.
+
+## Repository and documentation
+
+```powershell
+git diff --check
 git status --short
 git diff --cached --name-only
 ```
 
-- [ ] No `.besa/key.json` or `.besa/keys/` archive is staged.
-- [ ] No local trust store or generated rotation proof is staged.
-- [ ] No meter, receipt, signed manifest, or private key is staged.
-- [ ] `examples/manifest.signed.json` remains ignored.
-- [ ] Only intentional release files are staged.
-
-## Version and documentation
-
-- [ ] `package.json` and `package-lock.json` use the same version number.
-- [ ] `README.md`, `SECURITY.md`, and `docs/THREAT_MODEL.md` reference that
-      same version and describe current capability accurately (no existing
-      feature marked "not implemented," no planned feature marked as shipped).
-- [ ] `CHANGELOG.md` has a dated entry for this version.
-- [ ] PowerShell examples cover every CLI command.
-- [ ] Limitations accurately state what has (and has not) been independently
-      security-audited or run in production — never claim regulatory or
-      compliance certification.
+- [ ] `package.json` and `package-lock.json` use the same version.
+- [ ] Changelog and release notes are dated and match shipped behavior.
+- [ ] Architecture, security, threat model, runtime, gateway, evidence, and
+      Hosted Verifier docs state guarantees and non-guarantees consistently.
+- [ ] No independent security audit or public Besa-operated verifier is implied.
+- [ ] No `.besa/`, key, token, generated artifact, or unrelated local directory
+      is staged.
+- [ ] Four review passes are complete: protocol/crypto, runtime/MCP/replay,
+      Hosted Verifier/deployment, and backward compatibility/release surface.
 
 ## Publish
 
-Only after every gate is green:
+Only after every gate is green and npm authentication is confirmed:
 
 ```powershell
-git commit -m "chore: release v<version>"
-git tag v<version>
+npm whoami
+git commit -m "Release v1.1.0"
 git push origin main
-git push origin v<version>
-npm login          # authenticate first (2FA if enabled)
 npm publish --access public
+npm view @dorigjo/besa@1.1.0 version dist.integrity dist.shasum
 ```
 
-Tagging and npm publication are explicit release actions. Do not perform them
-as part of ordinary development or documentation changes.
+Create and push a Git tag or GitHub Release only as a separate, explicitly
+approved release action. Never infer successful publication from a dry-run;
+verify the immutable registry version after the real publish.

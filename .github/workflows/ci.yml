@@ -26,6 +26,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
 
       - name: Set up Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -51,8 +53,17 @@ jobs:
       - name: Test
         run: npm test
 
+      - name: Verify protocol conformance vectors
+        run: npm run conformance
+
+      - name: Run consequential-action demos
+        run: npm run demo
+
       - name: Smoke test CLI
         run: npm run smoke
+
+      - name: Smoke test hosted verifier
+        run: npm run smoke:server
 
       - name: Package smoke test
         run: npm run test:package
@@ -60,5 +71,38 @@ jobs:
       - name: Verify npm package surface
         run: npm run verify:package-surface
 
+      - name: Run reproducible protocol benchmark
+        if: matrix.node-version == 24
+        run: npm run benchmark
+
+      - name: Generate and validate CycloneDX SBOM
+        if: matrix.node-version == 24
+        run: |
+          npm run --silent sbom > "$RUNNER_TEMP/besa-sbom.cdx.json"
+          node -e "const fs=require('node:fs'); const sbom=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + '/besa-sbom.cdx.json','utf8')); if(sbom.bomFormat !== 'CycloneDX') process.exit(1)"
+
       - name: Verify install needs no lifecycle scripts (supply-chain check)
         run: npm ci --ignore-scripts
+
+  container:
+    name: Container smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Build hosted verifier image
+        run: docker build --pull --tag besa:ci .
+
+      - name: Verify non-root, read-only runtime and probes
+        run: |
+          test "$(docker image inspect --format '{{.Config.User}}' besa:ci)" = "node"
+          container_id="$(docker run --detach --rm --read-only --tmpfs /tmp:rw,noexec,nosuid,size=16m --publish 127.0.0.1:18787:8787 besa:ci)"
+          trap 'docker logs "$container_id"; docker stop "$container_id"' EXIT
+          for attempt in $(seq 1 20); do
+            curl --fail --silent --show-error http://127.0.0.1:18787/health && break
+            sleep 1
+          done
+          curl --fail --silent --show-error http://127.0.0.1:18787/ready

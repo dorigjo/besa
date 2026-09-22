@@ -53,6 +53,15 @@ test("verification fails closed against the wrong public key", () => {
   assert.equal(verification.reasonCode, "E_PUBLIC_KEY_ID_MISMATCH");
 });
 
+test("verification returns a structured failure for a malformed public key", () => {
+  const keypair = generateKeyPair();
+  const attestation = createAdmissionAttestation(baseInput(), keypair);
+
+  const verification = verifyAdmissionAttestationDetailed(attestation, "!");
+  assert.equal(verification.valid, false);
+  assert.equal(verification.reasonCode, "E_SIGNATURE_CHECK_FAILED");
+});
+
 test("tampering with any signed field invalidates the attestation", () => {
   const keypair = generateKeyPair();
   const attestation = createAdmissionAttestation(baseInput(), keypair);

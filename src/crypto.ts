@@ -65,9 +65,32 @@ function sortValue(
 
   try {
     if (Array.isArray(value)) {
-      return value.map((item, index) =>
-        sortValue(item, `${path}[${String(index)}]`, depth + 1, state),
-      );
+      if (value.length > MAX_CANONICAL_NODES - state.nodes) {
+        throw new TypeError(`${path} exceeds the canonical JSON node limit`);
+      }
+
+      const output: unknown[] = [];
+
+      for (let index = 0; index < value.length; index += 1) {
+        const itemPath = `${path}[${String(index)}]`;
+        const descriptor = Object.getOwnPropertyDescriptor(
+          value,
+          String(index),
+        );
+
+        if (!descriptor) {
+          output.push(null);
+          continue;
+        }
+
+        if (!("value" in descriptor)) {
+          throw new TypeError(`${itemPath} must not be an accessor`);
+        }
+
+        output.push(sortValue(descriptor.value, itemPath, depth + 1, state));
+      }
+
+      return output;
     }
 
     const prototype = Object.getPrototypeOf(value) as object | null;
