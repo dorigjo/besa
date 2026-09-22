@@ -1,82 +1,86 @@
-<h1 align="center">Besa</h1>
+# Besa
 
-<p align="center"><strong>The cryptographic admission and evidence layer for AI-agent actions.</strong></p>
+**Cryptographic admission and evidence for consequential AI-agent actions.**
 
-<p align="center">
-  Before an AI agent touches a tool, API, database, or deployment pipeline — Besa checks whether the action is declared, policy-approved, within budget, and attributable.
-</p>
+Authenticate the agent elsewhere. Besa decides whether this exact action may
+execute under these exact constraints, then leaves independently verifiable
+evidence of the decision and supplied result.
 
-<p align="center">
-  <a href="https://github.com/dorigjo/besa/actions/workflows/ci.yml"><img src="https://github.com/dorigjo/besa/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
-  <a href="https://www.npmjs.com/package/@dorigjo/besa"><img src="https://img.shields.io/npm/v/@dorigjo/besa" alt="npm" /></a>
-</p>
+[![CI](https://github.com/dorigjo/besa/actions/workflows/ci.yml/badge.svg)](https://github.com/dorigjo/besa/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/@dorigjo/besa)](https://www.npmjs.com/package/@dorigjo/besa)
 
----
-
-## The problem
-
-AI agents are calling real systems — CRMs, payment APIs, deployment pipelines, databases, code repositories. Every call is a real action with real consequences and no natural chokepoint.
-
-When something goes wrong — or when compliance asks — your team needs to answer:
-
-- What was this agent actually declared to do?
-- Was this action inside policy before it happened?
-- Was it admitted or blocked — and why?
-- Can you show an auditor a tamper-evident proof?
-
-Most teams today cannot answer these questions. There is no gate. There is no record. There is no proof.
-
----
-
-## What Besa does
-
-Besa is the cryptographic admission and evidence layer for AI-agent tool calls.
-
-**Gate before execution:** Besa checks whether the tool is declared in a signed manifest, policy-approved, within budget, and scoped to the requesting agent. Undeclared tools are denied. Destructive high-risk tools are blocked by default. Budget overruns are stopped.
-
-**Sign the decision:** Every admission — allow or deny — produces a signed cryptographic receipt recording the tool name, manifest hash, request fingerprint, reason code, and signing key. Not a log. Signed proof.
-
-**Verify the chain:** The signed manifest, admission decision, and receipt form a complete, tamper-evident evidence chain. Any field change causes verification to fail closed.
-
-> **v1.0.** A stable cryptographic trust primitive — the CLI, SDK surface, and signed-artifact formats are frozen; a breaking change to any of them requires a major version bump. No independent third-party security audit has been performed yet. See [Limitations](#limitations).
-
----
-
-## The control flow
-
-```
-manifest.yaml
-  → besa sign              # declare and sign tool capabilities, risks, scopes
-  → manifest.signed.json   # tamper-evident capability declaration
-  → besa trust add         # pin the publisher's public key
-  → besa verify            # verify signature against trust anchor
-  → besa admit <tool>      # policy gate: allow or deny (fail-closed)
-  → besa receipt <tool>    # enforce budget, issue signed execution receipt
-  → besa verify-receipt    # verify the complete evidence chain
+```text
+Agent / automation
+        |
+existing identity + authentication
+        |
+        v
+      Besa  <--- exact action boundary
+        |
+deterministic ALLOW / DENY + signed capability
+        |
+        v
+Tool / API / database / deployment / external payment rail
+        |
+signed, linked action evidence
 ```
 
-Every step produces a durable, independently verifiable artifact. Changing any field in any artifact causes verification to fail closed.
+Besa is a small TypeScript protocol implementation, CLI, SDK, and self-hosted
+HTTP verifier. Local use needs no account and no remote Besa service.
 
----
+## 30-second demo
 
-## What you get
+```bash
+git clone https://github.com/dorigjo/besa
+cd besa
+npm install
+npm run demo
+```
 
-### Signed capability declarations
-Every tool's declared capabilities, risk level, allowed scopes, and budget limits are captured in a manifest and signed with Ed25519. Any change after signing is detectable.
+The demo runs four concrete paths:
 
-### Policy-gated tool calls
-Besa checks every tool call before it happens. Destructive high-risk tools are blocked by default. Budget limits cap runaway usage. Per-agent grant scoping restricts access to specific tools. Undeclared tools are denied.
+```text
+Production deployment (unreviewed commit): DENY CONSTRAINT_VIOLATION
+Production deployment (approved commit): ALLOW <signed capability>
+Destructive database delete (staging): ALLOW <signed capability>
+Destructive database delete (production): DENY RESOURCE_NOT_GRANTED
+External payment rail mock (EUR 100 to merchant-123): ALLOW <signed capability>
+MCP authentication: accepted by the example transport
+Privileged MCP action: DENY ACTION_NOT_GRANTED
+```
 
-### Signed allow/deny decisions
-Every admission decision — allow or deny — produces a signed receipt recording the tool name, manifest hash, request fingerprint, decision, and timestamp. Not a log. Proof.
+It then verifies the linked action evidence. Nothing moves money, deploys code,
+or touches a database; those are explicit mock execution boundaries.
 
-### Verifiable evidence chain
-Sign → verify → admit → receipt → verify-receipt. Each step is independently verifiable. The signed manifest, admission decision, and receipt form a complete, tamper-evident chain.
+## Why authentication is not enough
 
-### CI/CD gate
-Run Besa in your CI pipeline to verify that manifests are signed, that declared tools pass policy, and that undeclared or high-risk tools fail the build. See [docs/CI_GATE.md](docs/CI_GATE.md).
+Authentication can establish that `agent:release` reached a service. A broad
+cloud or MCP permission may establish that it can call a deployment tool.
+Neither answers:
 
----
+```text
+May this agent deploy commit abc123 from repository dorigjo/besa
+to production, with risk <= 20, before this expiry, exactly once?
+```
+
+Besa represents that question as a canonical Action Envelope. A deterministic
+policy produces a signed Action Capability for the exact hash, resource,
+constraints, expiry, and nonce. The runtime verifies it immediately before the
+handler and records signed evidence afterward.
+
+## Why a separate protocol
+
+A cloud provider, identity vendor, MCP gateway, or customer can implement the
+same control in its own stack. Besa's useful boundary is not exclusive code; it
+is a provider-neutral artifact contract that can cross identity systems, agent
+frameworks, tools, and execution rails. Frozen formats, public conformance
+vectors, and keyless verification let a different party verify the decision
+without trusting the executor's private log format.
+
+That value depends on correct integration and real adoption. v1.1 is an
+unaudited open-source implementation and conformance surface, not an industry
+standard, certification, or claim that vendor-native controls are insufficient
+for every deployment.
 
 ## Install
 
@@ -84,172 +88,199 @@ Run Besa in your CI pipeline to verify that manifests are signed, that declared 
 npm install @dorigjo/besa
 ```
 
-Pin the exact version explicitly:
+Requires Node.js 20 or later and uses ESM modules.
 
-```bash
-npm install @dorigjo/besa@1.0.0
+## The v1.1 protocol
+
+| Artifact | Purpose |
+|---|---|
+| `ActionEnvelopeV1` | Canonical proposed action: principal, agent, tool, operation, resource, request hash, scopes, constraints, expiry, nonce, and risk. |
+| `DelegationV1` | Signed, narrowing authority from a trusted root to an agent. A child cannot broaden its parent. |
+| `ActionCapabilityV1` | Signed allow or deny bound to the exact action and policy decision. |
+| `ActionEvidenceV1` | Signed link from action and allow capability to the supplied execution result. |
+
+All artifacts use strict schemas, bounded canonical JSON, SHA-256 identities,
+domain-separated Ed25519 signatures, and stable machine-readable reason codes.
+See [SPEC.md](SPEC.md) and the immutable vectors in [conformance/](conformance/).
+
+## Runtime integration
+
+`withBesa` sits immediately before the consequence-bearing handler:
+
+```ts
+import {
+  AppendOnlyEvidenceLog,
+  InMemoryReplayStore,
+  withBesa,
+} from "@dorigjo/besa";
+
+const execute = withBesa(
+  {
+    trustStore,
+    capability: getCapabilityForExactAction,
+    replayStore: new InMemoryReplayStore(),
+    replayRequirement: "enforce",
+    evidenceKeyPair: recorderKeyPair,
+    evidenceSink: new AppendOnlyEvidenceLog("./evidence.jsonl"),
+    recorderId: "recorder:production",
+    executorId: "deployment:primary",
+    requireDelegation: true,
+    delegationChain,
+  },
+  async (action) => deployExactCommit(action.constraints),
+);
+
+const { result, capability, evidence } = await execute(actionEnvelope);
 ```
 
-Set the key passphrase before any signing operation:
+Before calling the handler, the wrapper validates the action, verifies issuer
+trust and the exact capability, checks optional delegation, and consumes replay
+state. A signed deny never executes. Success and handler failure both generate
+signed evidence. See [Runtime Admission](docs/RUNTIME_ADMISSION.md).
+See also [Agent Gateway Integration](docs/AGENT_GATEWAY.md) for deployment
+boundaries and [Evidence Artifacts](docs/EVIDENCE_ENVELOPE.md) for independent
+verification semantics.
+
+`InMemoryReplayStore` enforces one-time use only inside one process. Use a
+customer-owned atomic `ReplayStore` for durable or distributed replay
+protection. Besa fails closed when `replayRequirement: "enforce"` cannot be met.
+
+## MCP reference integration
+
+`withBesaMcp` additionally binds the Action Envelope's tool and request hash to
+the actual MCP call. Place it after normal transport authentication and before
+the tool implementation.
+
+The minimal typed adapter is in
+[examples/consequential-mcp-middleware.ts](examples/consequential-mcp-middleware.ts).
+Besa is not an MCP server, router, or control plane.
+
+## Self-hosted Hosted Verifier
+
+Run public signature and Action Envelope verification locally:
+
+```bash
+npx besa serve --port 8787
+```
+
+Run keyless, trust-aware capability/delegation/evidence verification:
+
+```bash
+npx besa serve --action-trust verifier-trust.json
+```
+
+Enable token-protected Action Capability issuance from a strict policy:
+
+```bash
+export BESA_KEY_PASSPHRASE="<secret-manager-value>"
+export BESA_ADMISSION_TOKEN="<high-entropy-bearer-token>"
+npx besa serve \
+  --trust verifier-trust.json \
+  --action-policy examples/action-policy.yaml
+```
+
+The server includes `/health`, `/ready`, `/metrics`, bounded JSON bodies and
+headers, timeouts, a default 120 requests/minute per-address limit, secure
+response headers, structured metadata-only logs, and constant-time bearer-token
+comparison. Admission is never enabled without explicit trust, policy, key, and
+token configuration.
+
+The repository also ships a non-root, read-only-tested Docker image definition.
+See [Hosted Verifier](docs/HOSTED_VERIFIER.md) for endpoints, container commands,
+secrets, reverse-proxy requirements, and failure behavior. v1.1 ships no public
+Besa-operated instance.
+
+## Consequential-action examples
+
+| Scenario | Exact boundary demonstrated |
+|---|---|
+| Production deployment | Repository, environment, commit, risk, and expiry are bound before execution. |
+| Destructive database action | A staging grant cannot be reused for production. |
+| Financial action | Amount and recipient are admitted before an external mock rail; Besa is not the rail. |
+| Privileged MCP tool | Normal authentication succeeds while the exact high-consequence call is denied. |
+
+Run all four with `npm run demo`.
+
+## Deployment trust models
+
+- **Local:** SDK and executor share an operator. Fastest integration, weakest
+  separation of duty.
+- **Customer-controlled gateway:** admission runs in customer infrastructure
+  immediately before execution. The customer owns keys, TLS, policy, replay,
+  evidence retention, and availability.
+- **Independent admission service:** a separately controlled process issues
+  capabilities, keeping the decision key away from the executor. This is the
+  strongest separation and the largest operational responsibility.
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for component and trust boundaries.
+
+## What Besa is not
+
+Besa does not replace:
+
+- IAM, OAuth, SSO, agent identity, or MCP authentication
+- cloud permissions or application authorization
+- MCP orchestration, a generic gateway, or an agent framework
+- a wallet, payment processor, payment network, KYC, or settlement system
+- SIEM, observability, tracing, prompt scanning, or model monitoring
+- a sandbox, secret manager, malware detector, or data-loss-prevention system
+- legal review, policy ownership, evidence retention, or compliance programs
+
+It sits after identity context exists and immediately before the consequential
+action.
+
+## Security and limitations
+
+Besa provides tamper-evidence, not secrecy. Cryptographic validity is not trust;
+verifiers must configure trusted public keys. `ActionEvidenceV1` proves that a
+trusted recorder signed the supplied links and result hash. It does not prove a
+real-world side effect occurred unless that recorder is independently trusted
+to observe it.
+
+No independent third-party security audit has been completed. Local encrypted
+keys are not an HSM. The JSONL evidence sink is not an immutable ledger. There
+is no external trusted timestamp authority, central revocation distribution,
+hosted retention, public cloud service, or global replay database.
+
+Besa does not guarantee regulatory compliance. Its artifacts may be useful
+technical evidence in customer-controlled security, governance, or audit
+workflows. Read [SECURITY.md](SECURITY.md),
+[the threat model](docs/THREAT_MODEL.md),
+[the v1.1 security review](docs/V1_1_SECURITY_REVIEW.md), and
+[AUDIT_SCOPE.md](AUDIT_SCOPE.md) before using it on a production boundary.
+
+## Conformance and benchmarks
+
+```bash
+npm run conformance
+npm run benchmark
+```
+
+The conformance command verifies frozen v1.0 artifacts plus v1.1 positive and
+negative vectors. The benchmark measures canonicalization, action hashing,
+capability verification, policy admission, and full action-chain verification;
+it reports Node/OS/CPU, methodology, iterations, median, p95, and p99. Numbers
+are machine-specific and are never hard-coded as a performance promise. See
+[the v1.1 reference run](docs/BENCHMARKS.md) for reproducible baseline results.
+
+## Legacy v1 compatibility
+
+The existing manifest/tool CLI and signed formats remain supported:
 
 ```bash
 export BESA_KEY_PASSPHRASE="your-passphrase-at-least-16-bytes"
-```
-
-### Build from source
-
-```bash
-git clone https://github.com/dorigjo/besa
-cd besa
-npm ci
-npm run build
-```
-
----
-
-## Quickstart
-
-```bash
-# Show available commands
-npx besa --help
-
-# Generate or load the local signing key
 npx besa keys
-
-# Validate the manifest (dry-run, no signing)
 npx besa load examples/manifest.yaml
-
-# Sign the manifest
 npx besa sign examples/manifest.yaml
-
-# Verify the signature
 npx besa verify examples/manifest.signed.json
-
-# Admission gate (fail-closed dry-run)
-npx besa admit examples/manifest.signed.json crm.lookup   # → allow
-npx besa admit examples/manifest.signed.json crm.delete   # → deny RISK_BLOCKED
-
-# Issue a signed execution receipt (consumes budget)
+npx besa admit examples/manifest.signed.json crm.lookup
 npx besa receipt crm.lookup examples/manifest.signed.json \
   --request examples/request.json
-
-# Verify the receipt chain
-# (optionally add --request to rebind the original request to the receipt hash)
 npx besa verify-receipt .besa/receipts/<id>.json \
   examples/manifest.signed.json --request examples/request.json
 ```
 
-### PowerShell
-
-```powershell
-$env:BESA_KEY_PASSPHRASE = "your-passphrase-at-least-16-bytes"
-npx besa keys
-npx besa sign examples/manifest.yaml
-npx besa verify examples/manifest.signed.json
-npx besa admit examples/manifest.signed.json crm.lookup
-npx besa receipt crm.lookup examples/manifest.signed.json `
-  --request examples/request.json
-
-$receipt = Get-ChildItem .\.besa\receipts\*.json |
-  Sort-Object LastWriteTime -Descending | Select-Object -First 1
-npx besa verify-receipt $receipt.FullName examples/manifest.signed.json
-```
-
-### Consumer trust (separate system)
-
-```bash
-# Pin the publisher's public key
-npx besa trust add examples/manifest.signed.json \
-  --trust consumer-trust.json
-
-# Verify against a pinned trust anchor (fails without it)
-npx besa verify examples/manifest.signed.json \
-  --trust consumer-trust.json
-```
-
-### Key rotation
-
-```bash
-npx besa keys rotate
-
-npx besa trust apply .besa/rotations/<rotation>.json \
-  --trust consumer-trust.json
-
-npx besa sign examples/manifest.yaml   # re-sign under the new key
-```
-
-The previous key becomes `retired`: artifacts signed before rotation remain
-verifiable, but new admissions under that key are denied. `trust revoke`
-invalidates a key for all artifacts, current and historical.
-
----
-
-## CI/CD gate
-
-Besa can run as a verification gate in GitHub Actions or any CI pipeline. A failed manifest signature or a denied tool call fails the build.
-
-```yaml
-- name: Verify manifest
-  run: |
-    npx besa verify examples/manifest.signed.json
-    npx besa admit examples/manifest.signed.json crm.lookup
-```
-
-See [docs/CI_GATE.md](docs/CI_GATE.md) for a complete example workflow.
-
----
-
-## Runtime gateway pattern
-
-Besa's SDK can sit on the call path of an agent runtime. Before the agent calls a tool, the gateway calls `admit()` or `admitAndConsume()` from `@dorigjo/besa`. If the decision is deny, the tool call never reaches the upstream system.
-
-```typescript
-import { admit, verifyTrustedSignedManifest } from "@dorigjo/besa";
-
-// Before forwarding any agent tool call:
-const verified = verifyTrustedSignedManifest(signedManifest, trustStore);
-if (!verified.valid) return { decision: "deny", reasonCode: verified.reasonCode };
-
-const decision = admit(signedManifest.manifest, toolName, currentCount);
-if (decision.decision === "deny") return decision;
-
-// Only here: forward the call to the actual tool
-```
-
-See [examples/agent-gateway/](examples/agent-gateway/) for a working gateway skeleton for verification and admission; signed receipt issuance requires an explicitly configured signing key.
-
----
-
-## Commands
-
-| Command | Description |
-|---|---|
-| `besa keys` | Generate or display the local signing key |
-| `besa keys rotate` | Rotate to a new key, archive the previous |
-| `besa trust add <manifest>` | Pin the manifest's public key as a trust anchor |
-| `besa trust apply <rotation>` | Apply a signed rotation proof |
-| `besa trust revoke <key-id>` | Revoke a trust anchor |
-| `besa trust list` | List all trust anchors and their status |
-| `besa load <manifest>` | Validate a manifest without signing |
-| `besa sign <manifest>` | Sign a manifest |
-| `besa verify <manifest>` | Verify a signed manifest against the trust store |
-| `besa admit <manifest> <tool>` | Gate: check policy + budget (fail-closed, dry-run) |
-| `besa receipt <tool> <manifest>` | Enforce budget and issue a signed execution receipt |
-| `besa verify-receipt <receipt> <manifest>` | Verify the receipt trust chain |
-| `besa export-evidence <manifest> <receipt>` | Export a manifest + receipt as an audit-facing evidence envelope (see `docs/EVIDENCE_ENVELOPE.md`) |
-| `besa serve [--port <n>]` | Run the hosted verifier over HTTP (signature checks only by default) |
-
-All commands accept `--trust <trust.json>` to use a consumer-side trust store.
-`admit` and `receipt` also accept `--agent <id> --grants <grants.yaml>`.
-`serve` also accepts `--trust <file>` (additionally enables `POST /v1/admit`,
-see [docs/RUNTIME_ADMISSION.md](docs/RUNTIME_ADMISSION.md)) and
-`--rate-limit <n>` (requests/minute per client, off by default). See
-[docs/HOSTED_VERIFIER.md](docs/HOSTED_VERIFIER.md) for the full endpoint
-reference.
-
----
-
-## The execution receipt
+The frozen receipt shape remains:
 
 ```json
 {
@@ -267,130 +298,27 @@ reference.
 }
 ```
 
-`publicKeyId` is the full SHA-256 fingerprint of the Ed25519 public key DER bytes.
-Changing any field causes `verify-receipt` to fail closed.
+Migration from v1.0/v1.0.1: **none required**. Adopt the new action artifacts
+only where an exact consequential-action boundary is needed.
 
----
-
-## Admission reason codes
-
-| Code | Meaning |
-|---|---|
-| `ALLOWED` | Tool call admitted |
-| `TOOL_NOT_FOUND` | Tool not declared in the signed manifest |
-| `RISK_BLOCKED` | Destructive high-risk tool blocked by policy |
-| `BUDGET_EXCEEDED` | Call count reached the manifest budget limit |
-| `TOOL_NOT_GRANTED` | Agent not granted access to this tool |
-| `AGENT_NOT_FOUND` | Agent ID not listed in the grant set |
-| `E_KEY_UNTRUSTED` | Signing key not in the trust store |
-| `E_KEY_RETIRED` | Key retired; new admissions under it are denied |
-| `E_KEY_REVOKED` | Key revoked; all operations denied |
-
----
-
-## SDK
-
-```typescript
-import {
-  admit,
-  addTrustAnchor,
-  applyKeyRotation,
-  canonicalize,
-  checkTrustedKey,
-  createKeyRotation,
-  createReceipt,
-  generateKeyPair,
-  hashRequest,
-  loadManifest,
-  signManifest,
-  validateManifest,
-  validateReceipt,
-  verifyReceiptDetailed,
-  verifySignedManifest,
-  verifyTrustedSignedManifest,
-} from "@dorigjo/besa";
-```
-
----
-
-## Security model
-
-Besa provides **tamper-evidence**, not secrecy.
-
-A signed manifest proves that the declared tool capabilities, scopes, risks, and
-metadata have not changed since signing. A signed receipt creates a
-tamper-evident record that a specific admission decision was made at a specific
-time under a specific key.
-
-**Cryptography:**
-
-- Ed25519 signatures on the complete artifact envelope
-- AES-256-GCM key encryption at rest with scrypt KDF (N=32768, r=8, p=1)
-- SHA-256 manifest hashing and full 256-bit (64-hex-character) SHA-256 public key fingerprints
-- Domain-separated signature messages (`besa:<domain>:v1\0<canonical-json>`)
-- Timing-safe public key comparison via `crypto.timingSafeEqual`
-
-**Fail-closed behavior:**
-
-- Verification fails on any signature, hash, or key mismatch
-- Admission fails closed on invalid policy, manifest, or call count
-- Trust store rejects symlinks, unknown fields, and duplicate key IDs
-- Trust store paths must end in `.json`
-- Tool names are restricted to ASCII printable characters
-
-See [SECURITY.md](SECURITY.md) and [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md).
-
----
-
-## Release gates
+## Development and release gates
 
 ```bash
 npm ci
 npm run build
-npm test          # unit + integration suite
-npm run smoke     # end-to-end trust flow
+npm test
+npm run conformance
+npm run test:examples
+npm run test:docs
+npm run smoke
+npm run smoke:server
 npm run test:package
-npm pack --dry-run
+npm run verify:package-surface
+npm audit --omit=dev
 ```
 
----
-
-## Limitations
-
-Besa `1.0.0` is a **stable cryptographic trust primitive** — signed manifests, signed execution receipts, and the verification chain use standard cryptographic primitives and are designed for tamper-evident local verification, with a frozen CLI/SDK/artifact-format surface. No independent third-party security audit has been performed yet (see [docs/V1_SECURITY_RELEASE_REVIEW.md](docs/V1_SECURITY_RELEASE_REVIEW.md)), and the surrounding infrastructure (hosted components) remains early.
-
-Current limitations:
-- Local key storage only; no hosted key management or HSM integration
-- File-based meter and trust state; intended for single-host use
-- No distributed replay protection across machines or environments
-- No external trusted timestamp authority
-- A stateless hosted verifier (`besa serve`) exists for signature checks over
-  HTTP, and an opt-in, non-consuming admission-attestation endpoint
-  (`besa serve --trust`) exists — see
-  [docs/HOSTED_VERIFIER.md](docs/HOSTED_VERIFIER.md) and
-  [docs/RUNTIME_ADMISSION.md](docs/RUNTIME_ADMISSION.md). Neither has
-  authentication; rate limiting is opt-in. No receipt retention or SIEM
-  export yet.
-- No production identity or multi-user authorization
-- No formal compliance certification (SOC 2, ISO 27001, EU AI Act)
-
-The signed manifest, admission gate, and receipt chain are designed to remain forward-compatible as the infrastructure matures. The policy contract you establish today will be verifiable against future infrastructure.
-
----
-
-## Roadmap
-
-The path from local admission-and-evidence layer to hosted infrastructure:
-
-1. **Today (1.0.0):** CLI gate, CI/CD integration, local enforcement, signed receipts
-2. **Done:** Hosted verifier ([docs/HOSTED_VERIFIER.md](docs/HOSTED_VERIFIER.md)) — stateless signature
-   verification over HTTP, plus an opt-in, non-consuming admission-attestation
-   endpoint ([docs/RUNTIME_ADMISSION.md](docs/RUNTIME_ADMISSION.md))
-3. **Next:** Hosted receipt retention — tamper-evident receipt log with export
-4. **Then:** Runtime gateway — HTTP proxy that gates agent tool calls in production
-5. **Then:** Enterprise control plane — org-level policy, SIEM export, HSM signing, multi-user
-
----
+CI runs Node 20, 22, and 24 and builds/runs the container read-only. See
+[CONTRIBUTING.md](CONTRIBUTING.md) for protocol change rules.
 
 ## License
 

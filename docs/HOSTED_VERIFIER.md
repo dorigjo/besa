@@ -1,216 +1,184 @@
-# Hosted Verifier
+# Self-hosted Hosted Verifier
 
-Architecture, endpoint reference, and threat model for `besa serve`. No
-compliance claim, no marketing language — every statement below is either
-demonstrated by a test in `src/tests/server.test.ts` or explicitly named as
-not implemented.
+`besa serve` is a self-hosted HTTP distribution of Besa verification and,
+when explicitly configured, admission. Besa v1.1 does not operate a public
+service. The operator owns deployment, TLS, ingress, keys, retention, replay
+state, monitoring, and incident response.
 
-## What this is
+## Modes
 
-A stateless HTTP wrapper around the exact same verification functions the
-CLI already calls: `verifySignedManifest`, `verifyReceiptDetailed`, and
-`verifyKeyRotation` (`src/signing.ts`/`src/trust.ts`). It answers exactly
-one question per request — "is this artifact's signature cryptographically
-valid" — the same question `besa verify` (without `--trust`) answers
-locally. Implemented in `src/server/hosted-verifier.ts`, started via `besa
-serve [--port <n>] [--host <addr>]` (default port `8787`, default bind
-address `127.0.0.1` — loopback-only; pass `--host 0.0.0.0` explicitly to
-accept connections from other machines, which prints a visible warning on
-startup).
+| Invocation | Private key loaded | Token required | Available capability |
+|---|---:|---:|---|
+| `besa serve` | No | No | Public signature/schema verification for v1.0 artifacts and Action Envelope validation. |
+| `besa serve --action-trust trust.json` | No | No | Above plus trust-aware capability, delegation, and evidence verification. |
+| `besa serve --trust trust.json` | Yes | Yes | Above plus legacy `POST /v1/admit`, which returns signed non-consuming `AdmissionAttestation`s. |
+| `besa serve --trust trust.json --action-policy policy.yaml` | Yes | Yes | Above plus signed Action Capability issuance at `POST /v1/actions/admit`. |
 
-This closes a real, previously-documented gap: a third party without the
-Besa CLI installed had no way to independently check a Besa-signed
-artifact's validity (`docs/CI_GATE.md`, `docs/THREAT_MODEL.md`,
-`CHANGELOG.md` all named this). It does not close the broader "Hosted Trust
-Plane" gap described in `docs/V1_ROADMAP.md`'s Phase 2 — see "What this is
-not," below.
+`--action-trust` is the least-privilege verification deployment: it loads only
+public keys. `--trust` deliberately enables a signing process, requires
+`BESA_ADMISSION_TOKEN`, and requires an existing encrypted key at
+`.besa/key.json`. The server never creates a signing identity automatically.
 
-## What this is not
+## Run locally
 
-`docs/V1_ROADMAP.md`'s Phase 2 diagram names four hosted nodes:
-Authorization API, Policy Engine, Trust Ledger, and Verifier, sitting below
-the Besa SDK. This implements **only the Verifier node.** Specifically, a
-plain `besa serve` (no `--trust` flag):
+```bash
+npm install @dorigjo/besa
+npx besa serve --port 8787
+curl http://127.0.0.1:8787/health
+curl http://127.0.0.1:8787/ready
+```
 
-- **Never loads a trust store.** It cannot answer "do I trust this key," only
-  "is this signature valid for the key embedded in the artifact." Use `besa
-  verify --trust <file>` locally for trust-aware verification.
-- **Never runs admission policy.** No `admit()` call, no risk/budget/scope
-  checks. Use `besa admit` locally.
-- **Never issues receipts.** No signing key is ever loaded by the server
-  process — it holds no private key material at all, so it structurally
-  cannot sign anything, deny or allow.
-- **Never touches `.besa/`** — no meter, no receipts directory, no key file.
+The CLI binds `127.0.0.1` by default. Passing `--host 0.0.0.0` is an explicit
+decision to accept non-loopback connections. Put a publicly reachable instance
+behind a TLS-terminating reverse proxy and restrict inbound network access.
 
-Passing `--trust <file>` opts into a materially different, additive
-component — see "Opt-in extension: runtime admission," below, and its own
-document, `docs/RUNTIME_ADMISSION.md`. Without that flag, every guarantee
-above holds exactly as stated.
+## HTTP API
 
-This is a deliberate scope cut, not an oversight: the user's own
-"Infrastructure Development" authorization named "Hosted Verifier"
-specifically, and the founder constraints document's "smallest credible
-implementation" + "no fake enterprise functionality" rules stay in force
-for everything this authorization didn't explicitly name. The Authorization API, Policy Engine,
-and Trust Ledger nodes each need their own separate scope decision and plan
-before being built.
+All `POST` routes require `Content-Type: application/json` (optional UTF-8
+charset) and strictly valid UTF-8 JSON bytes. Success at transport level is
+`200` even when a supplied artifact is invalid; inspect the JSON `valid`,
+`authorized`, `decision`, or `reasonCode` field. Malformed UTF-8, JSON, or
+request envelopes receive `400`.
 
-## Endpoint reference
+| Method | Path | Mode | Body | Result |
+|---|---|---|---|---|
+| GET | `/health` | all | none | `{status:"ok",version}` |
+| GET | `/ready` | all | none | `200` ready or `503` during shutdown |
+| GET | `/metrics` | all | none | In-memory aggregate route/status counters |
+| POST | `/v1/verify/manifest` | all | `SignedManifest` | Signature result |
+| POST | `/v1/verify/receipt` | all | `{receipt,publicKey}` | Receipt signature result |
+| POST | `/v1/verify/rotation` | all | `KeyRotation` | Rotation signature result |
+| POST | `/v1/verify/action` | all | `ActionEnvelopeV1` | Strict schema/expiry result |
+| POST | `/v1/verify/capability` | action trust | `{capability,action}` | Trust-aware capability result |
+| POST | `/v1/verify/delegation` | action trust | `{chain,action}` | Trust-aware, narrowed-chain result |
+| POST | `/v1/verify/evidence` | action trust | `{evidence,action,capability,result,receiptHash?}` | Linked-evidence result |
+| POST | `/v1/admit` | `--trust` | `{signedManifest,toolName}` | Signed legacy `AdmissionAttestation` |
+| POST | `/v1/actions/admit` | `--trust --action-policy` | `{action,delegationChain?}` | Signed allow/deny `ActionCapabilityV1` |
 
-All request/response bodies are JSON. Request bodies are capped at
-`MAX_ARTIFACT_BYTES` (1 MiB, `src/io.ts:18`) — the same ceiling every local
-artifact read already enforces.
+Action-capability verification does not issue an authorization. It verifies an
+already-issued artifact against the configured public trust store.
 
-| Method | Path | Body | Response |
-|---|---|---|---|
-| `GET` | `/health` | — | `200 { status: "ok", version: <string> }` |
-| `GET` | `/metrics` | — | `200` with aggregate request counters (see "Monitoring," below) |
-| `POST` | `/v1/verify/manifest` | a `SignedManifest` | `200` with the `VerifyResult` (`{valid, reasonCode, detail}`) — `valid` may be `true` or `false`, both are `200` |
-| `POST` | `/v1/verify/receipt` | `{ receipt: <Receipt>, publicKey: <string> }` | `200` with the `VerifyResult` |
-| `POST` | `/v1/verify/rotation` | a `KeyRotation` | `200` with the `VerifyResult` |
+### Action admission request
 
-Error responses: `400` malformed JSON or a malformed `/v1/verify/receipt`
-envelope (missing `receipt`/`publicKey`); `404` unknown path; `405` known
-path, wrong method; `413` body exceeds `MAX_ARTIFACT_BYTES`; `429` rate
-limit exceeded (only when `--rate-limit` is enabled, see "Rate limiting,"
-below).
+```json
+{
+  "action": {
+    "artifactVersion": 1,
+    "principalId": "principal:acme",
+    "agentId": "agent:payments",
+    "authority": "customer:acme",
+    "tool": "payments.transfer",
+    "operation": "transfer",
+    "resource": "payment:merchant-123",
+    "requestHash": "<sha-256 of canonical tool arguments>",
+    "scopes": ["payments:transfer"],
+    "constraints": {"amountEur": 100, "merchantId": "merchant-123"},
+    "expiresAt": "2030-01-02T00:00:00.000Z",
+    "nonce": "unique-base64url-nonce",
+    "riskClass": "high"
+  }
+}
+```
 
-## Monitoring
+```bash
+curl --fail-with-body http://127.0.0.1:8787/v1/actions/admit \
+  --header "Authorization: Bearer $BESA_ADMISSION_TOKEN" \
+  --header "Content-Type: application/json" \
+  --data @action-request.json
+```
 
-`GET /metrics` returns a JSON snapshot of in-memory, per-process counters:
-`startedAt`, `uptimeSeconds`, `requestsTotal`, `requestsByRoute` (bucketed
-into the fixed set of known routes plus `"other"` — never the raw request
-URL, to bound memory against a caller hitting many distinct nonsense
-paths), `requestsByStatus`, and `rateLimitedTotal`. Reset to zero on
-process restart; not persisted. This is a read-only, always-on addition —
-no authentication, matching the rest of this server's public-endpoint
-model.
+The response is a signed `ActionCapabilityV1`. `decision: "deny"` is a valid,
+signed answer that must never be passed to an executor. A configured policy
+requiring delegation denies an absent, invalid, widened, expired, or
+non-authorizing chain.
 
-Every request also emits one structured JSON access-log line to stdout
-(`{ts, method, route, status, durationMs}`) — metadata only, never
-headers, bodies, keys, or signatures.
+## Operational defaults
 
-## Rate limiting
+- Body limit: 1 MiB, including early `Content-Length` rejection and streamed
+  bounded buffering.
+- Request timeout: 10 seconds; header and keep-alive timeout: 5 seconds.
+- Header size: 16 KiB; header count: 100; requests per socket: 1,000.
+- Rate limit: 120 requests per minute per remote address by default. Health and
+  readiness probes are exempt. Set `--rate-limit <n>` to choose another
+  positive limit. Limiting runs before bearer-token validation, so failed
+  authentication attempts consume the same client budget. A reverse proxy
+  changes the visible remote address; enforce an additional proxy-level limit
+  for public ingress.
+- POSTs with unsupported JSON media types get `415`; unsupported `Expect:
+  100-continue` gets `417`; query strings are rejected; oversized bodies get
+  `413`; protected routes without a valid bearer token get `401` before body
+  parsing.
+- Responses set `Cache-Control: no-store`, CSP `default-src 'none'`,
+  `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, and
+  `X-Frame-Options: DENY`.
+- Access logs are structured JSON metadata (`ts`, method, route, status,
+  duration). They do not include bodies, bearer tokens, keys, or signatures.
+- `/metrics` is in-process, resets on restart, and is not authenticated. Limit
+  access to it at the network layer when route/status activity is sensitive.
 
-Opt-in via `besa serve --rate-limit <n>`: a fixed-window limiter (default
-window 60s) keyed by the client's remote address, rejecting with `429` and
-a `Retry-After` header once a client exceeds `<n>` requests in the current
-window. Rejected requests are counted in `/metrics`'s `rateLimitedTotal`
-and never reach body parsing or verification logic — the cheapest possible
-rejection. Disabled by default; without `--rate-limit`, behavior is
-unchanged from Phase 5. The limiter tracks at most 10,000 distinct client
-keys at a time (oldest evicted first) to bound memory under a
-many-source-address attack.
+The server makes no outbound HTTP requests, so it has no URL-fetch/SSRF
+surface. It is still subject to inbound bandwidth, CPU, and connection-exhaustion
+attacks; request limits are not a substitute for ingress controls.
 
-A `200` response does not mean "the artifact is valid" — it means "the
-verifier successfully computed an answer." The answer itself is in the
-response body's `valid` field, exactly mirroring how `verifySignedManifest`
-already behaves as a function: it returns a structured result, it does not
-throw for an invalid-but-well-formed artifact.
+## Container deployment
 
-## Guarantees
+The repository includes a two-stage, non-root Docker image. It installs from
+`package-lock.json` with lifecycle scripts disabled and ships compiled output
+plus production dependencies only.
 
-- Byte-identical verification logic to the CLI — no second crypto pipeline.
-  `routeVerifierRequest()` calls the same `src/signing.ts`/`src/trust.ts`
-  functions directly; nothing is reimplemented.
-- The server process never loads a signing key or trust store. A
-  compromised or DoS'd verifier process cannot leak signing material or
-  forge a trust/admission decision, because it holds neither.
-- Concurrent requests are independently correct — proven in
-  `src/tests/server.test.ts` by firing 20 simultaneous requests with mixed
-  valid/invalid payloads against one server instance and asserting each
-  response matches its own request.
-- Oversized bodies are rejected without unbounded buffering — the request
-  handler stops accumulating past `MAX_ARTIFACT_BYTES` and responds `413`.
+```bash
+docker build --pull --tag besa:1.1.0 .
+docker run --rm --read-only \
+  --tmpfs /tmp:rw,noexec,nosuid,size=16m \
+  --publish 127.0.0.1:8787:8787 \
+  besa:1.1.0
+```
 
-## Limitations
+The image defaults to `serve --host 0.0.0.0` so the published container port
+is reachable. Restrict the host publication or use a private network; do not
+publish it directly to the internet without TLS, rate limits, and network
+policy.
 
-| Feature | Status | Notes |
-|---|---|---|
-| Authentication | Not implemented | Deliberate — this is a public verification function, like checking a certificate's signature. Anyone can call it. |
-| Rate limiting | Opt-in (`--rate-limit <n>`) | Off by default. See "Rate limiting," above. Operator must still choose a limit appropriate to their deployment. |
-| TLS | Not implemented | Run behind a reverse proxy that terminates TLS. |
-| Trust-store awareness | Not implemented | See "What this is not," above. |
-| Admission / receipts | Not implemented | See "What this is not," above. |
-| Persistent state | None — fully stateless | No filesystem access of any kind after startup (package version is read once at process start). Rate-limit/metrics counters are in-memory only, reset on restart. |
+### Keyless full-chain verification
 
-## Threat model
+```bash
+docker run --rm --read-only \
+  --publish 127.0.0.1:8787:8787 \
+  --mount type=bind,src="$PWD/verifier-trust.json",dst=/run/besa/trust.json,readonly \
+  besa:1.1.0 serve --host 0.0.0.0 --action-trust /run/besa/trust.json
+```
 
-Per-attacker format matching `docs/PROVIDER_THREAT_MODEL.md`.
+### Signed action admission
 
-### Attacker: unauthenticated caller
+Provision the encrypted key and trust file outside the image. Store the
+passphrase and bearer token in the orchestrator's secret store. Besa does not
+load `.env` files automatically; `examples/hosted-verifier.env.example` is a
+reference, not a secrets mechanism.
 
-- **Assets:** the verification function's compute/network capacity.
-- **Trust boundary:** anyone who can reach the listening port.
-- **Attack:** send verify requests, at any volume.
-- **Detection:** none built in — no request logging beyond Node's own
-  process I/O.
-- **Mitigation:** verifying a signature is not a privileged operation; the
-  artifact and its claimed public key are both in the request itself, so
-  no authentication is required by design. An operator can additionally
-  opt into `--rate-limit <n>` (Phase 8) to cap requests per client address;
-  off by default.
-- **Residual risk:** an operator who exposes this publicly without
-  `--rate-limit` (or their own reverse-proxy-level limiting) accepts
-  unmetered request volume. Named, not silently assumed away.
+```bash
+docker run --rm --read-only \
+  --publish 127.0.0.1:8787:8787 \
+  --mount type=bind,src="$PWD/.besa",dst=/app/.besa,readonly \
+  --mount type=bind,src="$PWD/verifier-trust.json",dst=/run/besa/trust.json,readonly \
+  --mount type=bind,src="$PWD/examples/action-policy.yaml",dst=/run/besa/policy.yaml,readonly \
+  --env BESA_KEY_PASSPHRASE \
+  --env BESA_ADMISSION_TOKEN \
+  --env BESA_ADMISSION_ISSUER_ID=besa:hosted-verifier \
+  besa:1.1.0 serve --host 0.0.0.0 --trust /run/besa/trust.json \
+    --action-policy /run/besa/policy.yaml
+```
 
-### Attacker: oversized-body denial of service
+The server process holds the decrypted signing key in memory for its lifetime.
+Run admission in an isolated workload, rotate compromised keys, and do not
+co-locate the signing key with an untrusted executor where separation of duty
+matters.
 
-- **Assets:** server memory and CPU.
-- **Trust boundary:** anyone who can reach the listening port.
-- **Attack:** send a request body far exceeding `MAX_ARTIFACT_BYTES`.
-- **Detection:** the request handler counts bytes as they arrive and stops
-  accumulating past the ceiling.
-- **Mitigation:** `413` response, bounded memory (`src/tests/server.test.ts`,
-  "oversized request body is rejected with 413, not buffered unbounded").
-- **Residual risk:** a large volume of *many* oversized requests still
-  costs the server per-connection overhead and bandwidth — the byte cap
-  bounds memory per request, not aggregate request volume. `--rate-limit`
-  (Phase 8, opt-in, off by default) is the actual mitigation for that.
+## What this service proves and does not prove
 
-### Attacker: malformed input
-
-- **Assets:** none directly — a correctness/availability concern, not
-  confidentiality.
-- **Trust boundary:** anyone who can reach the listening port.
-- **Attack:** send non-JSON bodies, wrong-shaped JSON, or artifacts with
-  unexpected field types.
-- **Detection:** `verifySignedManifest`/`verifyReceiptDetailed`/
-  `verifyKeyRotation` already fail closed on malformed input (they are the
-  same functions the CLI trusts against untrusted file contents); the HTTP
-  layer additionally returns `400` for JSON that doesn't even parse.
-- **Mitigation:** covered by the existing fail-closed contract of the
-  wrapped functions — no new validation logic was written for this layer.
-- **Residual risk:** none identified beyond what already applies to local
-  CLI verification of untrusted files.
-
-### Attacker: information leakage via error responses
-
-- **Assets:** internal implementation details.
-- **Trust boundary:** anyone who can reach the listening port.
-- **Attack:** probe error responses for stack traces or internal paths.
-- **Detection:** manual review of every response body in
-  `routeVerifierRequest()` — all error bodies are fixed, short strings
-  (`"invalid JSON body"`, `"not found"`, etc.), never `error.message` or a
-  stack trace.
-- **Mitigation:** the request handler's `.catch()` also returns a fixed
-  string, not the caught error's message.
-- **Residual risk:** none identified.
-
-## Opt-in extension: runtime admission
-
-`besa serve --trust <file>` additionally mounts `POST /v1/admit` — a
-materially different trust boundary (it loads a signing key) covered by its
-own document: `docs/RUNTIME_ADMISSION.md`. Without `--trust`, everything in
-this document remains exactly as stated: no key, no trust store, no
-admission, no receipts.
-
-## Why not exported via the SDK yet
-
-`createHostedVerifierServer()` is reachable only via `besa serve`, not
-through `sdk.ts`'s public export surface (`sdk-surface.test.ts`'s frozen
-list is unchanged by this phase). Same judgment already applied to
-`KeyProvider`/`LocalKeyProvider` in Phase 3
-(`KEY_PROVIDER_ARCHITECTURE.md`, "SDK surface decision"): freeze a public
-export only once a real second consumer or embedding use case proves the
-shape is right, not on the strength of the first implementation.
+It can verify artifact signatures and links, and it can issue a signed decision
+for a supplied exact action under its configured policy. It cannot authenticate
+the agent for you, prove an executor performed a real-world side effect, settle
+a payment, enforce a globally unique nonce without an external replay store, or
+turn a local policy file into organizational governance. See `ARCHITECTURE.md`,
+`docs/RUNTIME_ADMISSION.md`, and `docs/THREAT_MODEL.md` for the corresponding
+trust model and limits.

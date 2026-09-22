@@ -1,116 +1,99 @@
-# Agent Gateway Skeleton
+# Agent Gateway Integration
 
-The `examples/agent-gateway/server.ts` file is a minimal, honest skeleton showing how Besa fits into the path of an AI agent making tool calls.
+Besa is not an agent gateway, MCP router, identity provider, or tool host. It is
+the exact-action admission and evidence primitive that an application places in
+front of a consequence-bearing handler.
 
-It is a development prototype. It is not production-ready infrastructure.
-
----
-
-## What it demonstrates
-
-```
+```text
 agent request
-    ↓
-POST /gate { signedManifest, toolName, requestPayload }
-    ↓
-verifyTrustedSignedManifest(manifest, trustStore, "admit")
-    ↓ (reject if signature invalid or key untrusted)
-admit(manifest, toolName, currentCallCount)
-    ↓ (check risk level, budget, scopes)
-200 { decision: "allow", ... } or 403 { decision: "deny", ... }
+  -> application authentication and identity context
+  -> ActionEnvelopeV1
+  -> Besa capability, delegation, expiry, and replay checks
+  -> application-owned tool or API
+  -> signed ActionEvidenceV1
 ```
 
-Every request returns a structured admission decision — allow or deny. The gateway performs verification and admission only; it does not issue signed receipts. Receipt issuance requires an explicitly configured signing key (`createReceipt(input, keypair)`), which is out of scope for a transport-only skeleton.
+The gateway remains responsible for transport authentication, TLS, routing,
+timeouts, tool discovery, request cancellation, and the real side effect.
 
----
+## Local enforcement
 
-## Running the skeleton
+Use `withBesa(config, handler)` when the application already has an exact
+`ActionEnvelopeV1`. The wrapper:
 
-```bash
-npm run build
+1. validates the action;
+2. resolves and verifies its signed `ActionCapabilityV1`;
+3. verifies a bound delegation chain when supplied or required;
+4. atomically consumes replay state when enforcement is required;
+5. rechecks expiry immediately before execution;
+6. calls the handler only for a valid signed allow; and
+7. signs and appends success or handler-failure evidence.
 
-# Set up a key and sign the example manifest first
-node dist/index.js sign examples/manifest.yaml
-export BESA_KEY_PASSPHRASE=your-passphrase
+The wrapper performs no hidden network calls. Its capability resolver may call
+a customer-operated admission service, load a local artifact, or use another
+application-owned transport.
 
-# Start the gateway
-npx tsx examples/agent-gateway/server.ts
-# → Besa agent gateway skeleton listening on http://localhost:3742
+## MCP enforcement
 
-# In another terminal, send a test request
-curl -X POST http://localhost:3742/gate \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "signedManifest": '"$(cat examples/manifest.signed.json)"',
-    "toolName": "crm.lookup",
-    "requestPayload": { "customerId": "123" }
-  }'
+Use `withBesaMcp(config, execute)` at the MCP tool execution boundary. It adds
+two checks before delegating to `withBesa`:
+
+- the Action Envelope `tool` must equal the actual MCP tool name; and
+- `requestHash` must equal the canonical hash of the actual MCP arguments.
+
+This prevents a capability for one tool or argument set from authorizing a
+different call. See
+[`examples/consequential-mcp-middleware.ts`](../examples/consequential-mcp-middleware.ts)
+for the compile-checked reference integration.
+
+## Independent admission service
+
+Run the self-hosted verifier separately when the decision authority should not
+share a process with the executor:
+
+```text
+gateway -> POST /v1/actions/admit -> signed ActionCapabilityV1
+gateway -> withBesa / withBesaMcp -> tool execution -> ActionEvidenceV1
+auditor -> POST /v1/verify/* -> independent verification
 ```
 
-Expected response:
+`POST /v1/actions/admit` requires an explicit action policy, trust store,
+existing encrypted signing key, and bearer token. A keyless verifier can run
+with `besa serve --action-trust verifier-trust.json`. Besa v1.1 does not operate
+a public hosted instance. See [HOSTED_VERIFIER.md](HOSTED_VERIFIER.md).
 
-```json
-{
-  "decision": "allow",
-  "reasonCode": "ALLOWED",
-  "toolName": "crm.lookup",
-  "detail": "tool call admitted",
-  "upstream": "forwarded (placeholder)"
-}
-```
+## Replay and retries
 
----
+An action nonce is cryptographically bound but is not globally one-time by
+itself. `InMemoryReplayStore` protects one process until expiry. A distributed
+gateway must provide an atomic shared `ReplayStore` and use
+`replayRequirement: "enforce"`.
 
-## Trust store setup
+Once replay state has been consumed, do not blindly retry after an ambiguous
+tool, evidence-creation, or evidence-append failure. The side effect may have
+happened even when the caller received an error.
 
-The skeleton starts with an empty trust store. No manifests will pass verification until you add a trusted key:
+## Trust separation
 
-```bash
-# Add the signing key from the example manifest to the trust store
-node dist/index.js trust add examples/manifest.signed.json --trust examples/agent-gateway/trust.json
-```
+Strong deployments separate these roles where practical:
 
-Then load `examples/agent-gateway/trust.json` in the server instead of the empty `{ keys: [] }`.
+| Role | Responsibility |
+|---|---|
+| Identity system | Authenticates the principal and agent upstream. |
+| Decision authority | Applies policy and signs Action Capabilities. |
+| Executor | Performs the exact approved tool or API action. |
+| Evidence recorder | Signs the supplied result linkage. |
+| Verifier | Uses pinned public trust to verify artifacts independently. |
+| Replay-store operator | Provides atomic one-time consumption guarantees. |
 
----
+A process that can sign its own authorization or evidence is not independent
+of itself. Cryptographic validity establishes origin and integrity only; the
+verifier still decides which public keys and operators it trusts.
 
-## What the skeleton intentionally omits
+## Legacy skeleton
 
-| Feature | Status | Notes |
-|---|---|---|
-| Agent authentication | Not implemented | Who is calling the gateway? |
-| Persistent call counters | In-memory only | Resets on restart; cross-process metering needs persistence |
-| Trust store management | Manual | Hardcoded in server startup |
-| Actual tool forwarding | Placeholder | Returns decision without calling the tool |
-| Signed receipt issuance | Not implemented | Needs an explicitly configured signing key |
-| Rate limiting | Not implemented | Needed before any public exposure |
-| TLS | Not implemented | Use a reverse proxy in front |
-
-These features are the Runtime Gateway surface — on the roadmap, not in this example skeleton.
-
----
-
-## How it fits the roadmap
-
-```
-Today (v1.0):
-  CLI → sign → verify → admit → receipt (local, file-based)
-
-This skeleton adds:
-  HTTP endpoint → same Besa core → JSON response with receipt
-
-Runtime Gateway (roadmap):
-  Agent SDK → gateway → persistent counters → hosted verifier → receipt retention
-```
-
-The skeleton proves the call sequence is correct and the SDK is composable. The infrastructure that surrounds it in production is a separate engineering effort.
-
----
-
-## Limitations (this example skeleton)
-
-- Trust store is in-memory only — restart resets it
-- Call counter is in-memory only — budget resets on restart and is not shared across processes
-- No authentication — any caller can POST to /gate
-- No TLS — do not expose to a network without a terminating proxy
-- No signed receipt issuance — receipts require an explicitly configured signing key
+`examples/agent-gateway/server.ts` remains a compatibility example for the v1.0
+SignedManifest and non-consuming `admit()` flow. It has no authentication, TLS,
+durable metering, real tool forwarding, or signed exact-action evidence. Do not
+use that skeleton as the v1.1 production integration; use the wrappers and
+self-hosted verifier described above.

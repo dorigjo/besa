@@ -82,6 +82,29 @@ test("canonical JSON rejects excessive depth and bytes", () => {
   );
 });
 
+test("canonical JSON rejects huge sparse arrays before traversing holes", () => {
+  const values: unknown[] = [];
+  values.length = 0xffff_ffff;
+
+  assert.throws(() => canonicalize(values), /node limit/);
+});
+
+test("canonical JSON rejects accessor arrays without invoking getters", () => {
+  let reads = 0;
+  const values: unknown[] = [];
+  Object.defineProperty(values, "0", {
+    enumerable: true,
+    get() {
+      reads += 1;
+      return "value";
+    },
+  });
+  values.length = 1;
+
+  assert.throws(() => canonicalize(values), /accessor/);
+  assert.equal(reads, 0);
+});
+
 test("signed artifacts require the current artifact version", () => {
   const signed = signManifest(manifest(), generateKeyPair()) as unknown as Record<string, unknown>;
   delete signed.artifactVersion;

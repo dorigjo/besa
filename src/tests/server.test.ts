@@ -14,6 +14,8 @@ import { verifyAdmissionAttestationDetailed } from "../attestation.js";
 import type { TrustStore } from "../types.js";
 import { GOLDEN_RECEIPT, GOLDEN_SIGNED_MANIFEST } from "./fixtures/golden-v1.js";
 
+const ADMISSION_TOKEN = "legacy-admission-test-token-000001";
+
 async function withServer(
   run: (baseUrl: string) => Promise<void>,
 ): Promise<void> {
@@ -48,7 +50,9 @@ async function withAdmissionServer(
   admission: HostedVerifierAdmissionOptions,
   run: (baseUrl: string) => Promise<void>,
 ): Promise<void> {
-  const server = createHostedVerifierServer({ admission });
+  const server = createHostedVerifierServer({
+    admission: { ...admission, apiToken: ADMISSION_TOKEN },
+  });
   await new Promise<void>((resolve) => server.listen(0, resolve));
   const address = server.address() as AddressInfo;
 
@@ -68,7 +72,10 @@ async function postJson(
 ): Promise<{ status: number; body: unknown }> {
   const response = await fetch(baseUrl + path, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${ADMISSION_TOKEN}`,
+    },
     body: JSON.stringify(body),
   });
   return { status: response.status, body: await response.json() };
@@ -428,7 +435,9 @@ test("POST /v1/admit wrong method returns 405, unaffected by admission config", 
     await withAdmissionServer(
       { trustStore: trustedManifestKeyStore(), meterPath, keyPair: keypair },
       async (baseUrl) => {
-        const response = await fetch(baseUrl + "/v1/admit");
+        const response = await fetch(baseUrl + "/v1/admit", {
+          headers: { Authorization: `Bearer ${ADMISSION_TOKEN}` },
+        });
         assert.equal(response.status, 405);
       },
     );
@@ -473,9 +482,9 @@ test("rate limiting returns 429 with Retry-After once the per-client limit is ex
   const baseUrl = `http://127.0.0.1:${String(address.port)}`;
 
   try {
-    const first = await fetch(baseUrl + "/health");
-    const second = await fetch(baseUrl + "/health");
-    const third = await fetch(baseUrl + "/health");
+    const first = await fetch(baseUrl + "/metrics");
+    const second = await fetch(baseUrl + "/metrics");
+    const third = await fetch(baseUrl + "/metrics");
 
     assert.equal(first.status, 200);
     assert.equal(second.status, 200);
@@ -491,7 +500,7 @@ test("rate limiting returns 429 with Retry-After once the per-client limit is ex
   }
 });
 
-test("rate limiting is disabled by default (no rateLimit option)", async () => {
+test("health probes are exempt from the default rate limit", async () => {
   await withServer(async (baseUrl) => {
     for (let i = 0; i < 10; i += 1) {
       const response = await fetch(baseUrl + "/health");

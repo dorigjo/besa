@@ -1,0 +1,117 @@
+{
+  "$comment": "Besa consequential-action v1 conformance vector. FROZEN: do not regenerate or alter. It contains public verification material only. Independently verify the action, root delegation, allow capability, and post-action evidence at 2030-01-01T00:00:03.000Z. Any mutation of a security-relevant field must fail verification or change the linked hash.",
+  "specVersion": 1,
+  "artifactVersion": 1,
+  "issuerPublicKey": "MCowBQYDK2VwAyEAGrDr2aDeKT1qciXIMuXb1+pZWSVcUM2aQKIkRjuKqEU=",
+  "issuerPublicKeyId": "bf873cbe46a1abf62b58431718167bd9a8d3d55c88927ead9f2fdd56ff585508",
+  "agentPublicKey": "MCowBQYDK2VwAyEAjNmBO6Jg4hPHTCVeD8rjsUCcJ/Mbg1pVuo/uE18K81s=",
+  "action": {
+    "artifactVersion": 1,
+    "principalId": "principal:acme",
+    "agentId": "agent:payments",
+    "authority": "customer:acme",
+    "tool": "payments.transfer",
+    "operation": "transfer",
+    "resource": "payment:merchant-123",
+    "requestHash": "0b98d7884666132330c462b01b0fbec2797d9c03e8bb00369d8c5f078757bad9",
+    "scopes": [
+      "payments:transfer"
+    ],
+    "constraints": {
+      "amountEur": 100,
+      "merchantId": "merchant-123"
+    },
+    "expiresAt": "2030-01-02T00:00:00.000Z",
+    "nonce": "conformance_nonce_0001",
+    "riskClass": "high"
+  },
+  "delegation": {
+    "algorithm": "ed25519",
+    "allowedOperations": [
+      "transfer"
+    ],
+    "allowedResources": [
+      "payment:merchant-123"
+    ],
+    "artifactVersion": 1,
+    "constraints": {
+      "exact": {
+        "merchantId": "merchant-123"
+      },
+      "maximums": {
+        "amountEur": 100
+      }
+    },
+    "delegationId": "dlg_11111111-1111-4111-8111-111111111111",
+    "expiresAt": "2030-01-02T00:00:00.000Z",
+    "issuedAt": "2029-12-31T00:00:00.000Z",
+    "issuerId": "principal:acme",
+    "issuerPublicKey": "MCowBQYDK2VwAyEAGrDr2aDeKT1qciXIMuXb1+pZWSVcUM2aQKIkRjuKqEU=",
+    "issuerPublicKeyId": "bf873cbe46a1abf62b58431718167bd9a8d3d55c88927ead9f2fdd56ff585508",
+    "notBefore": "2029-12-31T00:00:00.000Z",
+    "parentDelegationHash": null,
+    "scopes": [
+      "payments:transfer"
+    ],
+    "signature": "cfQiFrHgeW0Ws0gQQ9rUex7mITYaSiam+ZpTLjNCbLNbNajTE3OHLmw8tt6rH5pV64m34TSNdE503e1IQ8RHBg==",
+    "subjectId": "agent:payments",
+    "subjectPublicKey": "MCowBQYDK2VwAyEAjNmBO6Jg4hPHTCVeD8rjsUCcJ/Mbg1pVuo/uE18K81s=",
+    "subjectPublicKeyId": "24f5760c4441ab94814406cf51a2f800fa2d1bf866336332591206b7be67d9db"
+  },
+  "capability": {
+    "actionHash": "6fb383c582a2a0d95e0c6586fccb2891a5c716c4ec064dbcba5bb8fc6cc2a7a5",
+    "agentId": "agent:payments",
+    "algorithm": "ed25519",
+    "artifactVersion": 1,
+    "authority": "customer:acme",
+    "capabilityId": "cap_11111111-1111-4111-8111-111111111111",
+    "constraintsHash": "77a82d275992dd00d9ee601581c1f18efa52688b50d54e650270df396040087a",
+    "decision": "allow",
+    "delegationChainHash": "7c98ba263832063ce13abf717163225e91f68ccc6d5ef2cd22177c314454da84",
+    "expiresAt": "2030-01-02T00:00:00.000Z",
+    "issuedAt": "2029-12-31T00:00:00.000Z",
+    "issuerId": "besa:conformance",
+    "issuerPublicKey": "MCowBQYDK2VwAyEAGrDr2aDeKT1qciXIMuXb1+pZWSVcUM2aQKIkRjuKqEU=",
+    "issuerPublicKeyId": "bf873cbe46a1abf62b58431718167bd9a8d3d55c88927ead9f2fdd56ff585508",
+    "nonce": "conformance_nonce_0001",
+    "operation": "transfer",
+    "policyId": "policy:conformance:v1",
+    "principalId": "principal:acme",
+    "reasonCode": "ACTION_ALLOWED",
+    "resource": "payment:merchant-123",
+    "signature": "SeL61ujF2kDY0oOTikMP/dsJ38IHAwg/pRaBQDgg81BNkrhvlZ0TOPQu9xnEAykf5ceaylnEwDVd8+prmx0dDA==",
+    "tool": "payments.transfer"
+  },
+  "evidence": {
+    "actionHash": "6fb383c582a2a0d95e0c6586fccb2891a5c716c4ec064dbcba5bb8fc6cc2a7a5",
+    "algorithm": "ed25519",
+    "artifactVersion": 1,
+    "capabilityHash": "5f51ebadec94808392ead60e82226f624dfa56138c739f8a2cc8b5c5750a6af3",
+    "completedAt": "2030-01-01T00:00:01.000Z",
+    "delegationChainHash": "7c98ba263832063ce13abf717163225e91f68ccc6d5ef2cd22177c314454da84",
+    "evidenceId": "evd_11111111-1111-4111-8111-111111111111",
+    "executorId": "rail:mock",
+    "outcome": "succeeded",
+    "receiptHash": null,
+    "recordedAt": "2030-01-01T00:00:02.000Z",
+    "recorderId": "besa:conformance",
+    "recorderPublicKey": "MCowBQYDK2VwAyEAGrDr2aDeKT1qciXIMuXb1+pZWSVcUM2aQKIkRjuKqEU=",
+    "recorderPublicKeyId": "bf873cbe46a1abf62b58431718167bd9a8d3d55c88927ead9f2fdd56ff585508",
+    "resultHash": "dc3e11bc64e70b65cbae64c8156e5c07680602ab09bd44d5db918f6e165e371e",
+    "signature": "jnZ2+7FWkinVQfcCljJST6g6oGl0W2SbEviA7ZBnYaIjlULSeAquMNasgr5Mog3WirhH5JbUbv+CQs3pBAgaBA==",
+    "startedAt": "2030-01-01T00:00:00.000Z"
+  },
+  "executionResult": {
+    "rail": "mock",
+    "status": "accepted",
+    "railReference": "pay_001"
+  },
+  "negativeCases": [
+    "change action.resource: capability and evidence links must fail",
+    "change action.constraints.amountEur: capability and evidence links must fail",
+    "change capability.signature: capability verification must fail",
+    "use the vector after 2030-01-02T00:00:00.000Z: action and capability must be expired",
+    "add any unknown artifact field: strict schema validation must fail",
+    "replace delegation.allowedResources with a broader child value: chain verification must fail"
+  ]
+}

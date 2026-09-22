@@ -1,4 +1,5 @@
 import { spawn, execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -182,19 +183,49 @@ try {
 // actual built CLI binary, not just the unit-tested route function.
 const ADMISSION_PORT = 8800;
 const ADMISSION_BASE_URL = `http://127.0.0.1:${String(ADMISSION_PORT)}`;
+const ACTION_TRUST_PORT = 8803;
+const ACTION_TRUST_BASE_URL = `http://127.0.0.1:${String(ACTION_TRUST_PORT)}`;
+const ADMISSION_TOKEN = "server-smoke-admission-token-000001";
 const workDir = mkdtempSync(join(tmpdir(), "besa-admission-smoke-"));
 const keyFile = join(workDir, "key.json");
 const trustFile = join(workDir, "trust.json");
+const actionPolicyFile = join(workDir, "action-policy.json");
 const passphraseEnv = { ...process.env, BESA_KEY_PASSPHRASE: "smoke-test-passphrase-0123" };
+const admissionEnv = { ...passphraseEnv, BESA_ADMISSION_TOKEN: ADMISSION_TOKEN };
+
+const ACTION = {
+  artifactVersion: 1,
+  principalId: "principal:server-smoke",
+  agentId: "agent:server-smoke",
+  authority: "besa:server-smoke",
+  tool: "payments.mock",
+  operation: "payments.authorize",
+  resource: "invoice:server-smoke-001",
+  requestHash: "1".repeat(64),
+  scopes: ["payments:write"],
+  constraints: { amount: 25, currency: "EUR" },
+  expiresAt: new Date(Date.now() + 300_000).toISOString(),
+  nonce: "server-smoke-action-0001",
+  riskClass: "high",
+};
 
 let admissionOk = true;
 let admissionServer;
+let actionTrustServer;
 
 try {
   execFileSync(node, [cli, "keys", "--key-file", keyFile], {
     env: passphraseEnv,
     stdio: "pipe",
   });
+  const serverPublicKey = execFileSync(
+    node,
+    [cli, "keys", "export-public", "--key-file", keyFile],
+    { env: passphraseEnv, encoding: "utf8" },
+  ).trim();
+  const serverPublicKeyId = createHash("sha256")
+    .update(Buffer.from(serverPublicKey, "base64"))
+    .digest("hex");
 
   writeFileSync(
     trustFile,
@@ -207,6 +238,34 @@ try {
           status: "active",
           addedAt: "2026-01-01T00:00:00.000Z",
         },
+        {
+          publicKeyId: serverPublicKeyId,
+          publicKey: serverPublicKey,
+          status: "active",
+          addedAt: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+    }),
+    "utf8",
+  );
+  writeFileSync(
+    actionPolicyFile,
+    JSON.stringify({
+      version: 1,
+      policyId: "server-smoke-policy",
+      delegationRequired: false,
+      rules: [
+        {
+          ruleId: "allow-payment-mock",
+          principals: [ACTION.principalId],
+          agents: [ACTION.agentId],
+          tools: [ACTION.tool],
+          operations: [ACTION.operation],
+          resources: [ACTION.resource],
+          allowedScopes: ACTION.scopes,
+          maxRisk: "high",
+          constraints: { exact: { currency: "EUR" }, maximums: { amount: 100 } },
+        },
       ],
     }),
     "utf8",
@@ -214,8 +273,19 @@ try {
 
   admissionServer = spawn(
     node,
-    [cli, "serve", "--port", String(ADMISSION_PORT), "--trust", trustFile, "--key-file", keyFile],
-    { stdio: ["ignore", "pipe", "inherit"], env: passphraseEnv },
+    [
+      cli,
+      "serve",
+      "--port",
+      String(ADMISSION_PORT),
+      "--trust",
+      trustFile,
+      "--key-file",
+      keyFile,
+      "--action-policy",
+      actionPolicyFile,
+    ],
+    { stdio: ["ignore", "pipe", "inherit"], env: admissionEnv },
   );
 
   const deadline = Date.now() + 5000;
@@ -234,10 +304,22 @@ try {
   }
   if (!ready) throw new Error("admission-enabled server did not become ready in time");
 
+  console.log("\n== POST /v1/admit (missing bearer token, expect 401) ==");
+  const unauthorizedResponse = await fetch(`${ADMISSION_BASE_URL}/v1/admit`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ signedManifest: GOLDEN_SIGNED_MANIFEST, toolName: "crm.lookup" }),
+  });
+  console.log(`status: ${String(unauthorizedResponse.status)}`);
+  if (unauthorizedResponse.status !== 401) admissionOk = false;
+
   console.log("\n== POST /v1/admit (admission enabled, trusted manifest, expect allow) ==");
   const allowResponse = await fetch(`${ADMISSION_BASE_URL}/v1/admit`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${ADMISSION_TOKEN}`,
+    },
     body: JSON.stringify({ signedManifest: GOLDEN_SIGNED_MANIFEST, toolName: "crm.lookup" }),
   });
   const allowBody = await allowResponse.json();
@@ -247,7 +329,10 @@ try {
   console.log("\n== POST /v1/admit (unknown tool, expect signed deny) ==");
   const denyResponse = await fetch(`${ADMISSION_BASE_URL}/v1/admit`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${ADMISSION_TOKEN}`,
+    },
     body: JSON.stringify({ signedManifest: GOLDEN_SIGNED_MANIFEST, toolName: "does.not.exist" }),
   });
   const denyBody = await denyResponse.json();
@@ -255,11 +340,88 @@ try {
   if (denyResponse.status !== 200 || denyBody.decision !== "deny" || denyBody.reasonCode !== "TOOL_NOT_FOUND") {
     admissionOk = false;
   }
+
+  console.log("\n== POST /v1/actions/admit (exact action, expect signed allow) ==");
+  const actionResponse = await fetch(`${ADMISSION_BASE_URL}/v1/actions/admit`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${ADMISSION_TOKEN}`,
+    },
+    body: JSON.stringify({ action: ACTION }),
+  });
+  const actionCapability = await actionResponse.json();
+  console.log(JSON.stringify(actionCapability, null, 2));
+  if (actionResponse.status !== 200 || actionCapability.decision !== "allow") {
+    admissionOk = false;
+  }
+
+  console.log("\n== POST /v1/verify/capability (admission process, expect authorized) ==");
+  const capabilityResponse = await fetch(`${ADMISSION_BASE_URL}/v1/verify/capability`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ capability: actionCapability, action: ACTION }),
+  });
+  const capabilityBody = await capabilityResponse.json();
+  console.log(JSON.stringify(capabilityBody, null, 2));
+  if (
+    capabilityResponse.status !== 200 ||
+    capabilityBody.valid !== true ||
+    capabilityBody.authorized !== true
+  ) {
+    admissionOk = false;
+  }
+
+  actionTrustServer = spawn(
+    node,
+    [
+      cli,
+      "serve",
+      "--port",
+      String(ACTION_TRUST_PORT),
+      "--action-trust",
+      trustFile,
+    ],
+    { stdio: ["ignore", "pipe", "inherit"] },
+  );
+
+  const actionTrustDeadline = Date.now() + 5000;
+  let actionTrustReady = false;
+  while (Date.now() < actionTrustDeadline) {
+    try {
+      const response = await fetch(`${ACTION_TRUST_BASE_URL}/ready`);
+      if (response.ok) {
+        actionTrustReady = true;
+        break;
+      }
+    } catch {
+      // not listening yet
+    }
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  if (!actionTrustReady) throw new Error("keyless action verifier did not become ready in time");
+
+  console.log("\n== Keyless --action-trust capability verification (expect authorized) ==");
+  const keylessResponse = await fetch(`${ACTION_TRUST_BASE_URL}/v1/verify/capability`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ capability: actionCapability, action: ACTION }),
+  });
+  const keylessBody = await keylessResponse.json();
+  console.log(JSON.stringify(keylessBody, null, 2));
+  if (
+    keylessResponse.status !== 200 ||
+    keylessBody.valid !== true ||
+    keylessBody.authorized !== true
+  ) {
+    admissionOk = false;
+  }
 } catch (error) {
   console.error("SMOKE FAIL:", error instanceof Error ? error.message : String(error));
   admissionOk = false;
 } finally {
   if (admissionServer) admissionServer.kill();
+  if (actionTrustServer) actionTrustServer.kill();
   rmSync(workDir, { recursive: true, force: true });
 }
 
@@ -293,10 +455,10 @@ try {
   }
   if (!ready) throw new Error("rate-limited server did not become ready in time");
 
-  console.log("\n== Rate limiting: 3rd request within window expects 429 ==");
-  await fetch(`${RATE_LIMIT_BASE_URL}/health`);
-  await fetch(`${RATE_LIMIT_BASE_URL}/health`);
-  const third = await fetch(`${RATE_LIMIT_BASE_URL}/health`);
+  console.log("\n== Rate limiting: 3rd non-health request within window expects 429 ==");
+  await fetch(`${RATE_LIMIT_BASE_URL}/metrics`);
+  await fetch(`${RATE_LIMIT_BASE_URL}/metrics`);
+  const third = await fetch(`${RATE_LIMIT_BASE_URL}/metrics`);
   console.log(`3rd request status: ${String(third.status)}, Retry-After: ${third.headers.get("retry-after") ?? "(none)"}`);
   if (third.status !== 429 || !third.headers.has("retry-after")) rateLimitOk = false;
 } catch (error) {
