@@ -13,6 +13,7 @@ import "./provider-rotation.test.js";
 import "./provider-concurrency.test.js";
 import "./server.test.js";
 import "./server-security.test.js";
+import "./cli-demo.test.js";
 import "./cli-server.test.js";
 import "./attestation.test.js";
 import "./rate-limiter.test.js";

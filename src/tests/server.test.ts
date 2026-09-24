@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { request as httpRequest } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { AddressInfo } from "node:net";
@@ -197,6 +198,63 @@ test("oversized request body is rejected with 413, not buffered unbounded", asyn
     });
 
     assert.equal(response.status, 413);
+  });
+});
+
+test("chunked oversized request returns a structured 413 without resetting the upload", async () => {
+  await withServer(async (baseUrl) => {
+    const result = await new Promise<{ status: number; body: string }>((resolve, reject) => {
+      let body = "";
+      let status = 0;
+      let requestFinished = false;
+      let responseFinished = false;
+
+      const finish = (): void => {
+        if (requestFinished && responseFinished) {
+          resolve({ status, body });
+        }
+      };
+
+      const request = httpRequest(
+        new URL("/v1/verify/manifest", baseUrl),
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Transfer-Encoding": "chunked",
+          },
+        },
+        (response) => {
+          status = response.statusCode ?? 0;
+          response.setEncoding("utf8");
+          response.on("data", (chunk: string) => {
+            body += chunk;
+          });
+          response.on("end", () => {
+            responseFinished = true;
+            finish();
+          });
+        },
+      );
+
+      request.on("error", reject);
+      request.on("finish", () => {
+        requestFinished = true;
+        finish();
+      });
+
+      const chunk = Buffer.alloc(64 * 1024, "x");
+      for (let index = 0; index < 32; index += 1) {
+        request.write(chunk);
+      }
+      request.end();
+    });
+
+    assert.equal(result.status, 413);
+    assert.equal(
+      (JSON.parse(result.body) as { reasonCode: string }).reasonCode,
+      "HTTP_BODY_TOO_LARGE",
+    );
   });
 });
 

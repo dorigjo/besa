@@ -10,8 +10,9 @@ If neither applies (docs-only, tooling-only), say so explicitly. -->
 
 ## Backward compatibility
 
-<!-- Do existing signed manifests, receipts, trust stores, and rotation
-proofs remain verifiable after this change? Additive or breaking? -->
+<!-- Do existing v1.0 manifests/receipts and v1.1 actions, capabilities,
+delegations, evidence, trust stores, and rotation proofs remain verifiable
+after this change? Additive or breaking? -->
 
 ## Checklist
 
@@ -19,12 +20,19 @@ proofs remain verifiable after this change? Additive or breaking? -->
 
 - [ ] `npm run build` passes
 - [ ] `npm test` passes
+- [ ] `npm run conformance` passes
+- [ ] `npm run test:examples` passes
+- [ ] `npm run test:docs` passes
 - [ ] `npm run smoke` passes
+- [ ] `npm run smoke:server` passes
 - [ ] `npm run test:package` passes
+- [ ] `npm run verify:package-surface` passes
+- [ ] `npm audit --omit=dev` passes
 
 ### Release surface
 
 - [ ] `npm pack --dry-run` includes only intended files
+- [ ] Installed-package commands changed by this PR were tested from a clean temporary directory
 - [ ] No new files added to `.besa/`, `node_modules/`, or local release artifacts
 - [ ] No stale `.tgz`, local receipts, generated keys, or temporary audit files committed
 - [ ] No unnecessary npm lifecycle hooks added (`preinstall`, `install`, `postinstall`, `prepare`)

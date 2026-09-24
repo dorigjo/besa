@@ -919,7 +919,6 @@ export function createHostedVerifierServer(
           error: `request body exceeds the ${String(maxBodyBytes)} byte limit`,
           reasonCode: "HTTP_BODY_TOO_LARGE",
         },
-        { Connection: "close" },
       );
       return;
     }
@@ -933,11 +932,10 @@ export function createHostedVerifierServer(
           { ...options, maxBodyBytes },
           metrics,
         );
-        // A 413 responds before the client has finished sending its (still
-        // in-flight, oversized) body — force the socket closed afterward
-        // rather than returning it to the keep-alive pool in an unknown
-        // drain state.
-        respond(status, body, status === 413 ? { Connection: "close" } : undefined);
+        // readBody stops buffering at the limit and keeps draining the request.
+        // Let Node manage the connection so the caller receives the structured
+        // 413 instead of racing a forced socket close.
+        respond(status, body);
       })
       .catch((error: unknown) => {
         console.error(
