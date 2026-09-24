@@ -25,7 +25,7 @@ follow the private process in SECURITY.md instead.
 <!-- Answer explicitly, even if "no":
 Can a wrong or tampered signature be accepted as valid?
 Can a blocked/denied action still execute?
-Can a trust boundary (trust store, key rotation, admission) be bypassed? -->
+Can a trust, delegation, replay, admission, or evidence boundary be bypassed? -->
 
 ## Which surface is involved?
 
@@ -33,7 +33,16 @@ Can a trust boundary (trust store, key rotation, admission) be bypassed? -->
 
 - [ ] Manifest signing (`besa sign`)
 - [ ] Verification (`besa verify` / `besa verify-receipt`)
-- [ ] Admission / policy gate (`besa admit`)
+- [ ] Action Envelope / action hashing
+- [ ] Action policy / admission decision
+- [ ] Signed Action Capability
+- [ ] Delegation chain
+- [ ] Runtime wrapper (`withBesa`)
+- [ ] MCP wrapper (`withBesaMcp`)
+- [ ] Replay store / one-time execution
+- [ ] Action Evidence / evidence sink
+- [ ] Hosted Verifier (`besa serve`)
+- [ ] Legacy admission (`besa admit`)
 - [ ] Receipts (`besa receipt`)
 - [ ] Grants (`--agent` / `--grants`)
 - [ ] Trust store / key rotation (`besa trust` / `besa keys`)
@@ -70,8 +79,9 @@ Can a trust boundary (trust store, key rotation, admission) be bypassed? -->
 ## Minimal reproducible example
 
 <!--
-The smallest manifest / grant set / sequence of steps that reproduces the issue.
-Use synthetic values only — no real keys, tokens, receipts, or customer data.
+The smallest Action Envelope, policy, capability, manifest, grant set, or
+sequence of steps that reproduces the issue. Use synthetic values only — no
+real keys, tokens, receipts, evidence records, or customer data.
 -->
 
 1.

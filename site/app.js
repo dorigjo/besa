@@ -4,7 +4,7 @@
 (function () {
   "use strict";
 
-  var INSTALL_CMD = "npm install @dorigjo/besa";
+  var QUICK_START = "npm install @dorigjo/besa\nnpx besa demo";
   var currentLang = "en";
 
   function setLang(lang) {
@@ -32,12 +32,12 @@
     }
   }
 
-  function copyInstall(el) {
+  function copyQuickStart(el) {
     if (!navigator.clipboard) {
       return;
     }
     navigator.clipboard
-      .writeText(INSTALL_CMD)
+      .writeText(QUICK_START)
       .then(function () {
         el.classList.add("copied");
         window.setTimeout(function () {
@@ -46,7 +46,9 @@
         var status = document.getElementById("copy-status");
         if (status) {
           status.textContent =
-            currentLang === "de" ? "In die Zwischenablage kopiert." : "Copied to clipboard.";
+            currentLang === "de"
+              ? "Quick Start in die Zwischenablage kopiert."
+              : "Quick start copied to clipboard.";
         }
       })
       .catch(function () {
@@ -75,12 +77,12 @@
       return;
     }
     cmd.addEventListener("click", function () {
-      copyInstall(cmd);
+      copyQuickStart(cmd);
     });
     cmd.addEventListener("keydown", function (event) {
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
-        copyInstall(cmd);
+        copyQuickStart(cmd);
       }
     });
   }

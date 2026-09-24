@@ -120,6 +120,7 @@ try {
   }
 
   runBesa("binary help", ["--help"]);
+  runBesa("binary demo", ["demo"]);
   run(
     "SDK import",
     process.execPath,
@@ -150,14 +151,24 @@ try {
     "AUDIT_SCOPE.md",
     "SECURITY.md",
     "docs/AGENT_GATEWAY.md",
+    "docs/BESA_VS_IAM.md",
+    "docs/BESA_VS_MCP_AUTH.md",
+    "docs/BESA_VS_OBSERVABILITY.md",
     "docs/BENCHMARKS.md",
     "docs/EVIDENCE_ENVELOPE.md",
     "docs/HOSTED_VERIFIER.md",
     "docs/RUNTIME_ADMISSION.md",
+    "docs/SECURITY_CREDIBILITY.md",
     "docs/THREAT_MODEL.md",
+    "docs/adoption/DISCOVERY_AUDIT.md",
+    "docs/adoption/INTEGRATION_TARGETS.md",
+    "docs/assets/besa-architecture.svg",
     "examples/action-policy.yaml",
     "examples/consequential-mcp-middleware.ts",
+    "examples/generic-tool-wrapper.ts",
+    "examples/http-middleware.ts",
     "examples/hosted-verifier.env.example",
+    "scripts/traction-report.mjs",
     "conformance/golden-v1.json",
     "conformance/consequential-action-v1.json",
     "conformance/consequential-action-negative-v1.json",
@@ -253,8 +264,8 @@ try {
     ["install", "--ignore-scripts", "--no-audit", "--no-fund", tarball],
     upgradeRoot,
   );
-  if (JSON.parse(readFileSync(upgradePackageJson, "utf8")).version !== "1.1.0") {
-    throw new Error("local tarball did not upgrade Besa to 1.1.0");
+  if (JSON.parse(readFileSync(upgradePackageJson, "utf8")).version !== "1.1.1") {
+    throw new Error("local tarball did not upgrade Besa to 1.1.1");
   }
 
   console.log("PACKAGE SMOKE OK: tarball SDK/CLI install and v1 upgrade passed");

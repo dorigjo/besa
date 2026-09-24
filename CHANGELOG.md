@@ -4,6 +4,51 @@ All notable changes to this project are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-09-23
+
+Adoption and installed-demo patch. No protocol artifact, signature domain, SDK
+export, or existing CLI command changes. v1.0 and v1.1 artifacts remain
+compatible.
+
+### Added
+
+* `besa demo`, an installed-package exact-action demonstration that proves an
+  authenticated production-delete request is denied before its handler, then
+  signs and verifies the allowed staging-deploy path and linked evidence.
+* Focused generic TypeScript, HTTP-handler, and MCP integration references.
+* Factual Besa-vs-IAM, Besa-vs-MCP-Auth, and Besa-vs-observability guides plus a
+  compact security-credibility index.
+* Discovery audit, integration targets, measured distribution plan, architecture
+  SVG, media specification, and channel-specific v1.1 launch drafts.
+* `npm run traction`, a local public-API report for npm download windows,
+  GitHub stars/forks/issues, external issues, and the latest release. It embeds
+  no product telemetry and generates no traffic beyond those API reads.
+* A CLI regression test and package-surface assertion for `dist/demo.js`.
+
+### Changed
+
+* README and static site now lead with the precise boundary between IAM/OAuth/
+  MCP authentication and exact-action admission, using the protocol-correct
+  `DELETE production-db` denial example.
+* npm keywords and package contents now expose the current authorization,
+  security, integration, and evaluation surfaces without renaming the package.
+* Contributor and issue/PR templates now cover v1.1 artifacts, replay, evidence,
+  Hosted Verifier failures, feature-freeze rules, and all release gates.
+* Measured local benchmark values are visible from the README with methodology
+  and non-SLA limitations.
+
+### Fixed
+
+* Oversized Hosted Verifier requests now return the structured `413` response
+  without closing the connection while the client is still uploading the body.
+
+### Security
+
+* No independent third-party security audit has been completed.
+* Demo authentication is explicitly labeled as upstream input; Besa does not
+  claim to authenticate AWS identities or contact AWS.
+* Evidence and replay limitations remain unchanged and prominently documented.
+
 ## [1.1.0] - 2026-09-22
 
 Consequential Action Admission release. This release is additive: existing v1

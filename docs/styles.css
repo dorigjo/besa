@@ -15,6 +15,8 @@
   --sage:   #A8D5B5;
   --paper:  #F5F8F3;
   --ink:    #17281F;
+  --charcoal: #202624;
+  --deny:     #9B3F38;
 
   /* Semantic */
   --color-base:          var(--paper);
@@ -94,19 +96,23 @@ body {
 .site-header {
   margin: 0 auto;
   max-width: 760px;
+  min-width: 0;
   padding: 1.5rem 2rem 0;
+  width: 100%;
 }
 
 .nav {
   align-items: center;
   display: flex;
   justify-content: space-between;
+  min-width: 0;
 }
 
 .nav-brand {
   align-items: center;
   display: flex;
   gap: 0.75rem;
+  min-width: 0;
   text-decoration: none;
 }
 
@@ -122,7 +128,7 @@ body {
   font-feature-settings: "kern" 1, "liga" 1;
   font-size: 1.3rem;
   font-weight: 700;
-  letter-spacing: -0.03em;
+  letter-spacing: 0;
   line-height: 1;
 }
 
@@ -130,6 +136,7 @@ body {
 
 .lang-toggle {
   display: flex;
+  flex-shrink: 0;
   gap: 0.35rem;
 }
 
@@ -140,7 +147,7 @@ body {
   cursor: pointer;
   font-family: var(--font-mono);
   font-size: 0.68rem;
-  letter-spacing: 0.1em;
+  letter-spacing: 0;
   min-height: 44px;
   min-width: 44px;
   padding: 0 0.7rem;
@@ -175,7 +182,9 @@ body {
 main {
   margin: 0 auto;
   max-width: 760px;
+  min-width: 0;
   padding: 0 2rem 8rem;
+  width: 100%;
 }
 
 /* ─── Hero ────────────────────────────────────────────────────────────────── */
@@ -191,7 +200,7 @@ main {
   font-family: var(--font-mono);
   font-size: 0.68rem;
   font-weight: 600;
-  letter-spacing: 0.22em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -208,9 +217,9 @@ main {
   color: var(--color-authority);
   font-family: var(--font-serif);
   font-feature-settings: "kern" 1, "liga" 1;
-  font-size: clamp(4rem, 12vw, 7.5rem);
+  font-size: 7rem;
   font-weight: 700;
-  letter-spacing: -0.055em;
+  letter-spacing: 0;
   line-height: 1;
   margin-bottom: 1.5rem;
 }
@@ -220,9 +229,9 @@ main {
   color: var(--color-authority);
   font-family: var(--font-serif);
   font-feature-settings: "kern" 1, "liga" 1;
-  font-size: clamp(1.5rem, 3.5vw, 2.15rem);
+  font-size: 2.15rem;
   font-weight: 600;
-  letter-spacing: -0.025em;
+  letter-spacing: 0;
   line-height: 1.22;
   margin-bottom: 1.25rem;
   max-width: 580px;
@@ -237,6 +246,29 @@ main {
   max-width: 560px;
 }
 
+.hero-claim,
+.hero-sub,
+.problem-copy,
+.category-name,
+.category-desc,
+.artifact-desc,
+.status-copy,
+.footer-legal {
+  hyphens: none;
+  overflow-wrap: anywhere;
+}
+
+html[lang="de"] .hero-claim,
+html[lang="de"] .hero-sub,
+html[lang="de"] .problem-copy,
+html[lang="de"] .category-name,
+html[lang="de"] .category-desc,
+html[lang="de"] .artifact-desc,
+html[lang="de"] .status-copy,
+html[lang="de"] .footer-legal {
+  hyphens: auto;
+}
+
 /* ─── Pipeline Card ───────────────────────────────────────────────────────── */
 
 .pipeline-card {
@@ -244,6 +276,8 @@ main {
   border: 1px solid var(--color-border-strong);
   border-left: 3px solid var(--color-accent);
   margin-bottom: 2.75rem;
+  max-width: 100%;
+  min-width: 0;
   overflow-x: auto;
   padding: 1.6rem 1.8rem;
 }
@@ -320,7 +354,7 @@ main {
   font-family: var(--font-mono);
   font-size: 0.65rem;
   font-weight: 600;
-  letter-spacing: 0.22em;
+  letter-spacing: 0;
   margin-bottom: 1.4rem;
   text-transform: uppercase;
 }
@@ -328,7 +362,8 @@ main {
 /* ─── Problem (full-bleed forest band) ───────────────────────────────────── */
 
 .problem {
-  background: var(--color-authority);
+  background: var(--charcoal);
+  border-top: 3px solid var(--deny);
   margin-left: -2rem;
   margin-right: -2rem;
   padding: 5rem 2rem;
@@ -342,7 +377,7 @@ main {
   color: var(--color-on-dark);
   font-family: var(--font-serif);
   font-feature-settings: "kern" 1, "liga" 1;
-  font-size: clamp(1.2rem, 2.8vw, 1.55rem);
+  font-size: 1.55rem;
   font-weight: 500;
   line-height: 1.55;
   max-width: 560px;
@@ -365,9 +400,9 @@ main {
   color: var(--color-authority);
   font-family: var(--font-serif);
   font-feature-settings: "kern" 1, "liga" 1;
-  font-size: clamp(1.9rem, 4.5vw, 3.1rem);
+  font-size: 3.1rem;
   font-weight: 700;
-  letter-spacing: -0.03em;
+  letter-spacing: 0;
   line-height: 1.1;
   margin-bottom: 1.25rem;
 }
@@ -407,7 +442,7 @@ main {
 /* ─── Terminal Card (CLI section) ─────────────────────────────────────────── */
 
 .terminal-card {
-  background: var(--color-authority);
+  background: var(--charcoal);
   border-left: 3px solid var(--color-accent-on-dark);
   margin-top: 0.5rem;
   overflow-x: auto;
@@ -498,7 +533,7 @@ main {
   color: var(--color-text-muted);
   font-family: var(--font-mono);
   font-size: 0.72rem;
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
 }
 
 .footer-legal {
@@ -578,11 +613,11 @@ main {
   }
 
   .hero-brand {
-    font-size: clamp(3.2rem, 19vw, 5rem);
+    font-size: 4rem;
   }
 
   .hero-claim {
-    font-size: clamp(1.35rem, 7.5vw, 1.9rem);
+    font-size: 1.5rem;
   }
 
   .hero-sub {
@@ -598,6 +633,9 @@ main {
 
   .pipeline-flow {
     font-size: 0.78rem;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
   }
 
   .hero-cta {
@@ -608,8 +646,9 @@ main {
 
   .install-cmd {
     font-size: 0.8rem;
-    overflow-x: auto;
+    overflow-wrap: anywhere;
     padding: 0.7rem 1rem;
+    white-space: pre-wrap;
     width: 100%;
   }
 
@@ -637,5 +676,8 @@ main {
   .terminal-card pre,
   .receipt-card pre {
     font-size: 0.78rem;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
   }
 }

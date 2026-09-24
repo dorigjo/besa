@@ -127,11 +127,11 @@ The repository includes a two-stage, non-root Docker image. It installs from
 plus production dependencies only.
 
 ```bash
-docker build --pull --tag besa:1.1.0 .
+docker build --pull --tag besa:1.1.1 .
 docker run --rm --read-only \
   --tmpfs /tmp:rw,noexec,nosuid,size=16m \
   --publish 127.0.0.1:8787:8787 \
-  besa:1.1.0
+  besa:1.1.1
 ```
 
 The image defaults to `serve --host 0.0.0.0` so the published container port
@@ -145,7 +145,7 @@ policy.
 docker run --rm --read-only \
   --publish 127.0.0.1:8787:8787 \
   --mount type=bind,src="$PWD/verifier-trust.json",dst=/run/besa/trust.json,readonly \
-  besa:1.1.0 serve --host 0.0.0.0 --action-trust /run/besa/trust.json
+  besa:1.1.1 serve --host 0.0.0.0 --action-trust /run/besa/trust.json
 ```
 
 ### Signed action admission
@@ -164,7 +164,7 @@ docker run --rm --read-only \
   --env BESA_KEY_PASSPHRASE \
   --env BESA_ADMISSION_TOKEN \
   --env BESA_ADMISSION_ISSUER_ID=besa:hosted-verifier \
-  besa:1.1.0 serve --host 0.0.0.0 --trust /run/besa/trust.json \
+  besa:1.1.1 serve --host 0.0.0.0 --trust /run/besa/trust.json \
     --action-policy /run/besa/policy.yaml
 ```
 

@@ -1,0 +1,78 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Besa exact-action admission architecture</title>
+  <desc id="desc">An agent authenticates through IAM, OAuth, or MCP Auth before Besa decides whether an exact consequential action may execute and records signed evidence.</desc>
+  <rect width="1200" height="630" fill="#F5F8F3"/>
+
+  <g font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+    <text x="72" y="76" fill="#1B3A2D" font-family="Georgia, serif" font-size="38" font-weight="700">Besa</text>
+    <text x="72" y="112" fill="#3E5A4C" font-size="20">Cryptographic admission and evidence for consequential AI-agent actions.</text>
+
+    <g transform="translate(72 158)">
+      <rect width="210" height="92" rx="6" fill="#FFFFFF" stroke="#A8B5AE" stroke-width="2"/>
+      <text x="105" y="40" text-anchor="middle" fill="#17281F" font-size="18" font-weight="700">AI agent</text>
+      <text x="105" y="67" text-anchor="middle" fill="#556E61" font-size="14">proposes an action</text>
+    </g>
+
+    <path d="M294 204 H340" stroke="#556E61" stroke-width="2.5"/>
+    <path d="M340 204 l-10 -7 v14 z" fill="#556E61"/>
+
+    <g transform="translate(352 158)">
+      <rect width="220" height="92" rx="6" fill="#FFFFFF" stroke="#A8B5AE" stroke-width="2"/>
+      <text x="110" y="36" text-anchor="middle" fill="#17281F" font-size="17" font-weight="700">IAM / OAuth / MCP Auth</text>
+      <text x="110" y="64" text-anchor="middle" fill="#556E61" font-size="14">WHO may connect?</text>
+    </g>
+
+    <path d="M584 204 H630" stroke="#556E61" stroke-width="2.5"/>
+    <path d="M630 204 l-10 -7 v14 z" fill="#556E61"/>
+
+    <g transform="translate(642 146)">
+      <rect width="238" height="116" rx="6" fill="#1B3A2D"/>
+      <path d="M28 24 H52 L64 47 L52 70 H28 L16 47 Z" fill="#A8D5B5" fill-opacity="0.14" stroke="#A8D5B5" stroke-width="2"/>
+      <path d="M46 34 V60" stroke="#EAF3EA" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M26 37 L36 47 L26 57" fill="none" stroke="#A8D5B5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="82" y="46" fill="#FFFFFF" font-size="21" font-weight="700">Besa</text>
+      <text x="82" y="73" fill="#D7E8DB" font-size="14">MAY THIS EXACT ACTION</text>
+      <text x="82" y="94" fill="#D7E8DB" font-size="14">EXECUTE?</text>
+    </g>
+
+    <path d="M892 204 H938" stroke="#556E61" stroke-width="2.5"/>
+    <path d="M938 204 l-10 -7 v14 z" fill="#556E61"/>
+
+    <g transform="translate(950 158)">
+      <rect width="178" height="92" rx="6" fill="#FFFFFF" stroke="#A8B5AE" stroke-width="2"/>
+      <text x="89" y="38" text-anchor="middle" fill="#17281F" font-size="17" font-weight="700">Consequential tool</text>
+      <text x="89" y="65" text-anchor="middle" fill="#556E61" font-size="14">ALLOW only</text>
+    </g>
+
+    <line x1="72" y1="306" x2="1128" y2="306" stroke="#CAD3CD" stroke-width="1"/>
+
+    <text x="72" y="354" fill="#17281F" font-size="17" font-weight="700">EXACT-ACTION CONTRACT</text>
+    <text x="72" y="384" fill="#3E5A4C" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="15">WHO  ·  WHAT  ·  RESOURCE  ·  CONSTRAINTS  ·  EXPIRY  ·  DELEGATION</text>
+
+    <g transform="translate(72 420)">
+      <rect width="676" height="142" rx="6" fill="#FFFFFF" stroke="#A8B5AE" stroke-width="2"/>
+      <text x="24" y="34" fill="#556E61" font-size="13" font-weight="700">UPSTREAM</text>
+      <text x="170" y="34" fill="#17281F" font-size="15">AWS credentials accepted</text>
+      <text x="24" y="68" fill="#556E61" font-size="13" font-weight="700">CONTRACT</text>
+      <text x="170" y="68" fill="#17281F" font-size="15">DEPLOY commit abc123 to staging</text>
+      <text x="24" y="102" fill="#556E61" font-size="13" font-weight="700">REQUEST</text>
+      <text x="170" y="102" fill="#17281F" font-size="15">DELETE database:production-db</text>
+      <text x="24" y="128" fill="#556E61" font-size="13" font-weight="700">EXECUTOR</text>
+      <text x="170" y="128" fill="#17281F" font-size="15">not called</text>
+    </g>
+
+    <path d="M760 491 H804" stroke="#556E61" stroke-width="2.5"/>
+    <path d="M804 491 l-10 -7 v14 z" fill="#556E61"/>
+
+    <g transform="translate(816 420)">
+      <rect width="312" height="142" rx="6" fill="#FFF7F6" stroke="#B3473E" stroke-width="2"/>
+      <text x="24" y="38" fill="#8F2F28" font-size="28" font-weight="800">DENY</text>
+      <text x="24" y="68" fill="#8F2F28" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="15">ACTION_NOT_GRANTED</text>
+      <line x1="24" y1="88" x2="288" y2="88" stroke="#E7C2BE"/>
+      <text x="24" y="115" fill="#3E5A4C" font-size="14">Signed capability + action hash</text>
+      <text x="24" y="135" fill="#3E5A4C" font-size="14">Verified evidence on allowed execution</text>
+    </g>
+
+    <text x="72" y="602" fill="#556E61" font-size="13">Open protocol · TypeScript SDK and CLI · Self-hosted verifier · No hosted Besa service required</text>
+  </g>
+</svg>

@@ -72,6 +72,7 @@ import {
   openKeyPair,
   sealKeyPair,
 } from "./keystore.js";
+import { runDemo } from "./demo.js";
 
 const BESA_DIR = ".besa";
 const KEY_PATH = join(BESA_DIR, "key.json");
@@ -96,6 +97,7 @@ const FLAGS_WITH_VALUES = new Set([
   "--host",
 ]);
 const COMMAND_FLAGS: Record<string, ReadonlySet<string>> = {
+  demo: new Set(),
   keys: new Set(["--trust", "--key-file", "--passphrase-file"]),
   trust: new Set(["--trust"]),
   load: new Set(),
@@ -1102,13 +1104,14 @@ function readVersion(): string {
 function usage(): void {
   console.log(
     [
-      "Besa - cryptographic admission and evidence infrastructure for AI-agent execution",
+      "Besa - cryptographic admission and evidence for consequential AI-agent actions",
       "",
       "Usage:",
       "  besa <command> [arguments] [options]",
       "  besa --help | --version",
       "",
       "Commands:",
+      "  demo                 Run the exact-action deny/allow demonstration",
       "  keys                 Show the local signing key, generating one if absent",
       "  keys rotate          Rotate the signing key and emit a signed rotation proof",
       "  keys fingerprint     Print the local public key's SHA-256 fingerprint",
@@ -1156,6 +1159,7 @@ function usage(): void {
       "                       Capability issuer id for action admission (environment; default: besa:hosted-verifier)",
       "",
       "Examples:",
+      "  besa demo",
       "  besa keys",
       "  besa sign examples/manifest.yaml",
       "  besa trust add examples/manifest.signed.json --trust consumer-trust.json",
@@ -1196,7 +1200,7 @@ function requireArgs(
   }
 }
 
-function main(argv: string[]): void {
+async function main(argv: string[]): Promise<void> {
   const command = argv[0] ?? "";
 
   try {
@@ -1204,6 +1208,11 @@ function main(argv: string[]): void {
     const args = positionals(argv.slice(1), allowedFlags);
 
     switch (command) {
+      case "demo":
+        requireArgs(args, 0, command);
+        await runDemo();
+        break;
+
       case "keys":
         requireArgs(args, 0, command, 1);
         cmdKeys(args[0]);
@@ -1280,4 +1289,4 @@ function main(argv: string[]): void {
   }
 }
 
-main(process.argv.slice(2));
+void main(process.argv.slice(2));

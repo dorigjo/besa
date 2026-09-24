@@ -23,7 +23,8 @@ npm run smoke:server
 - [ ] Full tests include strict schemas, malformed keys, mutation, expiry,
       replay, delegation narrowing, runtime failures, and HTTP abuse cases.
 - [ ] Frozen v1.0 plus v1.1 positive and negative conformance vectors pass.
-- [ ] All four consequence demos produce the expected allow/deny behavior.
+- [ ] The demo denies the mismatched production action without calling its
+      executor, then signs and verifies the allowed path and evidence.
 - [ ] Benchmark output records environment, method, median, p95, and p99.
 - [ ] Compile-checked examples use only the public SDK.
 - [ ] The canonical v1 Receipt remains identical on every public surface.
@@ -54,13 +55,14 @@ npm publish --dry-run --access public
 ```
 
 - [ ] Packed SDK and `besa` CLI install in an empty project.
+- [ ] `npx besa demo` succeeds from that clean tarball installation.
 - [ ] Upgrade smoke installs the immutable previous Git version, then the local
-      v1.1 tarball, and confirms legacy plus additive exports.
+      v1.1.1 tarball, and confirms legacy plus additive exports.
 - [ ] Required Docker, documentation, examples, launch notes, and conformance
       files are present.
 - [ ] `src/`, `dist/tests/`, `.besa/`, private keys, operational trust stores,
       receipts, evidence logs, local projects, and tarballs are absent.
-- [ ] Dry-run names exactly `@dorigjo/besa@1.1.0` and reports no bin warning.
+- [ ] Dry-run names exactly `@dorigjo/besa@1.1.1` and reports no bin warning.
 
 ## Supply chain
 
@@ -101,10 +103,10 @@ Only after every gate is green and npm authentication is confirmed:
 
 ```powershell
 npm whoami
-git commit -m "Release v1.1.0"
+git commit -m "Release v1.1.1"
 git push origin main
 npm publish --access public
-npm view @dorigjo/besa@1.1.0 version dist.integrity dist.shasum
+npm view @dorigjo/besa@1.1.1 version dist.integrity dist.shasum
 ```
 
 Create and push a Git tag or GitHub Release only as a separate, explicitly

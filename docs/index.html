@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Besa — Exact-action admission &amp; evidence for AI agents</title>
-  <meta name="description" content="Besa binds principal, agent, authority, operation, resource, constraints, expiry, and nonce into signed capabilities and evidence for consequential AI-agent actions." />
+  <title>Besa — Cryptographic admission for consequential AI-agent actions</title>
+  <meta name="description" content="Open-source TypeScript authorization for exact consequential AI-agent and MCP actions, with signed capabilities, replay protection, and verifiable evidence." />
   <meta name="theme-color" content="#1B3A2D" />
   <meta name="color-scheme" content="light" />
   <link rel="canonical" href="https://dorigjo.github.io/besa/" />
@@ -13,13 +13,13 @@
 
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Besa" />
-  <meta property="og:title" content="Besa — Exact-action admission &amp; evidence for AI agents" />
-  <meta property="og:description" content="Signed, fail-closed authorization and evidence for the exact action an AI agent is about to execute." />
+  <meta property="og:title" content="Besa — Cryptographic admission for consequential AI-agent actions" />
+  <meta property="og:description" content="Identity says who the agent is. Besa decides whether this exact consequential action may execute." />
   <meta property="og:url" content="https://dorigjo.github.io/besa/" />
   <meta property="og:image" content="https://dorigjo.github.io/besa/logo.svg" />
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="Besa — Exact-action admission &amp; evidence for AI agents" />
-  <meta name="twitter:description" content="Signed, fail-closed authorization and evidence for the exact action an AI agent is about to execute." />
+  <meta name="twitter:title" content="Besa — Cryptographic admission for consequential AI-agent actions" />
+  <meta name="twitter:description" content="Identity says who the agent is. Besa decides whether this exact consequential action may execute." />
   <meta name="twitter:image" content="https://dorigjo.github.io/besa/logo.svg" />
 </head>
 <body>
@@ -41,38 +41,40 @@
 
     <section class="hero">
       <span class="category-eyebrow"
-            data-en="Exact-Action Admission &amp; Evidence"
-            data-de="Zulassung und Nachweis exakter Aktionen">Exact-Action Admission &amp; Evidence</span>
+            data-en="AI-Agent Authorization at the Execution Boundary"
+            data-de="KI-Agenten-Autorisierung an der Ausführungsgrenze">AI-Agent Authorization at the Execution Boundary</span>
       <div class="hero-rule" aria-hidden="true"></div>
       <h1 class="hero-brand">Besa</h1>
       <p class="hero-claim"
-         data-en="Exact-action authorization before consequential AI-agent execution."
-         data-de="Autorisierung exakter Aktionen vor folgenreicher KI-Agenten-Ausführung.">
-        Exact-action authorization before consequential AI-agent execution.
+         data-en="Cryptographic admission and evidence for consequential AI-agent actions."
+         data-de="Kryptografische Zulassung und Nachweise für folgenreiche KI-Agenten-Aktionen.">
+        Cryptographic admission and evidence for consequential AI-agent actions.
       </p>
       <p class="hero-sub"
-         data-en="After identity and before the side effect, Besa binds the principal, agent, authority, operation, resource, constraints, expiry, and nonce. It issues a signed allow or deny capability, then links the result to signed evidence."
-         data-de="Nach der Identitätsprüfung und vor dem Seiteneffekt bindet Besa Principal, Agent, Autorität, Operation, Ressource, Constraints, Ablaufzeit und Nonce. Es stellt eine signierte Allow- oder Deny-Capability aus und verknüpft anschließend das Ergebnis mit signiertem Nachweis.">
-        After identity and before the side effect, Besa binds the principal, agent, authority, operation, resource, constraints, expiry, and nonce. It issues a signed allow or deny capability, then links the result to signed evidence.
+         data-en="Identity tells you who the agent is. Besa verifies whether this exact operation, resource, and argument set may execute now, then signs evidence of the admitted action and supplied result."
+         data-de="Identität sagt, wer der Agent ist. Besa prüft, ob genau diese Operation, Ressource und Argumentmenge jetzt ausgeführt werden darf, und signiert anschließend den Nachweis der zugelassenen Aktion und des gelieferten Ergebnisses.">
+        Identity tells you who the agent is. Besa verifies whether this exact operation, resource, and argument set may execute now, then signs evidence of the admitted action and supplied result.
       </p>
       <div class="pipeline-card">
-        <pre class="pipeline-flow">ActionEnvelopeV1
-  ↓  exact policy + narrowed delegation
-  ↓  signed ActionCapability → allow / deny
-  ↓  replay-enforced execution
-  ↓  signed EvidenceEnvelope → independently verifiable</pre>
+        <pre class="pipeline-flow">Agent
+  ↓  IAM / OAuth / MCP Auth
+Besa exact-action admission
+  ↓  ALLOW only
+Consequential action
+  ↓  signed, linked evidence</pre>
       </div>
       <div class="hero-cta">
         <pre class="install-cmd"
              id="install-cmd"
              role="button"
              tabindex="0"
-             aria-label="Copy install command: npm install @dorigjo/besa">npm install @dorigjo/besa</pre>
+             aria-label="Copy quick start commands: npm install @dorigjo/besa and npx besa demo">npm install @dorigjo/besa
+npx besa demo</pre>
         <span id="copy-status" class="visually-hidden" role="status" aria-live="polite"></span>
         <a class="spec-link"
            href="https://github.com/dorigjo/besa"
-           data-en="Read the spec →"
-           data-de="Spezifikation lesen →">Read the spec →</a>
+           data-en="Source, spec, and threat model →"
+           data-de="Quellcode, Spezifikation und Bedrohungsmodell →">Source, spec, and threat model →</a>
       </div>
     </section>
 
@@ -81,9 +83,9 @@
             data-en="The problem"
             data-de="Das Problem">The problem</span>
       <p class="problem-copy"
-         data-en="Authentication says who connected. Tool permissions say what may be called. Neither proves whether this exact payment, deployment, message, or database mutation was authorized under these exact constraints, nor links the outcome to that decision."
-         data-de="Authentifizierung sagt, wer verbunden ist. Tool-Berechtigungen sagen, was aufgerufen werden darf. Beides beweist nicht, ob genau diese Zahlung, dieses Deployment, diese Nachricht oder Datenbankmutation unter genau diesen Constraints autorisiert war, und verknüpft das Ergebnis nicht mit dieser Entscheidung.">
-        Authentication says who connected. Tool permissions say what may be called. Neither proves whether this exact payment, deployment, message, or database mutation was authorized under these exact constraints, nor links the outcome to that decision.
+         data-en="An agent has valid AWS credentials. Its signed contract permits DEPLOY to staging. It requests DELETE production-db. IAM accepted the identity; Besa returns DENY ACTION_NOT_GRANTED and the executor is not called."
+         data-de="Ein Agent hat gültige AWS-Zugangsdaten. Sein signierter Vertrag erlaubt DEPLOY nach Staging. Er fordert DELETE production-db an. IAM hat die Identität akzeptiert; Besa antwortet mit DENY ACTION_NOT_GRANTED und der Executor wird nicht aufgerufen.">
+        An agent has valid AWS credentials. Its signed contract permits DEPLOY to staging. It requests DELETE production-db. IAM accepted the identity; Besa returns DENY ACTION_NOT_GRANTED and the executor is not called.
       </p>
     </section>
 
@@ -92,12 +94,12 @@
             data-en="The category"
             data-de="Die Kategorie">The category</span>
       <h2 class="category-name"
-          data-en="Approve. Enforce. Prove."
-          data-de="Genehmigen. Durchsetzen. Beweisen.">Approve. Enforce. Prove.</h2>
+          data-en="Identity answers who. Besa decides this action."
+          data-de="Identität beantwortet wer. Besa entscheidet diese Aktion.">Identity answers who. Besa decides this action.</h2>
       <p class="category-desc"
-         data-en="Besa sits after identity and before the side effect. It evaluates exact action envelopes, verifies narrowed delegation, fails closed on mismatch or replay, and signs capabilities plus post-action evidence."
-         data-de="Besa sitzt nach der Identitätsprüfung und vor dem Seiteneffekt. Es bewertet exakte Action Envelopes, prüft eingeschränkte Delegation, schlägt bei Abweichung oder Replay geschlossen fehl und signiert Capabilities sowie nachgelagerte Ausführungsnachweise.">
-        Besa sits after identity and before the side effect. It evaluates exact action envelopes, verifies narrowed delegation, fails closed on mismatch or replay, and signs capabilities plus post-action evidence.
+         data-en="Besa sits after identity and immediately before the side effect. It evaluates an exact Action Envelope, verifies the signed capability and optional narrowed delegation, consumes replay state, and records signed result evidence."
+         data-de="Besa sitzt nach der Identitätsprüfung und unmittelbar vor dem Seiteneffekt. Es bewertet ein exaktes Action Envelope, prüft die signierte Capability und optional eingeschränkte Delegation, konsumiert Replay-State und zeichnet signierte Ergebnisnachweise auf.">
+        Besa sits after identity and immediately before the side effect. It evaluates an exact Action Envelope, verifies the signed capability and optional narrowed delegation, consumes replay state, and records signed result evidence.
       </p>
     </section>
 
@@ -120,53 +122,50 @@
     </section>
 
     <section class="cli reveal">
-      <span class="section-label">CLI + Self-hosted Verifier</span>
+      <span class="section-label">Try the real deny / allow path</span>
       <div class="terminal-card">
         <pre>npm install @dorigjo/besa
+npx besa demo
 
-npx besa --help
+# DENY ACTION_NOT_GRANTED
+# executor called: no
+# ALLOW ACTION_ALLOWED
+# evidence verification: EVIDENCE_VALID
 
+# Optional self-hosted verifier
 besa serve --port 8787 --action-trust verifier-trust.json
-
-# Admission mode also requires BESA_ADMISSION_TOKEN
-besa serve --port 8787 --trust issuer-trust.json \
-  --key-file .besa/key.json \
-  --action-policy examples/action-policy.yaml</pre>
+</pre>
       </div>
     </section>
 
     <section class="artifact reveal">
       <span class="section-label"
-            data-en="The artifact"
-            data-de="Das Artefakt">The artifact</span>
+            data-en="The exact-action contract"
+            data-de="Der Vertrag für die exakte Aktion">The exact-action contract</span>
       <p class="artifact-desc"
-         data-en="v1.1 adds signed action capabilities and linked result evidence without changing the stable v1 receipt below. Existing verifiers remain compatible."
-         data-de="v1.1 ergänzt signierte Action Capabilities und verknüpfte Ergebnisnachweise, ohne den stabilen v1-Receipt unten zu verändern. Bestehende Verifier bleiben kompatibel.">
-        v1.1 adds signed action capabilities and linked result evidence without changing the stable v1 receipt below. Existing verifiers remain compatible.
+         data-en="A capability is valid only for the canonical action hash it signs. Change the operation, resource, arguments, constraints, expiry, nonce, or delegation and the authorization link no longer matches."
+         data-de="Eine Capability gilt nur für den kanonischen Action-Hash, den sie signiert. Werden Operation, Ressource, Argumente, Constraints, Ablaufzeit, Nonce oder Delegation geändert, stimmt die Autorisierungsverknüpfung nicht mehr.">
+        A capability is valid only for the canonical action hash it signs. Change the operation, resource, arguments, constraints, expiry, nonce, or delegation and the authorization link no longer matches.
       </p>
       <div class="receipt-card">
-        <pre>{
-  "artifactVersion": 1,
-  "receiptId": "rcpt_2d7942c7-8f70-4984-9c3f-24876acfd860",
-  "manifestHash": "ea7e9ca22d199f40281cdf9e5d6145440c6c7d6bfbe94157c4b1da5527054410",
-  "toolName": "crm.lookup",
-  "decision": "allow",
-  "reasonCode": "ALLOWED",
-  "timestamp": "2026-06-19T10:00:00.000Z",
-  "requestHash": "b27b80d1227c167a6fca199778645daa77d20a8087782fc48802d11d6281c920",
-  "publicKeyId": "f68668614543c4896cf8cee418492f1a4df1f1acdba8850f94728b8a94cf90fe",
-  "algorithm": "ed25519",
-  "signature": "&lt;base64-ed25519-signature&gt;"
-}</pre>
+        <pre>WHO          principal + agent
+WHAT         tool + operation
+RESOURCE     exact target
+CONSTRAINTS  arguments + limits
+EXPIRY       bounded time + nonce
+DELEGATION   narrowed authority chain
+
+RESULT       signed ALLOW or DENY
+EVIDENCE     action hash + supplied result hash</pre>
       </div>
     </section>
 
     <section class="status reveal">
       <span class="section-label">Status</span>
       <p class="status-copy"
-         data-en="v1.1.0. Local library, MCP middleware, and a production-oriented self-hosted HTTP verifier with health/readiness probes, request limits, rate limiting, token-protected admission, keyless verification mode, Docker deployment, tests, and conformance vectors. Besa does not operate an official public verifier instance. No independent third-party security audit has been performed yet."
-         data-de="v1.1.0. Lokale Library, MCP-Middleware und ein produktionsnaher, selbst hostbarer HTTP-Verifier mit Health-/Readiness-Probes, Request-Limits, Rate-Limiting, token-geschützter Admission, keylosem Verifikationsmodus, Docker-Deployment, Tests und Conformance-Vektoren. Besa betreibt keine offizielle öffentliche Verifier-Instanz. Ein unabhängiges Sicherheitsaudit wurde noch nicht durchgeführt.">
-        v1.1.0. Local library, MCP middleware, and a production-oriented self-hosted HTTP verifier with health/readiness probes, request limits, rate limiting, token-protected admission, keyless verification mode, Docker deployment, tests, and conformance vectors. Besa does not operate an official public verifier instance. No independent third-party security audit has been performed yet.
+         data-en="v1.1 protocol. Local SDK and CLI, MCP middleware, and a production-oriented self-hosted HTTP verifier with health/readiness probes, request limits, rate limiting, token-protected admission, keyless verification mode, Docker deployment, tests, and conformance vectors. Besa does not operate an official public verifier instance. No independent third-party security audit has been performed."
+         data-de="v1.1-Protokoll. Lokales SDK und CLI, MCP-Middleware und ein produktionsnaher, selbst hostbarer HTTP-Verifier mit Health-/Readiness-Probes, Request-Limits, Rate-Limiting, token-geschützter Admission, keylosem Verifikationsmodus, Docker-Deployment, Tests und Conformance-Vektoren. Besa betreibt keine offizielle öffentliche Verifier-Instanz. Eine unabhängige Sicherheitsprüfung durch Dritte wurde nicht durchgeführt.">
+        v1.1 protocol. Local SDK and CLI, MCP middleware, and a production-oriented self-hosted HTTP verifier with health/readiness probes, request limits, rate limiting, token-protected admission, keyless verification mode, Docker deployment, tests, and conformance vectors. Besa does not operate an official public verifier instance. No independent third-party security audit has been performed.
       </p>
       <a class="source-link"
          href="https://github.com/dorigjo/besa"

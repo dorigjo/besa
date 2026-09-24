@@ -2,61 +2,86 @@
 
 **Cryptographic admission and evidence for consequential AI-agent actions.**
 
-Authenticate the agent elsewhere. Besa decides whether this exact action may
-execute under these exact constraints, then leaves independently verifiable
-evidence of the decision and supplied result.
+Identity tells you **who** the agent is. Besa answers whether **this exact
+action** may execute, under which constraints, and leaves signed evidence of
+the decision and supplied result.
 
 [![CI](https://github.com/dorigjo/besa/actions/workflows/ci.yml/badge.svg)](https://github.com/dorigjo/besa/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/@dorigjo/besa)](https://www.npmjs.com/package/@dorigjo/besa)
 
 ```text
-Agent / automation
-        |
-existing identity + authentication
-        |
-        v
-      Besa  <--- exact action boundary
-        |
-deterministic ALLOW / DENY + signed capability
-        |
-        v
-Tool / API / database / deployment / external payment rail
-        |
-signed, linked action evidence
+Agent
+  |
+IAM / OAuth / MCP Auth        Who may reach the system?
+  |
+  v
+Besa                          May this exact action execute?
+  |
+  v
+Consequential action          Deploy, delete, transfer, privileged tool call
+  |
+  v
+Cryptographic evidence        What was admitted and what result was supplied?
 ```
 
-Besa is a small TypeScript protocol implementation, CLI, SDK, and self-hosted
-HTTP verifier. Local use needs no account and no remote Besa service.
-
-## 30-second demo
-
-```bash
-git clone https://github.com/dorigjo/besa
-cd besa
-npm install
-npm run demo
-```
-
-The demo runs four concrete paths:
+An agent has valid AWS credentials. Its signed action contract permits
+`DEPLOY` to `staging`. It asks to `DELETE production-db`.
 
 ```text
-Production deployment (unreviewed commit): DENY CONSTRAINT_VIOLATION
-Production deployment (approved commit): ALLOW <signed capability>
-Destructive database delete (staging): ALLOW <signed capability>
-Destructive database delete (production): DENY RESOURCE_NOT_GRANTED
-External payment rail mock (EUR 100 to merchant-123): ALLOW <signed capability>
-MCP authentication: accepted by the example transport
-Privileged MCP action: DENY ACTION_NOT_GRANTED
+AWS identity and access:  ACCEPTED
+Besa exact-action check:  DENY ACTION_NOT_GRANTED
+Executor called:          no
 ```
 
-It then verifies the linked action evidence. Nothing moves money, deploys code,
-or touches a database; those are explicit mock execution boundaries.
+AWS IAM remains responsible for identity and cloud access. Besa sits at the
+last application-controlled boundary before execution and verifies the signed,
+exact-action authorization.
+
+## Try Besa in 60 seconds
+
+```bash
+npm install @dorigjo/besa
+npx besa demo
+```
+
+The command runs a real local deny/allow path:
+
+```text
+AUTHENTICATED != AUTHORIZED FOR THIS EXACT ACTION
+
+ACTION
+agent: agent:deploy-agent
+operation: delete
+resource: database:production-db
+authorized contract: deploy commit abc123 to environment:staging
+
+RESULT
+DENY
+ACTION_NOT_GRANTED
+executor called: no
+
+ACTION
+agent: agent:deploy-agent
+operation: deploy
+resource: environment:staging
+
+RESULT
+ALLOW
+ACTION_ALLOWED
+executor called: yes
+signed capability: cap_<uuid>
+action hash: <sha256>
+evidence verification: EVIDENCE_VALID
+```
+
+The demo generates Ed25519 keys in memory, signs and verifies the exact-action
+capability, blocks the denied handler, executes the allowed mock handler, and
+verifies the linked evidence. It does not contact AWS or mutate infrastructure.
 
 ## Why authentication is not enough
 
-Authentication can establish that `agent:release` reached a service. A broad
-cloud or MCP permission may establish that it can call a deployment tool.
-Neither answers:
+Authentication can establish that an agent reached a service. Broad cloud or
+MCP permissions can establish that it may call a tool. Neither proves:
 
 ```text
 May this agent deploy commit abc123 from repository dorigjo/besa
@@ -64,31 +89,22 @@ to production, with risk <= 20, before this expiry, exactly once?
 ```
 
 Besa represents that question as a canonical Action Envelope. A deterministic
-policy produces a signed Action Capability for the exact hash, resource,
+policy produces a signed Action Capability bound to the action hash, resource,
 constraints, expiry, and nonce. The runtime verifies it immediately before the
 handler and records signed evidence afterward.
 
 ## Why a separate protocol
 
 A cloud provider, identity vendor, MCP gateway, or customer can implement the
-same control in its own stack. Besa's useful boundary is not exclusive code; it
-is a provider-neutral artifact contract that can cross identity systems, agent
-frameworks, tools, and execution rails. Frozen formats, public conformance
-vectors, and keyless verification let a different party verify the decision
-without trusting the executor's private log format.
+same control. Besa provides a provider-neutral artifact contract that can cross
+identity systems, agent frameworks, tools, and execution rails. Frozen formats,
+public conformance vectors, and keyless verification let another party verify
+the decision without depending on the executor's private log format.
 
 That value depends on correct integration and real adoption. v1.1 is an
 unaudited open-source implementation and conformance surface, not an industry
 standard, certification, or claim that vendor-native controls are insufficient
-for every deployment.
-
-## Install
-
-```bash
-npm install @dorigjo/besa
-```
-
-Requires Node.js 20 or later and uses ESM modules.
+for every deployment. Besa uses ESM modules and requires Node.js 20 or later.
 
 ## The v1.1 protocol
 
@@ -98,6 +114,27 @@ Requires Node.js 20 or later and uses ESM modules.
 | `DelegationV1` | Signed, narrowing authority from a trusted root to an agent. A child cannot broaden its parent. |
 | `ActionCapabilityV1` | Signed allow or deny bound to the exact action and policy decision. |
 | `ActionEvidenceV1` | Signed link from action and allow capability to the supplied execution result. |
+
+```mermaid
+flowchart LR
+  A[Proposed Action] --> C[Action Contract]
+  C --> D[Admission]
+  D -->|ALLOW only| X[Execution]
+  X --> E[Signed Evidence]
+  E --> V[Independent Verification]
+```
+
+An exact action contract binds all security-relevant dimensions:
+
+```mermaid
+flowchart LR
+  W[WHO<br/>principal + agent] --> C[Exact Action Contract]
+  A[WHAT<br/>tool + operation] --> C
+  R[RESOURCE] --> C
+  N[CONSTRAINTS] --> C
+  E[EXPIRY + NONCE] --> C
+  D[DELEGATION] --> C
+```
 
 All artifacts use strict schemas, bounded canonical JSON, SHA-256 identities,
 domain-separated Ed25519 signatures, and stable machine-readable reason codes.
@@ -145,6 +182,12 @@ verification semantics.
 customer-owned atomic `ReplayStore` for durable or distributed replay
 protection. Besa fails closed when `replayRequirement: "enforce"` cannot be met.
 
+Copy-paste reference boundaries:
+
+- [Generic TypeScript tool wrapper](examples/generic-tool-wrapper.ts)
+- [Node HTTP middleware](examples/http-middleware.ts)
+- [Consequential MCP middleware](examples/consequential-mcp-middleware.ts)
+
 ## MCP reference integration
 
 `withBesaMcp` additionally binds the Action Envelope's tool and request hash to
@@ -190,16 +233,38 @@ See [Hosted Verifier](docs/HOSTED_VERIFIER.md) for endpoints, container commands
 secrets, reverse-proxy requirements, and failure behavior. v1.1 ships no public
 Besa-operated instance.
 
-## Consequential-action examples
+## Three consequential-action boundaries
 
-| Scenario | Exact boundary demonstrated |
+### 1. Privileged cloud actions
+
+Bind the agent, operation, cloud resource, environment, commit, expiry, and
+nonce before deploy, infrastructure deletion, IAM mutation, or secret rotation.
+A staging deployment capability cannot authorize deletion of `production-db`.
+
+### 2. Agent money movement
+
+Bind the exact recipient, amount, currency, account, expiry, and delegation
+before calling an external payment rail. Besa admits the invocation; it is not
+a wallet, bank, processor, KYC system, or proof of settlement.
+
+### 3. Consequential MCP tool calls
+
+Place `withBesaMcp` after MCP transport authentication and immediately before
+the privileged handler. Server access can succeed while a call with a different
+tool, resource, argument hash, constraint, or nonce fails closed.
+
+## Besa versus adjacent controls
+
+| Control | Primary question |
 |---|---|
-| Production deployment | Repository, environment, commit, risk, and expiry are bound before execution. |
-| Destructive database action | A staging grant cannot be reused for production. |
-| Financial action | Amount and recipient are admitted before an external mock rail; Besa is not the rail. |
-| Privileged MCP tool | Normal authentication succeeds while the exact high-consequence call is denied. |
+| IAM / OAuth | Who may access this system? |
+| MCP authentication and authorization | May this identity reach this server or tool? |
+| Observability | What did the system report after the fact? |
+| **Besa** | Was this exact consequential action admitted under a signed contract, and is the supplied result cryptographically linked to it? |
 
-Run all four with `npm run demo`.
+Detailed boundaries: [Besa vs IAM](docs/BESA_VS_IAM.md),
+[Besa vs MCP Auth](docs/BESA_VS_MCP_AUTH.md), and
+[Besa vs Observability](docs/BESA_VS_OBSERVABILITY.md).
 
 ## Deployment trust models
 
@@ -245,6 +310,7 @@ hosted retention, public cloud service, or global replay database.
 Besa does not guarantee regulatory compliance. Its artifacts may be useful
 technical evidence in customer-controlled security, governance, or audit
 workflows. Read [SECURITY.md](SECURITY.md),
+[the security credibility index](docs/SECURITY_CREDIBILITY.md),
 [the threat model](docs/THREAT_MODEL.md),
 [the v1.1 security review](docs/V1_1_SECURITY_REVIEW.md), and
 [AUDIT_SCOPE.md](AUDIT_SCOPE.md) before using it on a production boundary.
@@ -259,9 +325,17 @@ npm run benchmark
 The conformance command verifies frozen v1.0 artifacts plus v1.1 positive and
 negative vectors. The benchmark measures canonicalization, action hashing,
 capability verification, policy admission, and full action-chain verification;
-it reports Node/OS/CPU, methodology, iterations, median, p95, and p99. Numbers
-are machine-specific and are never hard-coded as a performance promise. See
-[the v1.1 reference run](docs/BENCHMARKS.md) for reproducible baseline results.
+it reports Node/OS/CPU, methodology, iterations, median, p95, and p99.
+
+| Local operation | Median | p95 |
+|---|---:|---:|
+| Evaluate action policy | 51.85 us | 81.98 us |
+| Verify action capability | 583.21 us | 741.05 us |
+| Verify delegation, capability, and evidence | 3.12 ms | 6.31 ms |
+
+These Node 24 reference numbers are machine-specific local measurements, not a
+hosted-service SLA; they exclude network and persistent replay-store I/O. See
+[the full methodology and environment](docs/BENCHMARKS.md).
 
 ## Legacy v1 compatibility
 
@@ -319,6 +393,24 @@ npm audit --omit=dev
 
 CI runs Node 20, 22, and 24 and builds/runs the container read-only. See
 [CONTRIBUTING.md](CONTRIBUTING.md) for protocol change rules.
+
+## Adoption and contribution
+
+- [Discovery audit](docs/adoption/DISCOVERY_AUDIT.md)
+- [Integration targets](docs/adoption/INTEGRATION_TARGETS.md)
+- [Measured distribution plan](docs/adoption/DISTRIBUTION_PLAN.md)
+- [Architecture and media package](docs/adoption/SHAREABLE_MEDIA.md)
+- [Contributing](CONTRIBUTING.md)
+
+Maintainers can inspect public, aggregate npm and GitHub signals locally without
+embedding tracking in the CLI or SDK:
+
+```bash
+npm run traction
+```
+
+Repository readiness is not traction. Stars, installs, external issues, and
+integrations are reported as observed; none are generated or inferred.
 
 ## License
 

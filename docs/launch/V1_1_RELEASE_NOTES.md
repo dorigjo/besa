@@ -1,9 +1,9 @@
-# Besa v1.1.0: Consequential Action Admission
+# Besa v1.1.1: Installed Exact-Action Demo
 
 Authentication tells a service who an agent is. It does not prove that this
 exact consequential action was authorized under these exact constraints.
 
-Besa v1.1.0 adds an additive protocol and runtime for that boundary:
+Besa v1.1 introduced an additive protocol and runtime for that boundary:
 
 ```text
 identity/authentication
@@ -29,13 +29,24 @@ identity/authentication
   bounds, timeouts, secure headers, metrics, Docker deployment, and security
   failure tests.
 - Positive and negative public conformance vectors, fuzz-style mutation tests,
-  a reproducible benchmark harness, and four runnable consequence demos.
+  a reproducible benchmark harness, and an installed-package exact-action demo.
 
 ## Try it
 
 ```bash
-npm install
-npm run demo
+npm install @dorigjo/besa
+npx besa demo
+```
+
+The demo accepts upstream authentication as an explicit input, denies
+`DELETE database:production-db` because the signed contract only grants a
+staging deployment, proves the denied executor was not called, then signs and
+verifies the allowed action and evidence.
+
+From a source checkout:
+
+```bash
+npm ci
 npm run conformance
 npm run benchmark
 ```
@@ -55,6 +66,22 @@ npx besa serve \
 ```
 
 See `docs/HOSTED_VERIFIER.md` before exposing the service beyond loopback.
+
+## What v1.1.1 adds
+
+- `besa demo` on the published CLI, covered by a process-level regression test
+  and package-surface gate.
+- Three small integration boundaries for MCP, generic HTTP handlers, and
+  TypeScript agent/tool handlers.
+- Factual IAM, MCP Auth, and observability comparisons plus a compact security
+  credibility index.
+- A discovery audit, integration target ranking, measured 14-day distribution
+  plan, architecture SVG, media specification, and technical launch drafts.
+- A local, tracking-free traction report based on public npm and GitHub APIs.
+- Focused npm keywords, contributor guidance, and current issue/PR templates.
+
+No signed artifact, signature domain, SDK export, or existing CLI behavior
+changed between v1.1.0 and v1.1.1.
 
 ## Compatibility
 
