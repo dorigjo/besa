@@ -1,5 +1,6 @@
 import { validateActionEnvelope, type ActionEnvelopeV1 } from "./action.js";
 import { hashRequest } from "./signing.js";
+import { snapshotJson } from "./snapshot.js";
 import {
   withBesa,
   type BesaExecutionResult,
@@ -60,8 +61,15 @@ export function withBesaMcp<TResult>(
   }
   const { actionForCall, ...runtimeConfig } = config;
 
-  return async (call: McpToolCall): Promise<BesaExecutionResult<TResult>> => {
-    validateCall(call);
+  return async (callValue: McpToolCall): Promise<BesaExecutionResult<TResult>> => {
+    validateCall(callValue);
+    let call: McpToolCall;
+    try {
+      call = snapshotJson({ name: callValue.name, arguments: callValue.arguments });
+    } catch (error) {
+      throw new BesaMcpError("ACTION_REQUEST_INVALID",
+        "MCP arguments cannot be snapshotted as canonical JSON", { cause: error });
+    }
 
     let requested: ActionEnvelopeV1;
     try {

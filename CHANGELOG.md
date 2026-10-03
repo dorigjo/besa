@@ -4,6 +4,46 @@ All notable changes to this project are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [1.2.0] - 2026-10-03
+
+Additive authority, admission-receipt and executor APIs. Existing v1.0/v1.1
+artifact bytes and verification remain unchanged. Wrapper inputs are now detached
+and frozen; mutating handlers/mappers must create working copies. See
+`docs/RUNTIME_ADMISSION.md` for migration and deployment guarantees.
+
+### Added
+
+* Signed External Authority v1 and Pre-execution Admission Receipt v1 with
+  exact request/context, policy/version, identity, authority/assertion and
+  delegation binding; independent offline and historical verification.
+* `withPreExecutionAdmission`: verified receipt storage before the executor,
+  enforced atomic replay, final authority/policy checks and linked result evidence.
+* `withBesaExecutor`: independent supplied-receipt verification, host-authenticated
+  caller matching and executor binding through the signed request context.
+* `FileReplayStore`: atomic persisted claims across local processes, fail-closed
+  strict file/directory fsync and explicit weaker process-crash mode. Partial
+  claims remain spent; no automatic retries, cleanup or exactly-once claim.
+* Real content-addressed CI artifact publisher reference with no-replace atomic
+  publication, restart replay rejection and operation-specific idempotency.
+* Frozen public pre-execution ALLOW/DENY conformance vector and verification tests.
+* Provider-neutral adapters for externally verified OAuth/EMA access tokens,
+  pinned SPIFFE workloads and Besa delegation chains; no bearer tokens in receipts.
+* Executable deny/allow integration reference, adversarial tests, explicit
+  protocol/threat documentation and migration guidance. Existing artifact bytes
+  and verification paths are preserved.
+
+### Security
+
+* Runtime/MCP/HTTP call snapshots are detached and frozen across asynchronous
+  checks; malformed replay responses fail closed.
+* Policy/delegation constraints require own data fields, preventing inherited
+  property substitution. Future-issued delegations cannot authorize execution.
+* Executor verification observes policy and trust-store replacement during
+  asynchronous receipt/replay work; a late revocation blocks the callback.
+* Package allowlists and checks exclude private traction files and local projects.
+
 ## [1.1.1] - 2026-09-23
 
 Adoption and installed-demo patch. No protocol artifact, signature domain, SDK

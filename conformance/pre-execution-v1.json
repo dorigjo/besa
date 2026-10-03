@@ -1,0 +1,285 @@
+{
+  "vectorVersion": 1,
+  "description": "Synthetic public conformance vector. The assertion digest is not an original IdP signature proof.",
+  "at": "2030-01-01T00:00:00.000Z",
+  "config": {
+    "policy": {
+      "version": 1,
+      "policyId": "conformance-admission-v1",
+      "delegationRequired": false,
+      "rules": [
+        {
+          "ruleId": "publish",
+          "principals": [
+            "principal:platform"
+          ],
+          "agents": [
+            "agent:ci"
+          ],
+          "tools": [
+            "artifact.publish"
+          ],
+          "operations": [
+            "publish"
+          ],
+          "resources": [
+            "artifact:staging"
+          ],
+          "allowedScopes": [
+            "artifact:write"
+          ],
+          "maxRisk": "medium",
+          "constraints": {
+            "exact": {},
+            "maximums": {}
+          }
+        }
+      ]
+    },
+    "audience": "https://ci.example/artifacts",
+    "trustStore": {
+      "version": 1,
+      "keys": [
+        {
+          "publicKeyId": "c4e7e349e356838681c01b6c5fc2fedc389400643e55fb19085a19cf0c3b96d3",
+          "publicKey": "MCowBQYDK2VwAyEAFFqYF8Nr/9/6/AZ4Gm26T2SmbOK8+DVfi/7ZFfSZgL8=",
+          "status": "active",
+          "addedAt": "2029-12-31T23:00:00.000Z"
+        }
+      ]
+    },
+    "authorityTrustStore": {
+      "version": 1,
+      "keys": [
+        {
+          "publicKeyId": "fce72e1e4abf5620e2b834e29a56819979d5d7a6474964f63e0582655b1c5319",
+          "publicKey": "MCowBQYDK2VwAyEAUwv9O6bQP90RnRvEjWhbyk36YtES7wz63J/c7JRqYz0=",
+          "status": "active",
+          "addedAt": "2029-12-31T23:00:00.000Z"
+        }
+      ]
+    }
+  },
+  "input": {
+    "request": {
+      "requestVersion": 1,
+      "parameters": {
+        "content": "conformance artifact"
+      },
+      "context": {
+        "executorId": "executor:staging"
+      },
+      "audience": "https://ci.example/artifacts",
+      "requestedAt": "2030-01-01T00:00:00.000Z",
+      "policy": {
+        "id": "conformance-admission-v1",
+        "version": 1,
+        "hash": "9ac3973a212b68edd33d8186843edb5165d18b529f37cc8dd6b8237fab6a4553"
+      },
+      "action": {
+        "artifactVersion": 1,
+        "principalId": "principal:platform",
+        "agentId": "agent:ci",
+        "authority": "authority:ci",
+        "tool": "artifact.publish",
+        "operation": "publish",
+        "resource": "artifact:staging",
+        "requestHash": "00b3e8715b440d35d492f8c3b04507e1c288eb64eb1551b9fb093b4b70e1ea36",
+        "contextHash": "469501eddbe994de34b74499f5f5583d26be1a48ff0b23eda9f4d674df7e58c7",
+        "scopes": [
+          "artifact:write"
+        ],
+        "constraints": {},
+        "expiresAt": "2030-01-01T01:00:00.000Z",
+        "nonce": "nonce_0123456789abcdef",
+        "riskClass": "medium"
+      }
+    },
+    "authority": {
+      "agentId": "agent:ci",
+      "algorithm": "ed25519",
+      "artifactVersion": 1,
+      "assertionDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "audience": "https://ci.example/artifacts",
+      "constraints": {
+        "exact": {},
+        "maximums": {}
+      },
+      "delegationChainHash": null,
+      "expiresAt": "2030-01-01T01:00:00.000Z",
+      "issuedAt": "2029-12-31T23:00:00.000Z",
+      "issuer": "authority:ci",
+      "mechanism": "mcp-ema-access-token",
+      "normalizerId": "normalizer:ci",
+      "notBefore": "2029-12-31T23:00:00.000Z",
+      "operations": [
+        "publish"
+      ],
+      "principalId": "principal:platform",
+      "publicKey": "MCowBQYDK2VwAyEAUwv9O6bQP90RnRvEjWhbyk36YtES7wz63J/c7JRqYz0=",
+      "publicKeyId": "fce72e1e4abf5620e2b834e29a56819979d5d7a6474964f63e0582655b1c5319",
+      "resources": [
+        "artifact:staging"
+      ],
+      "scopes": [
+        "artifact:write"
+      ],
+      "signature": "N5ZfOVUgRBkziRYN0MJZmfU5yxa46HnZSqAgdVClaOdMnZUy10M1+uP6MreYN1GgHgWb+Q1UFJJ4WbuVvdgyDg==",
+      "tools": [
+        "artifact.publish"
+      ]
+    }
+  },
+  "receipt": {
+    "actionHash": "0e99ce15e3aade9eae8a07713d3326486b26d632dafd54f3f52752b4a2c67c60",
+    "agentId": "agent:ci",
+    "algorithm": "ed25519",
+    "artifactVersion": 1,
+    "assertionDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "audience": "https://ci.example/artifacts",
+    "authorityHash": "1b52215b23ec41c2b1d2968b8d627dc745dc0f566c3cca857d67991a6e64a232",
+    "capability": {
+      "actionHash": "0e99ce15e3aade9eae8a07713d3326486b26d632dafd54f3f52752b4a2c67c60",
+      "agentId": "agent:ci",
+      "algorithm": "ed25519",
+      "artifactVersion": 1,
+      "authority": "authority:ci",
+      "capabilityId": "cap_83f99e22-fc78-42fb-b5b7-fd9610476490",
+      "constraintsHash": "9c21e3caf0ef8b30748675f6b67696e53b6f11f099ee461dfa823f83f76608a2",
+      "decision": "allow",
+      "delegationChainHash": null,
+      "expiresAt": "2030-01-01T01:00:00.000Z",
+      "issuedAt": "2030-01-01T00:00:00.000Z",
+      "issuerId": "admission:ci",
+      "issuerPublicKey": "MCowBQYDK2VwAyEAFFqYF8Nr/9/6/AZ4Gm26T2SmbOK8+DVfi/7ZFfSZgL8=",
+      "issuerPublicKeyId": "c4e7e349e356838681c01b6c5fc2fedc389400643e55fb19085a19cf0c3b96d3",
+      "nonce": "nonce_0123456789abcdef",
+      "operation": "publish",
+      "policyId": "conformance-admission-v1",
+      "principalId": "principal:platform",
+      "reasonCode": "ACTION_ALLOWED",
+      "resource": "artifact:staging",
+      "signature": "NI14C4kmIPI4riw5j9pidyvf94u4Xve/MjC3VV8uiKRLiFd6Pte97++C9tbt01FG4lMfhBkm5TYnWCCoLXoIBw==",
+      "tool": "artifact.publish"
+    },
+    "decision": "allow",
+    "delegationChainHash": null,
+    "expiresAt": "2030-01-01T01:00:00.000Z",
+    "issuedAt": "2030-01-01T00:00:00.000Z",
+    "issuerId": "admission:ci",
+    "issuerPublicKey": "MCowBQYDK2VwAyEAFFqYF8Nr/9/6/AZ4Gm26T2SmbOK8+DVfi/7ZFfSZgL8=",
+    "issuerPublicKeyId": "c4e7e349e356838681c01b6c5fc2fedc389400643e55fb19085a19cf0c3b96d3",
+    "nonce": "nonce_0123456789abcdef",
+    "policyHash": "9ac3973a212b68edd33d8186843edb5165d18b529f37cc8dd6b8237fab6a4553",
+    "policyId": "conformance-admission-v1",
+    "policyVersion": 1,
+    "principalId": "principal:platform",
+    "reasonCode": "ACTION_ALLOWED",
+    "receiptId": "adm_0da6adea-03d4-40e3-8210-7c5697a7e6d5",
+    "requestDigest": "4480410bb1b00d36a5d0042f7250d6e8b6e5228809fd430d60ec3d94a5f84027",
+    "signature": "G6VfcwJc1USssOStxqAlcmg5p6cfG1MMwdOv5pgieyx6LxqLri5p1ItJcBaf2tUciBMjI0qfL/4Id9llwkbLCg=="
+  },
+  "deniedInput": {
+    "request": {
+      "requestVersion": 1,
+      "parameters": {
+        "content": "substituted"
+      },
+      "context": {
+        "executorId": "executor:staging"
+      },
+      "audience": "https://ci.example/artifacts",
+      "requestedAt": "2030-01-01T00:00:00.000Z",
+      "policy": {
+        "id": "conformance-admission-v1",
+        "version": 1,
+        "hash": "9ac3973a212b68edd33d8186843edb5165d18b529f37cc8dd6b8237fab6a4553"
+      },
+      "action": {
+        "artifactVersion": 1,
+        "principalId": "principal:platform",
+        "agentId": "agent:ci",
+        "authority": "authority:ci",
+        "tool": "artifact.publish",
+        "operation": "publish",
+        "resource": "artifact:staging",
+        "requestHash": "00b3e8715b440d35d492f8c3b04507e1c288eb64eb1551b9fb093b4b70e1ea36",
+        "contextHash": "469501eddbe994de34b74499f5f5583d26be1a48ff0b23eda9f4d674df7e58c7",
+        "scopes": [
+          "artifact:write"
+        ],
+        "constraints": {},
+        "expiresAt": "2030-01-01T01:00:00.000Z",
+        "nonce": "nonce_0123456789abcdef",
+        "riskClass": "medium"
+      }
+    },
+    "authority": {
+      "agentId": "agent:ci",
+      "algorithm": "ed25519",
+      "artifactVersion": 1,
+      "assertionDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "audience": "https://ci.example/artifacts",
+      "constraints": {
+        "exact": {},
+        "maximums": {}
+      },
+      "delegationChainHash": null,
+      "expiresAt": "2030-01-01T01:00:00.000Z",
+      "issuedAt": "2029-12-31T23:00:00.000Z",
+      "issuer": "authority:ci",
+      "mechanism": "mcp-ema-access-token",
+      "normalizerId": "normalizer:ci",
+      "notBefore": "2029-12-31T23:00:00.000Z",
+      "operations": [
+        "publish"
+      ],
+      "principalId": "principal:platform",
+      "publicKey": "MCowBQYDK2VwAyEAUwv9O6bQP90RnRvEjWhbyk36YtES7wz63J/c7JRqYz0=",
+      "publicKeyId": "fce72e1e4abf5620e2b834e29a56819979d5d7a6474964f63e0582655b1c5319",
+      "resources": [
+        "artifact:staging"
+      ],
+      "scopes": [
+        "artifact:write"
+      ],
+      "signature": "N5ZfOVUgRBkziRYN0MJZmfU5yxa46HnZSqAgdVClaOdMnZUy10M1+uP6MreYN1GgHgWb+Q1UFJJ4WbuVvdgyDg==",
+      "tools": [
+        "artifact.publish"
+      ]
+    }
+  },
+  "deniedReceipt": {
+    "actionHash": "0e99ce15e3aade9eae8a07713d3326486b26d632dafd54f3f52752b4a2c67c60",
+    "agentId": "agent:ci",
+    "algorithm": "ed25519",
+    "artifactVersion": 1,
+    "assertionDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "audience": "https://ci.example/artifacts",
+    "authorityHash": "1b52215b23ec41c2b1d2968b8d627dc745dc0f566c3cca857d67991a6e64a232",
+    "capability": null,
+    "decision": "deny",
+    "delegationChainHash": null,
+    "expiresAt": "2030-01-01T01:00:00.000Z",
+    "issuedAt": "2030-01-01T00:00:00.000Z",
+    "issuerId": "admission:ci",
+    "issuerPublicKey": "MCowBQYDK2VwAyEAFFqYF8Nr/9/6/AZ4Gm26T2SmbOK8+DVfi/7ZFfSZgL8=",
+    "issuerPublicKeyId": "c4e7e349e356838681c01b6c5fc2fedc389400643e55fb19085a19cf0c3b96d3",
+    "nonce": "nonce_0123456789abcdef",
+    "policyHash": "9ac3973a212b68edd33d8186843edb5165d18b529f37cc8dd6b8237fab6a4553",
+    "policyId": "conformance-admission-v1",
+    "policyVersion": 1,
+    "principalId": "principal:platform",
+    "reasonCode": "ACTION_REQUEST_MISMATCH",
+    "receiptId": "adm_102f015c-c14e-4059-b126-1efd8ad7490c",
+    "requestDigest": "16ff0577279c8348ea3fd58d22d7193441c4e73acc40a3d40caa773d6e8390f6",
+    "signature": "KoADAouNdQ4xEDDcLI+DAs3oByL4pYTSIx/fGKvLvPoHtZWk0HvdMBU1lHpeHFx1upKSQpXVadoq1Qte8q4YCQ=="
+  },
+  "expected": {
+    "policyHash": "9ac3973a212b68edd33d8186843edb5165d18b529f37cc8dd6b8237fab6a4553",
+    "requestHash": "4480410bb1b00d36a5d0042f7250d6e8b6e5228809fd430d60ec3d94a5f84027",
+    "authorityHash": "1b52215b23ec41c2b1d2968b8d627dc745dc0f566c3cca857d67991a6e64a232",
+    "receiptHash": "8d9b547c57a321727a4d23e0ebb87ed62709742d4af1ed54411b8f1ae42c5018",
+    "deniedReceiptHash": "eafaed0fafcb6e70f01ef7ecfdc521dbbf85b8b280b29b005f2d4bbc8980e884"
+  }
+}

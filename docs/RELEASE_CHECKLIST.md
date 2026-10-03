@@ -22,7 +22,9 @@ npm run smoke:server
 - [ ] Node 20, 22, and 24 CI jobs pass.
 - [ ] Full tests include strict schemas, malformed keys, mutation, expiry,
       replay, delegation narrowing, runtime failures, and HTTP abuse cases.
-- [ ] Frozen v1.0 plus v1.1 positive and negative conformance vectors pass.
+- [ ] Frozen v1.0, v1.1 and pre-execution v1 positive/negative vectors pass.
+- [ ] Executor adversarial tests include identity/executor substitution, storage
+      failure, late revocation, restart replay and separate-process concurrency.
 - [ ] The demo denies the mismatched production action without calling its
       executor, then signs and verifies the allowed path and evidence.
 - [ ] Benchmark output records environment, method, median, p95, and p99.
@@ -57,12 +59,15 @@ npm publish --dry-run --access public
 - [ ] Packed SDK and `besa` CLI install in an empty project.
 - [ ] `npx besa demo` succeeds from that clean tarball installation.
 - [ ] Upgrade smoke installs the immutable previous Git version, then the local
-      v1.1.1 tarball, and confirms legacy plus additive exports.
+      release tarball, and confirms legacy plus additive exports.
+- [ ] Installed TypeScript definitions compile and the real protected publisher
+      runs on Node versions supporting type stripping.
 - [ ] Required Docker, documentation, examples, launch notes, and conformance
       files are present.
 - [ ] `src/`, `dist/tests/`, `.besa/`, private keys, operational trust stores,
       receipts, evidence logs, local projects, and tarballs are absent.
-- [ ] Dry-run names exactly `@dorigjo/besa@1.1.1` and reports no bin warning.
+- [ ] Dry-run names exactly the version in package.json and reports no bin warning.
+- [ ] Private traction reports, .claude/, personal/ and n8n-nodes-besa/ are absent.
 
 ## Supply chain
 
@@ -96,6 +101,8 @@ git diff --cached --name-only
       is staged.
 - [ ] Four review passes are complete: protocol/crypto, runtime/MCP/replay,
       Hosted Verifier/deployment, and backward compatibility/release surface.
+- [ ] Lint and Docker results are reported only if actually executed; this
+      repository has no standalone lint script. Docker CI is a required gate.
 
 ## Publish
 
@@ -103,12 +110,21 @@ Only after every gate is green and npm authentication is confirmed:
 
 ```powershell
 npm whoami
-git commit -m "Release v1.1.1"
-git push origin main
 npm publish --access public
-npm view @dorigjo/besa@1.1.1 version dist.integrity dist.shasum
+$version = node -p "require('./package.json').version"
+npm view "@dorigjo/besa@$version" version dist.integrity dist.shasum
+$env:BESA_REGISTRY_VERSION = $version
+npm run test:package
+Remove-Item Env:BESA_REGISTRY_VERSION
 ```
 
-Create and push a Git tag or GitHub Release only as a separate, explicitly
-approved release action. Never infer successful publication from a dry-run;
-verify the immutable registry version after the real publish.
+Commit owned release changes on a branch, open a PR, satisfy main's protected
+Node 20/22/24 checks and the container job, and merge through the legitimate
+protected path. Publish from a fresh clean checkout of the reviewed commit;
+never force-push or bypass protections. A tag/GitHub release requires release
+authorization and must identify that same tested commit.
+
+Never infer publication from a dry-run. The registry-mode package smoke installs
+the exact public version in a new temporary consumer, verifies exports/types,
+receipt generation/verification, CLI, executor, package contents and upgrade.
+Verify registry integrity and report unavailable authentication honestly.

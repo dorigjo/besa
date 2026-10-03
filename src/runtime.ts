@@ -29,6 +29,7 @@ import {
   type ReplayStore,
 } from "./replay.js";
 import type { TrustStore } from "./types.js";
+import { snapshotJson } from "./snapshot.js";
 
 export interface RuntimeEvidenceRecordV1 {
   recordVersion: 1;
@@ -58,6 +59,7 @@ export interface BesaRuntimeConfig {
   delegationTrustStore?: TrustStore;
   requireDelegation?: boolean;
   clock?: () => Date;
+  receiptHash?: string;
 }
 
 export interface BesaExecutionResult<TResult> {
@@ -89,7 +91,7 @@ export class BesaRuntimeError extends Error {
 
 const MAX_LOG_RECORD_BYTES = 1_048_576;
 
-export class AppendOnlyEvidenceLog implements EvidenceSink {
+export class AppendOnlyEvidenceLog<TRecord = RuntimeEvidenceRecordV1> {
   readonly path: string;
   #tail: Promise<void> = Promise.resolve();
 
@@ -100,13 +102,13 @@ export class AppendOnlyEvidenceLog implements EvidenceSink {
     this.path = resolve(path);
   }
 
-  append(record: RuntimeEvidenceRecordV1): Promise<void> {
+  append(record: TRecord): Promise<void> {
     const operation = this.#tail.then(() => this.#appendRecord(record));
     this.#tail = operation.catch(() => undefined);
     return operation;
   }
 
-  async #appendRecord(record: RuntimeEvidenceRecordV1): Promise<void> {
+  async #appendRecord(record: TRecord): Promise<void> {
     const line = `${canonicalize(record)}\n`;
     const bytes = Buffer.byteLength(line, "utf8");
     if (bytes > MAX_LOG_RECORD_BYTES) {
@@ -255,6 +257,9 @@ export function withBesa<TResult>(
   if (config.clock !== undefined && typeof config.clock !== "function") {
     throw new TypeError("clock must be a function when supplied");
   }
+  if (config.receiptHash !== undefined && !/^[a-f0-9]{64}$/.test(config.receiptHash)) {
+    throw new TypeError("receiptHash must be a SHA-256 digest when supplied");
+  }
   if (
     config.requireDelegation !== undefined &&
     typeof config.requireDelegation !== "boolean"
@@ -270,7 +275,7 @@ export function withBesa<TResult>(
     if (!actionCheck.valid || !actionCheck.action || !actionCheck.actionHash) {
       throw new BesaRuntimeError(actionCheck.reasonCode, actionCheck.detail);
     }
-    const action = actionCheck.action;
+    const action = snapshotJson(actionCheck.action);
 
     let capabilityValue: ActionCapabilityV1;
     try {
@@ -332,6 +337,14 @@ export function withBesa<TResult>(
         { cause: error, capability },
       );
     }
+    if (!replay ||
+        !["consumed", "replay", "not-enforced", "unavailable"].includes(replay.status) ||
+        typeof replay.enforced !== "boolean" ||
+        (replay.status === "consumed" && replay.enforced !== true) ||
+        (replay.status === "not-enforced" && replay.enforced !== false)) {
+      throw new BesaRuntimeError(REPLAY_REASON.UNAVAILABLE,
+        "replay store returned an invalid result", { capability });
+    }
     if (replay.status === "replay" || replay.status === "unavailable") {
       throw new BesaRuntimeError(replay.reasonCode, replay.detail, { capability });
     }
@@ -385,7 +398,7 @@ export function withBesa<TResult>(
             outcome: "failed",
             executorId: config.executorId,
             recorderId: config.recorderId,
-            receiptHash: null,
+            receiptHash: config.receiptHash ?? null,
             startedAt: started.toISOString(),
             completedAt: completed.toISOString(),
             recordedAt: recorded.toISOString(),
@@ -430,7 +443,7 @@ export function withBesa<TResult>(
           outcome: "succeeded",
           executorId: config.executorId,
           recorderId: config.recorderId,
-          receiptHash: null,
+          receiptHash: config.receiptHash ?? null,
           startedAt: started.toISOString(),
           completedAt: completed.toISOString(),
           recordedAt: recorded.toISOString(),

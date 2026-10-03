@@ -6,6 +6,20 @@ IAM and Besa answer different authorization questions.
 |---|---|---|
 | IAM / OAuth / workload identity | Who may authenticate and access a service or resource class? | Identity, role, token, cloud policy |
 | Besa | May this exact consequential action execute under this exact contract? | Action Envelope, signed Action Capability, signed Action Evidence |
+| EMA / ID-JAG / XAA-style composition | Which principal/client may obtain access to the target service? | Enterprise assertion exchanged for a service access token |
+| Besa pre-execution extension | Whether this exact action was admitted under the supplied valid authority and exact policy version, with portable proof | Signed normalized authority and pre-execution admission receipt |
+
+BESA does not replace enterprise identity or authorization systems.
+It consumes verifiable authority and binds that authority to an exact
+pre-execution decision, producing portable cryptographic evidence.
+
+In the standards-oriented reference adapter, the application verifies the
+exchanged access token and authenticated actor. Besa normalizes narrow grants,
+checks principal/agent, issuer, service audience, exact resource/operation,
+parameters, context, policy hash, validity and nonce, and signs the decision.
+An ID-JAG/ID token is never accepted as a tool-execution capability. A workload
+identity similarly requires a pinned subject and operator-assigned grants;
+identity alone is not authorization. See [the adapter contract](RUNTIME_ADMISSION.md#external-identity-adapters).
 
 ## Where Besa sits
 
@@ -67,6 +81,14 @@ and no portable cryptographic evidence contract is needed.
 
 Besa is not a claim that native cloud controls are weak. It is an additional,
 provider-neutral execution contract for boundaries that need that portability.
+
+IAM, XAA and runtime enforcement vendors can implement exact field matching,
+scope translation, short-lived grants, replay consumption and pre-execution
+checks. Those individual functions are not a unique moat. Besa's proposed
+distinction is the signed, versioned artifact contract and independently
+verifiable authority/policy/action links across operators. The usefulness of
+that portability requires demonstrated external integrations; code quality
+alone is not evidence of adoption or defensibility.
 
 See [Architecture](../ARCHITECTURE.md), [Threat Model](THREAT_MODEL.md), and
 [Runtime Admission](RUNTIME_ADMISSION.md).

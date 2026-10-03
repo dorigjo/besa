@@ -1,6 +1,6 @@
 {
   "name": "@dorigjo/besa",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "Cryptographic admission and evidence for consequential AI-agent actions.",
   "type": "module",
   "main": "./dist/sdk.js",
@@ -17,7 +17,7 @@
   "scripts": {
     "build": "tsc",
     "test": "npm run build && node dist/tests/run.js",
-    "conformance": "npm run build && node --test dist/tests/golden.test.js dist/tests/conformance-v11.test.js",
+    "conformance": "npm run build && node --test dist/tests/golden.test.js dist/tests/conformance-v11.test.js dist/tests/conformance-v12.test.js",
     "demo": "npm run build && node dist/demo.js",
     "benchmark": "npm run build && node dist/benchmark.js",
     "traction": "node scripts/traction-report.mjs",
@@ -74,6 +74,8 @@
     "examples/consequential-mcp-middleware.ts",
     "examples/generic-tool-wrapper.ts",
     "examples/http-middleware.ts",
+    "examples/pre-execution.ts",
+    "examples/protected-artifact-publisher.ts",
     "examples/hosted-verifier.env.example",
     "Dockerfile",
     "ARCHITECTURE.md",
@@ -92,13 +94,17 @@
     "docs/SECURITY_CREDIBILITY.md",
     "docs/THREAT_MODEL.md",
     "docs/V1_1_SECURITY_REVIEW.md",
-    "docs/adoption/*.md",
+    "docs/adoption/DISCOVERY_AUDIT.md",
+    "docs/adoption/DISTRIBUTION_PLAN.md",
+    "docs/adoption/INTEGRATION_TARGETS.md",
+    "docs/adoption/SHAREABLE_MEDIA.md",
     "docs/assets/*.svg",
     "docs/launch/*.md",
     "scripts/traction-report.mjs",
     "conformance/golden-v1.json",
     "conformance/consequential-action-v1.json",
-    "conformance/consequential-action-negative-v1.json"
+    "conformance/consequential-action-negative-v1.json",
+    "conformance/pre-execution-v1.json"
   ],
   "bugs": {
     "url": "https://github.com/dorigjo/besa/issues"
