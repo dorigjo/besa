@@ -16,6 +16,11 @@ import { join, resolve } from "node:path";
 process.env.BESA_KEY_PASSPHRASE ??= randomBytes(32).toString("base64url");
 
 const repositoryRoot = resolve(".");
+const expectedVersion = JSON.parse(readFileSync(join(repositoryRoot, "package.json"), "utf8")).version;
+const registryVersion = process.env.BESA_REGISTRY_VERSION;
+if (registryVersion && registryVersion !== expectedVersion) {
+  throw new Error("registry smoke version must match the release source");
+}
 const UPGRADE_BASE_COMMIT = "082157830006d8497bf2ba5c162e8503772b4a9b";
 const workspace = mkdtempSync(join(tmpdir(), "besa-package-smoke-"));
 const installRoot = join(workspace, "consumer");
@@ -87,24 +92,21 @@ try {
     "utf8",
   );
 
-  runNpm(
-    "pack",
-    ["pack", "--silent", "--pack-destination", workspace],
-    repositoryRoot,
-  );
-
-  const tarball = readdirSync(workspace)
-    .filter((entry) => entry.endsWith(".tgz"))
-    .map((entry) => join(workspace, entry))
-    .at(0);
-
-  if (!tarball) {
-    throw new Error("npm pack did not create a tarball");
+  let packageSource;
+  if (registryVersion) {
+    packageSource = `@dorigjo/besa@${registryVersion}`;
+  } else {
+    runNpm("pack", ["pack", "--silent", "--pack-destination", workspace], repositoryRoot);
+    packageSource = readdirSync(workspace)
+      .filter((entry) => entry.endsWith(".tgz"))
+      .map((entry) => join(workspace, entry))
+      .at(0);
+    if (!packageSource) throw new Error("npm pack did not create a tarball");
   }
 
   runNpm(
-    "install tarball",
-    ["install", "--ignore-scripts", "--no-audit", "--no-fund", tarball],
+    "install release package",
+    ["install", "--ignore-scripts", "--no-audit", "--no-fund", "--registry=https://registry.npmjs.org", packageSource],
     installRoot,
   );
 
@@ -132,6 +134,13 @@ try {
         "typeof b.verifyTrustedSignedManifest !== 'function' || " +
         "typeof b.withBesa !== 'function' || " +
         "typeof b.withBesaMcp !== 'function' || " +
+        "typeof b.withPreExecutionAdmission !== 'function' || " +
+        "typeof b.withBesaExecutor !== 'function' || " +
+        "typeof b.FileReplayStore !== 'function' || " +
+        "typeof b.admitPreExecution !== 'function' || " +
+        "typeof b.verifyPreExecutionAdmission !== 'function' || " +
+        "typeof b.normalizeAccessTokenAuthority !== 'function' || " +
+        "typeof b.normalizeWorkloadAuthority !== 'function' || " +
         "typeof b.verifyActionCapability !== 'function') process.exit(1);",
     ],
     installRoot,
@@ -145,6 +154,32 @@ try {
     "examples",
   );
   const installedPackage = join(installRoot, "node_modules", "@dorigjo", "besa");
+  if (JSON.parse(readFileSync(join(installedPackage, "package.json"), "utf8")).version !== expectedVersion) {
+    throw new Error("installed package version does not match the release");
+  }
+  const forbidden = ["src", "dist/tests", ".besa", ".claude", "personal", "n8n-nodes-besa",
+    "docs/adoption/TRACTION_FORENSICS.md", "docs/adoption/traction-baseline.json"];
+  for (const path of forbidden) {
+    if (existsSync(join(installedPackage, path))) throw new Error(`private/test path installed: ${path}`);
+  }
+  const admissionExample = join(installedExamples, "pre-execution.ts");
+  if (!existsSync(admissionExample)) throw new Error("installed package lacks pre-execution example");
+  if (process.allowedNodeEnvironmentFlags.has("--experimental-strip-types")) {
+    const runnableExample = join(installRoot, "pre-execution.ts");
+    copyFileSync(admissionExample, runnableExample);
+    run("installed pre-execution example", process.execPath,
+      ["--experimental-strip-types", runnableExample], installRoot);
+  }
+  const publisher = join(installRoot, "protected-artifact-publisher.ts");
+  copyFileSync(join(installedExamples, "protected-artifact-publisher.ts"), publisher);
+  run("installed SDK TypeScript definitions", process.execPath,
+    [join(repositoryRoot, "node_modules/typescript/bin/tsc"), "--noEmit", "--strict",
+      "--skipLibCheck", "--target", "ES2022", "--module", "NodeNext", "--moduleResolution", "NodeNext",
+      "--typeRoots", join(repositoryRoot, "node_modules/@types"), publisher], installRoot);
+  if (process.allowedNodeEnvironmentFlags.has("--experimental-strip-types")) {
+    run("installed protected artifact publisher", process.execPath,
+      ["--experimental-strip-types", publisher, join(installRoot, "protected-artifacts")], installRoot);
+  }
   for (const relativePath of [
     "Dockerfile",
     "ARCHITECTURE.md",
@@ -172,6 +207,7 @@ try {
     "conformance/golden-v1.json",
     "conformance/consequential-action-v1.json",
     "conformance/consequential-action-negative-v1.json",
+    "conformance/pre-execution-v1.json",
   ]) {
     if (!existsSync(join(installedPackage, relativePath))) {
       throw new Error(`installed package is missing ${relativePath}`);
@@ -260,15 +296,15 @@ try {
     throw new Error("upgrade fixture did not install Besa 1.0.1");
   }
   runNpm(
-    "upgrade v1 to local tarball",
-    ["install", "--ignore-scripts", "--no-audit", "--no-fund", tarball],
+    "upgrade v1 to release package",
+    ["install", "--ignore-scripts", "--no-audit", "--no-fund", "--registry=https://registry.npmjs.org", packageSource],
     upgradeRoot,
   );
-  if (JSON.parse(readFileSync(upgradePackageJson, "utf8")).version !== "1.1.1") {
-    throw new Error("local tarball did not upgrade Besa to 1.1.1");
+  if (JSON.parse(readFileSync(upgradePackageJson, "utf8")).version !== expectedVersion) {
+    throw new Error(`release package did not upgrade Besa to ${expectedVersion}`);
   }
 
-  console.log("PACKAGE SMOKE OK: tarball SDK/CLI install and v1 upgrade passed");
+  console.log(`PACKAGE SMOKE OK: ${registryVersion ? "public registry" : "tarball"} ${expectedVersion} SDK/CLI/types/executor install and v1 upgrade passed`);
 } finally {
   rmSync(workspace, { recursive: true, force: true });
 }

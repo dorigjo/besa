@@ -101,10 +101,50 @@ identity systems, agent frameworks, tools, and execution rails. Frozen formats,
 public conformance vectors, and keyless verification let another party verify
 the decision without depending on the executor's private log format.
 
-That value depends on correct integration and real adoption. v1.1 is an
+That value depends on correct integration and real adoption. Besa is an
 unaudited open-source implementation and conformance surface, not an industry
 standard, certification, or claim that vendor-native controls are insufficient
 for every deployment. Besa uses ESM modules and requires Node.js 20 or later.
+
+## v1.2 pre-execution admission and protected executor
+
+`withPreExecutionAdmission` adds externally verified authority, an exact policy
+digest and a signed admission receipt stored before the protected executor
+runs. The request binds agent/principal, service audience, operation/resource,
+actual parameters, execution context, validity and nonce. Authority and policy
+are rechecked after asynchronous work; execution requires enforced replay
+consumption. DENY produces decision evidence without invoking the tool.
+
+`withBesaExecutor` independently verifies a supplied receipt at the executor.
+It binds the authenticated caller and target executor before any protected side
+effect. `FileReplayStore` persists atomic replay claims across processes on one
+trusted local filesystem; deployment-specific distributed stores remain injectable.
+
+The real reference integration publishes a content-addressed CI artifact without
+overwriting existing content. No receipt means no write. Persisted replay rejects
+the same attempt after restart; a newly authorized identical artifact is idempotent.
+After building the checkout, on Node 24:
+
+```bash
+node --experimental-strip-types examples/protected-artifact-publisher.ts
+```
+
+This local example explicitly selects process-crash durability. Strict production
+replay requires file/directory fsync support, authenticated caller context and
+durable receipt storage. It is not universal exactly-once execution or evidence
+of an independently operated customer integration.
+
+Provider-neutral adapters normalize verified OAuth/EMA access-token claims,
+explicitly authorized SPIFFE workloads and existing Besa delegations. The
+application supplies its external verifier; Besa does not implement an IdP or
+OAuth exchange. Receipts retain assertion digests, never bearer credentials.
+
+See [the contract and migration guide](docs/RUNTIME_ADMISSION.md),
+[the executable example](examples/pre-execution.ts),
+[the real artifact publisher](examples/protected-artifact-publisher.ts),
+[the artifact specification](SPEC.md) and
+[the threat boundaries](docs/THREAT_MODEL.md). These additive APIs require v1.2.0;
+the immutable v1.1.1 package does not contain them.
 
 ## The v1.1 protocol
 
@@ -178,8 +218,9 @@ See also [Agent Gateway Integration](docs/AGENT_GATEWAY.md) for deployment
 boundaries and [Evidence Artifacts](docs/EVIDENCE_ENVELOPE.md) for independent
 verification semantics.
 
-`InMemoryReplayStore` enforces one-time use only inside one process. Use a
-customer-owned atomic `ReplayStore` for durable or distributed replay
+`InMemoryReplayStore` enforces one-time use only inside one process.
+`FileReplayStore` provides local persisted atomic claims; use a
+customer-owned transactional `ReplayStore` for distributed replay
 protection. Besa fails closed when `replayRequirement: "enforce"` cannot be met.
 
 Copy-paste reference boundaries:

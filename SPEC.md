@@ -34,12 +34,20 @@ signed format:
 All hashing and signing operate over **canonical JSON**, produced by
 `canonicalize(value)`:
 
-- Object keys are sorted lexicographically (recursively).
+- Object keys are sorted lexicographically before JavaScript JSON serialization
+  (recursively). ECMAScript integer-index keys are emitted first in ascending
+  numeric order; remaining keys retain lexicographic order. For example
+  `canonicalize({"10":"ten","2":"two"})` is
+  `{"2":"two","10":"ten"}`. This frozen v1 format is not RFC 8785/JCS.
 - Output is compact (no insignificant whitespace).
 - Only finite JSON values are allowed. `NaN`, `Infinity`, `undefined`,
   functions, symbols, accessors, circular references, and non-plain objects are
   rejected.
 - Bounded for safety: max depth 64, max 100,000 nodes, max 1,048,576 bytes.
+- Numeric serialization follows ECMAScript JSON for finite binary64 numbers:
+  negative zero becomes `0`. Sparse array slots become `null`. Cross-language
+  verifiers must reproduce these frozen semantics and UTF-8 encoding. Transport
+  parsers must reject duplicate JSON keys before producing the object to verify.
 
 Frozen ordering vector:
 
@@ -47,8 +55,8 @@ Frozen ordering vector:
 canonicalize({ "b": 1, "a": { "d": 2, "c": 3 } })  ==  {"a":{"c":3,"d":2},"b":1}
 ```
 
-**The lexicographic key order produced by `canonicalize` — not the order of the
-field tables below — determines the signed and hashed bytes.** The tables in
+**The canonical key order defined above, not the order of the field tables
+below, determines the signed and hashed bytes.** The tables in
 this document define which fields are *required*, *optional*, and *rejected*;
 they are documentation order, not wire order. An implementation must never
 serialize fields in table order and sign the result.
@@ -80,7 +88,7 @@ shape, one domain per artifact type:
 | Admission attestation | `besa:admission-attestation:v1` |
 
 The signature covers the **entire artifact envelope minus the `signature`
-field**, canonicalized (lexicographic key order — see above).
+field**, canonicalized using the key order defined above.
 
 ### Signing and verification algorithm
 
@@ -473,6 +481,7 @@ Existing v1.0 codes remain frozen. v1.1 adds stable codes in these families:
 - `DELEGATION_VALID`, `DELEGATION_EMPTY_CHAIN`,
   `SCHEMA_DELEGATION_INVALID`, `SIGNATURE_DELEGATION_INVALID`,
   `TRUST_DELEGATION_ROOT_UNTRUSTED`, `DELEGATION_WIDENING`,
+  `TRUST_DELEGATION_KEY_REVOKED`,
   `DELEGATION_ACTION_NOT_GRANTED`, `DELEGATION_PARENT_MISMATCH`,
   `EXPIRY_DELEGATION_NOT_ACTIVE`, `DELEGATION_REQUIRED`.
 - `CAPABILITY_VALID`, `SCHEMA_CAPABILITY_INVALID`,
@@ -497,3 +506,184 @@ Existing v1.0 codes remain frozen. v1.1 adds stable codes in these families:
 chain. `conformance/consequential-action-negative-v1.json` names the expected
 failure codes for mutation, expiry, schema, delegation, and replay cases.
 `npm run conformance` verifies all published bytes through the public SDK.
+
+## Pre-execution authority and admission artifacts (additive)
+
+These are new artifact types, each explicitly versioned `1`, with separate
+domains. They do not extend or reinterpret the frozen capability/receipt
+schemas. Unknown fields and versions fail closed. Existing conformance vectors
+and canonicalization bytes are unchanged.
+
+### External Authority v1
+
+`ExternalAuthorityV1` is a trusted normalizer's signed attestation that external
+claims were verified and mapped to the stated grants. It is not a bearer token
+or the original IdP signature. All following fields are required:
+
+| Fields | Contract |
+|---|---|
+| `artifactVersion`, `algorithm` | `1`, `ed25519` |
+| `mechanism` | `oauth-access-token`, `mcp-ema-access-token`, `workload-identity`, or `besa-delegation` |
+| `principalId`, `agentId`, `issuer`, `audience`, `normalizerId` | Nonempty trimmed NFC text, no controls, at most 512 characters each |
+| `tools`, `operations`, `resources`, `scopes` | Nonempty sorted unique lists, at most 256 entries; rule-list validation follows ActionPolicyV1. No wildcard/prefix matching. |
+| `constraints` | Existing DelegationConstraintsV1: `exact` JSON object and `maximums` nonnegative finite numeric map; only own data fields can satisfy a constraint |
+| `notBefore`, `expiresAt`, `issuedAt` | Canonical UTC timestamps; nonempty authority interval and `issuedAt < expiresAt`; admission/execution require issuance and not-before no later than check time, and expiry strictly later |
+| `assertionDigest` | Lowercase SHA-256 hex of the verified external assertion, or verified delegation-chain digest for `besa-delegation` |
+| `delegationChainHash` | Null or lowercase SHA-256 hex; required non-null for `besa-delegation` |
+| `publicKey`, `publicKeyId` | Canonical Ed25519 SPKI DER base64 and SHA-256 fingerprint of decoded key |
+| `signature` | Canonical base64, exactly 64 decoded bytes |
+
+Limit: 131072 canonical UTF-8 bytes. Signature covers the entire body excluding
+`signature` in domain `besa:external-authority:v1`. Artifact hash covers the
+complete signed authority in domain `besa:external-authority-artifact:v1`.
+`hashAuthorityAssertion` hashes `besa:authority-assertion:v1`, a NUL byte and
+the exact assertion bytes (1-1048576 bytes). It does not parse or emit them.
+
+Verification requires a trusted normalizer key, matching issuer/principal/agent
+against the Action Envelope, exact service audience, grants and constraints,
+and authority validity encompassing the action expiry. Identity validation
+alone is insufficient. External token verification and scope/actor mapping
+are adapter responsibilities, never inferred from caller-provided JSON flags.
+Delegation normalization also requires the host-authenticated agent ID to match
+the signed leaf subject. Possessing a public signed chain is not authentication.
+Any issuer/subject key explicitly revoked in the supplied trust store invalidates
+the chain; unknown intermediary keys continue to derive trust from the root.
+
+### Pre-execution Request v1
+
+`PreExecutionRequestV1` has exactly `requestVersion`, `action`, `parameters`,
+`context`, `audience`, `policy` and `requestedAt`.
+
+- `requestVersion` is `1`; `action` is the existing strict ActionEnvelopeV1.
+- `parameters` and `context` are plain finite JSON objects. Required
+  `action.requestHash = hashRequest(parameters)` and
+  `action.contextHash = hashRequest(context)`. Every action constraint must
+  occur as an own parameter field with the same canonical value.
+- `audience` is the exact protected-service identifier, using bounded NFC text
+  as above. It must equal the operator-configured audience and authority audience.
+- `policy` has exactly `id`, `version`, `hash`: bounded ID, positive safe integer
+  version and lowercase SHA-256 digest. Only version `1` is admitted; other
+  representable requested versions produce signed `POLICY_VERSION_UNKNOWN`.
+- `requestedAt` is canonical UTC and cannot follow receipt issuance.
+- Limit: 262144 canonical UTF-8 bytes.
+
+Request digest: SHA-256 of `besa:pre-execution-request:v1`, NUL and the full
+canonical request. Policy digest: SHA-256 of `besa:action-policy:v1`, NUL and
+the validated canonical ActionPolicyV1 (including ID, version and every rule).
+Constraints/operation/resource/risk must be derived by a trusted tool mapper;
+hashing an attacker-supplied description does not establish truthful semantics.
+
+### Pre-execution Admission Receipt v1
+
+All fields below are required, with no unknown fields or legacy fallback:
+
+| Fields | Contract |
+|---|---|
+| `artifactVersion`, `algorithm` | `1`, `ed25519` |
+| `receiptId` | `adm_` plus canonical UUIDv4 |
+| `requestDigest`, `actionHash` | Digests of the supplied request and Action Envelope |
+| `principalId`, `agentId`, `audience` | Exact identities/service bound by the request |
+| `authorityHash`, `assertionDigest` | Signed normalized authority hash and external assertion digest; both non-null for ALLOW, nullable only for DENY with schema-invalid authority |
+| `delegationChainHash` | Verified chain hash or null when no chain was required/supplied |
+| `policyId`, `policyVersion`, `policyHash` | Actual configured/evaluated policy ID, version `1`, full policy digest |
+| `decision`, `reasonCode` | `allow` with `ACTION_ALLOWED`, or `deny` with another stable uppercase reason |
+| `issuedAt`, `expiresAt`, `nonce` | Canonical issuance time, exact action expiry and nonce; ALLOW issuance must precede expiry. DENY can record an already expired action. |
+| `issuerId`, `issuerPublicKey`, `issuerPublicKeyId` | Besa decision authority identifier, canonical Ed25519 SPKI DER base64 and key fingerprint |
+| `capability` | Existing ActionCapabilityV1 for ALLOW, with identical action, issuer, issuance time, policy ID and delegation hash; null for DENY |
+| `signature` | Canonical base64 Ed25519 signature (64 bytes) |
+
+Identifiers follow the 512-character NFC/control bounds above; digest fields are
+64 lowercase hex characters; nonce follows the existing action nonce pattern.
+Limit: 262144 canonical UTF-8 bytes. No raw parameters, bearer credentials or
+private keys occur in the receipt schema. Safe signed claims are supplied in
+the separately verifiable ExternalAuthority artifact.
+
+Signature domain: `besa:pre-execution-admission:v1`. Sign the entire receipt
+body except its own `signature`, including the nested capability and that
+capability's signature. Receipt hash: `besa:pre-execution-receipt-artifact:v1`
+over the complete signed canonical receipt. The v1 ActionEvidence `receiptHash`
+may link this hash without changing evidence schema/signature bytes.
+
+An independent verifier must:
+
+1. Strictly validate the receipt and supported schema; verify its domain-separated
+   signature against a pinned trusted admission key.
+2. Match exact request/action digests, principal/agent, audience, nonce/expiry
+   and supplied authority/assertion digests. Reject missing or changed input.
+3. Match the actual expected policy ID, version and digest. Never resolve a
+   policy ID alone to a silently different policy.
+4. For ALLOW, verify normalized authority and delegation were valid at issuance,
+   evaluate exact-action policy, and verify the embedded capability's signature,
+   links and identical issuer/issuance/policy/delegation fields.
+5. For execution, additionally verify current expiry, authority, policy and
+   active trusted keys. A valid DENY is evidence only, never authorization.
+6. At the enforced execution boundary, await receipt storage, atomically consume
+   the action/nonce replay key and repeat current checks before invoking the
+   executor. Stateless receipt/audit verification does not consume replay state.
+
+Audit mode verifies at receipt issuance for historical use, with current trust
+lifecycle controls. It cannot authorize current execution. Revoked keys are
+always rejected; audit results always carry `authorized: false`. Retired keys
+can verify supported prior
+artifacts. DENY signatures attest the issuer's negative decision; they do not
+assert that malformed authority was valid or that a side effect occurred.
+
+Malformed/non-canonical requests and signer/configuration failures have no
+trustworthy signing input and are rejected without synthesizing a receipt.
+Canonical but denied requests receive signed denial receipts. The receipt
+cannot prove original IdP signature validity, live revocation, exactly-once
+external effects, or authority normalizer honesty from a digest alone.
+
+### Executor enforcement and local replay adapter
+
+`withBesaExecutor` is an executor API, not a new signed artifact. It accepts the
+same request/authority and a supplied admission receipt plus host-authenticated
+`{ agentId, principalId }`. Both IDs must match the action. The existing signed
+context must contain `executorId` equal to the configured executor. Changing it
+changes context/request digests; no new field/domain is added to legacy artifacts.
+The wrapper verifies, awaits the receipt commit, atomically consumes the action
+replay key, and repeats current policy/authority checks before calling the executor.
+
+`FileReplayStore` persists one exclusive claim per SHA-256 of
+`besa:file-replay-key:v1`, NUL and the existing replay key, using a private local
+directory. A claim contains `recordVersion: 1`, `keyDigest`, `expiresAt` and
+`consumedAt`, never the raw key. Default `power-loss` mode requires file and
+directory fsync; unsupported platforms fail unavailable. Explicit `process`
+mode omits directory fsync. Partial claims are spent and expiry does not delete
+claims. This deployment adapter coordinates one local filesystem, not hosts,
+and does not provide side-effect transactions or result replay. Actual durability
+depends on the filesystem and custody of the state directory.
+
+`conformance/pre-execution-v1.json` freezes ALLOW/DENY requests, safe signed
+authority, policy, public trust inputs, receipts and hashes. It contains no
+original bearer assertion or private signing key. Existing conformance vectors
+continue to cover unchanged historical artifact bytes.
+
+### New reason codes and migration
+
+Authority codes: `AUTHORITY_VALID`, `SCHEMA_AUTHORITY_INVALID`,
+`AUTHORITY_MECHANISM_UNSUPPORTED`, `SIGNATURE_AUTHORITY_INVALID`,
+`TRUST_AUTHORITY_NORMALIZER_UNTRUSTED`, `EXPIRY_AUTHORITY_NOT_ACTIVE`,
+`AUTHORITY_AUDIENCE_MISMATCH`, `AUTHORITY_IDENTITY_MISMATCH`,
+`AUTHORITY_ACTION_NOT_GRANTED`. Adapter rejection codes also include
+`AUTHORITY_ASSERTION_VERIFICATION_FAILED`, `AUTHORITY_TOKEN_USE_INVALID`,
+`AUTHORITY_ISSUER_MISMATCH`, `AUTHORITY_SCOPE_NOT_GRANTED`,
+`AUTHORITY_IDENTITY_INVALID`.
+
+Admission codes: `PRE_EXECUTION_REQUEST_VALID`,
+`SCHEMA_PRE_EXECUTION_REQUEST_INVALID`, `ADMISSION_REQUEST_TIME_INVALID`,
+`POLICY_VERSION_UNKNOWN`, `POLICY_DIGEST_MISMATCH`, `ADMISSION_RECEIPT_VALID`,
+`SCHEMA_ADMISSION_RECEIPT_INVALID`, `SIGNATURE_ADMISSION_RECEIPT_INVALID`,
+`ADMISSION_TIME_INVALID`, `TRUST_ADMISSION_ISSUER_UNTRUSTED`,
+`ADMISSION_REQUEST_MISMATCH`, `ADMISSION_VERIFIER_ERROR`,
+`ADMISSION_VERIFIER_UNAVAILABLE`, `ADMISSION_RECORD_FAILED`, plus existing
+action/delegation/replay/runtime rejection codes.
+
+Executor codes: `SCHEMA_EXECUTOR_INPUT_INVALID`, `ADMISSION_CALLER_MISMATCH`,
+`ADMISSION_EXECUTOR_MISMATCH`. Replay adapters use the existing replay codes.
+
+These additions are packaged in the additive v1.2.0 minor release; historical
+artifact schemas, signatures and verification paths remain supported. See
+[`docs/RUNTIME_ADMISSION.md`](docs/RUNTIME_ADMISSION.md#migration) for frozen
+call snapshots, stronger opt-in runtime, explicit authority normalization,
+historical verification and downgrade rules.

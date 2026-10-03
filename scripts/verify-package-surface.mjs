@@ -6,6 +6,8 @@
 import { execFileSync } from "node:child_process";
 
 const FORBIDDEN_PATTERNS = [
+  /^(src|dist\/tests|personal|n8n-nodes-besa|\.claude)\//,
+  /^docs\/adoption\/(TRACTION_FORENSICS\.md|traction-baseline\.json)$/,
   /^\.besa\//,
   /(^|\/)receipts\//,
   /(^|\/)rotations\//,
@@ -20,6 +22,19 @@ const REQUIRED_PATHS = [
   "dist/index.js",
   "dist/sdk.js",
   "dist/sdk.d.ts",
+  "dist/external-authority.js",
+  "dist/external-authority.d.ts",
+  "dist/authority-adapters.js",
+  "dist/authority-adapters.d.ts",
+  "dist/pre-execution.js",
+  "dist/pre-execution.d.ts",
+  "dist/pre-execution-runtime.js",
+  "dist/pre-execution-runtime.d.ts",
+  "dist/snapshot.js",
+  "dist/executor.js",
+  "dist/executor.d.ts",
+  "dist/file-replay-store.js",
+  "dist/file-replay-store.d.ts",
   "Dockerfile",
   "ARCHITECTURE.md",
   "AUDIT_SCOPE.md",
@@ -51,10 +66,13 @@ const REQUIRED_PATHS = [
   "examples/consequential-mcp-middleware.ts",
   "examples/generic-tool-wrapper.ts",
   "examples/http-middleware.ts",
+  "examples/pre-execution.ts",
+  "examples/protected-artifact-publisher.ts",
   "examples/hosted-verifier.env.example",
   "scripts/traction-report.mjs",
   "conformance/consequential-action-v1.json",
   "conformance/consequential-action-negative-v1.json",
+  "conformance/pre-execution-v1.json",
 ];
 
 // Windows needs cmd.exe for the npm.cmd shim. Invoke it explicitly rather than

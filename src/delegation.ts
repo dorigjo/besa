@@ -80,6 +80,7 @@ export const DELEGATION_REASON = {
   INVALID: "SCHEMA_DELEGATION_INVALID",
   SIGNATURE_INVALID: "SIGNATURE_DELEGATION_INVALID",
   ROOT_UNTRUSTED: "TRUST_DELEGATION_ROOT_UNTRUSTED",
+  KEY_REVOKED: "TRUST_DELEGATION_KEY_REVOKED",
   NOT_ACTIVE: "EXPIRY_DELEGATION_NOT_ACTIVE",
   PARENT_MISMATCH: "DELEGATION_PARENT_MISMATCH",
   WIDENING: "DELEGATION_WIDENING",
@@ -425,6 +426,7 @@ function verifyOne(
   const nowMs = now.getTime();
   if (
     !Number.isFinite(nowMs) ||
+    Date.parse(delegation.issuedAt) > nowMs ||
     Date.parse(delegation.notBefore) > nowMs ||
     Date.parse(delegation.expiresAt) <= nowMs
   ) {
@@ -452,14 +454,14 @@ function constraintsNarrow(parent: DelegationV1, child: DelegationV1): boolean {
   const parentExact = parent.constraints.exact;
   const childExact = child.constraints.exact;
   for (const [key, value] of Object.entries(parentExact)) {
-    if (!(key in childExact) || canonicalize(childExact[key]) !== canonicalize(value)) {
+    if (!Object.hasOwn(childExact, key) || canonicalize(childExact[key]) !== canonicalize(value)) {
       return false;
     }
   }
 
   for (const [key, maximum] of Object.entries(parent.constraints.maximums)) {
     const childMaximum = child.constraints.maximums[key];
-    if (typeof childMaximum !== "number" || childMaximum > maximum) return false;
+    if (!Object.hasOwn(child.constraints.maximums, key) || typeof childMaximum !== "number" || childMaximum > maximum) return false;
   }
   return true;
 }
@@ -515,6 +517,17 @@ export function verifyDelegationChain(
       valid: false,
       reasonCode: DELEGATION_REASON.ROOT_UNTRUSTED,
       detail: `delegation root is not trusted: ${trust.reasonCode}`,
+    };
+  }
+  const revoked = new Set(
+    trustStore.keys.filter((key) => key.status === "revoked").map((key) => key.publicKeyId),
+  );
+  if (chain.some((delegation) => revoked.has(delegation.issuerPublicKeyId) ||
+      revoked.has(delegation.subjectPublicKeyId))) {
+    return {
+      valid: false,
+      reasonCode: DELEGATION_REASON.KEY_REVOKED,
+      detail: "delegation chain includes an explicitly revoked key",
     };
   }
   if (root.parentDelegationHash !== null) {
@@ -594,12 +607,12 @@ export function verifyActionDelegation(
   const leaf = chainResult.leaf;
   const exactMatches = Object.entries(leaf.constraints.exact).every(
     ([key, expected]) =>
-      key in action.constraints &&
+      Object.hasOwn(action.constraints, key) &&
       canonicalize(action.constraints[key]) === canonicalize(expected),
   );
   const maximumsMatch = Object.entries(leaf.constraints.maximums).every(
     ([key, maximum]) =>
-      typeof action.constraints[key] === "number" &&
+      Object.hasOwn(action.constraints, key) && typeof action.constraints[key] === "number" &&
       action.constraints[key] <= maximum,
   );
 

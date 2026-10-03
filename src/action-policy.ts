@@ -259,7 +259,7 @@ function constraintsMatch(
 ): boolean {
   for (const [key, expected] of Object.entries(constraints.exact)) {
     if (
-      !(key in action.constraints) ||
+      !Object.hasOwn(action.constraints, key) ||
       canonicalize(action.constraints[key]) !== canonicalize(expected)
     ) {
       return false;
@@ -267,7 +267,7 @@ function constraintsMatch(
   }
   for (const [key, maximum] of Object.entries(constraints.maximums)) {
     const actual = action.constraints[key];
-    if (typeof actual !== "number" || actual > maximum) return false;
+    if (!Object.hasOwn(action.constraints, key) || typeof actual !== "number" || actual > maximum) return false;
   }
   return true;
 }

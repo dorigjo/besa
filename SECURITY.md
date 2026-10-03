@@ -2,13 +2,19 @@
 
 ## Supported release
 
-The current supported line is `1.1.x`.
+The supported source line is `1.2.x`; v1.1 artifact verification remains supported.
+Check the npm registry for publication status rather than inferring it from source.
 
 Besa v1.1 is additive. The frozen v1.0 signed formats (`SignedManifest`,
 `Receipt`, `KeyRotation`, and `AdmissionAttestation`), their canonicalization,
 signature domains, CLI behavior, and existing SDK exports remain compatible.
 v1.1 adds versioned Action Envelope, Delegation, Capability, and Evidence
 artifacts; it does not reinterpret legacy signed bytes.
+
+v1.2 adds signed normalized authority, policy-bound admission receipts and
+executor-side enforcement without changing those historical formats. The host
+must authenticate caller identities outside untrusted JSON, protect signing
+keys and ensure all privileged access passes through the guarded executor.
 
 No independent third-party security audit has been completed. The repository
 includes self-authored tests, conformance vectors, a threat model, and audit
@@ -62,14 +68,22 @@ sensitive. See `docs/HOSTED_VERIFIER.md` for exact routes and configuration.
 
 An Action Envelope nonce is cryptographically bound but does not by itself make
 an action globally one-time. `InMemoryReplayStore` enforces reuse only inside
-one process and does not survive restarts. Use an atomic, durable
-customer-operated `ReplayStore` for stronger guarantees.
+one process and does not survive restarts. `FileReplayStore` shares persisted
+exclusive claims across processes on one trusted local filesystem. Its strict
+default requires file/directory fsync; Windows is unavailable in that mode.
+Explicit process mode cannot promise OS-crash/power-loss durability. Protect
+state from rollback/deletion and provide a transactional shared `ReplayStore`
+for multi-host deployments. Spent claims are never automatically refunded.
+None of these stores establishes exactly-once downstream side effects.
 
 `ActionEvidenceV1` proves a trusted recorder signed the supplied action,
 capability, result hash, and timestamps. It does not prove an external side
 effect occurred unless that recorder is independently trusted to observe it.
 `AppendOnlyEvidenceLog` is a local fsyncing JSONL sink, not an immutable,
 cross-process, retained ledger.
+Its file fsync does not sync newly created directory entries: a stronger
+pre-execution durability requirement needs pre-provisioned durable logs or a
+sink whose append contract provides that guarantee.
 
 ## Not a compliance claim
 
