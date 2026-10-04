@@ -55,6 +55,41 @@ Frozen ordering vector:
 canonicalize({ "b": 1, "a": { "d": 2, "c": 3 } })  ==  {"a":{"c":3,"d":2},"b":1}
 ```
 
+### Raw JSON boundary
+
+`parseArtifactJson(textOrUtf8Bytes)` is the shared transport decoder used by
+JSON file loaders, CLI artifact reads and the Hosted Verifier. SDK/offline
+integrations receiving untrusted JSON must use it before artifact verification:
+ordinary `JSON.parse` has already discarded duplicate-key information.
+Object-based verifier APIs cannot reconstruct the original transport bytes.
+
+- Reject duplicate object keys at every depth, including identical values and
+  escape-equivalent keys, before native JSON parsing constructs the object.
+- Accept only JSON grammar and fatal UTF-8 decoding. Reject a leading BOM,
+  truncated data and unpaired UTF-16 surrogates in decoded strings or keys.
+- Do not normalize arbitrary JSON strings/keys. Unicode scalar sequences are
+  exact: composed/decomposed text and visually similar keys remain different.
+  Identity schemas retain their existing NFC, control and exact-match rules.
+- Reject non-finite numbers and decimal tokens whose signed decimal coefficient
+  and exponent differ from their ECMAScript JSON number serialization. This
+  rejects overflow, nonzero underflow and silently rounded integers/decimals.
+  Equivalent decimal spelling (`1.0`, `1e0`) and negative zero remain supported.
+  Finite binary64 values serialized by the frozen canonicalizer round-trip.
+- Bound raw input to 1048576 UTF-8 bytes, depth 64 and 100000 value nodes,
+  additionally enforcing the existing canonical JSON bounds.
+
+This decoder does not authenticate, validate an artifact schema, consume replay
+state or authorize execution. HTTP parsing failures remain `400`; file/SDK
+decoding throws before verification. All existing object APIs, canonical bytes,
+hash/signature domains and frozen signed vectors remain unchanged. Historical
+ambiguous or non-scalar transport representations are deliberately rejected;
+do not restore permissive parsing as an execution fallback. A previously parsed
+object is not evidence that the original raw input passed this boundary.
+
+`conformance/json-boundary-v1.json` freezes positive/negative decoder vectors,
+separately from signed-artifact versions. It does not replace the existing
+signature, delegation, policy or replay conformance vectors.
+
 **The canonical key order defined above, not the order of the field tables
 below, determines the signed and hashed bytes.** The tables in
 this document define which fields are *required*, *optional*, and *rejected*;

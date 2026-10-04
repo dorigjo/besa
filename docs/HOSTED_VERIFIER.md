@@ -40,6 +40,15 @@ charset) and strictly valid UTF-8 JSON bytes. Success at transport level is
 `authorized`, `decision`, or `reasonCode` field. Malformed UTF-8, JSON, or
 request envelopes receive `400`.
 
+Raw JSON uses the SDK's `parseArtifactJson` boundary. Duplicate keys at any
+depth (including escaped spellings), a leading BOM, unpaired Unicode
+surrogates and decimal tokens that silently round/overflow/underflow receive
+`400` before artifact verification. It does not normalize arbitrary parameter
+text or merge visually similar keys. Depth is limited to 64, value nodes to
+100000 and raw/canonical JSON to 1 MiB; increasing an HTTP buffering option
+does not bypass the decoder's protocol limits. See [SPEC.md](../SPEC.md#raw-json-boundary)
+for numeric semantics and SDK/offline integration requirements.
+
 | Method | Path | Mode | Body | Result |
 |---|---|---|---|---|
 | GET | `/health` | all | none | `{status:"ok",version}` |

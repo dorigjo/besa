@@ -3,6 +3,7 @@ import { parse as parseYaml } from "yaml";
 import type { Grant, GrantDecision, GrantSet } from "./types.js";
 import { canonicalize } from "./crypto.js";
 import { readUtf8File } from "./io.js";
+import { parseArtifactJson } from "./json.js";
 
 export const GRANT_REASON = {
   GRANTED: "GRANT_OK",
@@ -118,7 +119,7 @@ export function loadGrants(path: string): GrantSet {
   let raw: unknown;
 
   if (extension === ".json") {
-    raw = JSON.parse(source) as unknown;
+    raw = parseArtifactJson(source);
   } else if (extension === ".yaml" || extension === ".yml") {
     raw = parseYaml(source, {
       maxAliasCount: 50,

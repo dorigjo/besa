@@ -14,6 +14,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname } from "node:path";
+import { parseArtifactJson } from "./json.js";
 
 export const MAX_ARTIFACT_BYTES = 1_048_576;
 
@@ -129,7 +130,7 @@ export function readUtf8File(
       );
     }
 
-    return new TextDecoder("utf-8", { fatal: true }).decode(
+    return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(
       buffer.subarray(0, total),
     );
   } finally {
@@ -146,7 +147,7 @@ export function readJsonFile(path: string): unknown {
   const contents = readUtf8File(path);
 
   try {
-    return JSON.parse(contents) as unknown;
+    return parseArtifactJson(contents);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(`invalid JSON at ${path}: ${message}`);

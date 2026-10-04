@@ -20,6 +20,7 @@ import "./attestation.test.js";
 import "./rate-limiter.test.js";
 import "./metrics.test.js";
 import "./io.test.js";
+import "./json-boundary.test.js";
 import "./evidence.test.js";
 import "./action.test.js";
 import "./action-fuzz.test.js";

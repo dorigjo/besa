@@ -76,6 +76,7 @@ const FROZEN_SDK_SURFACE = [
   "normalizeDelegationAuthority",
   "normalizeWorkloadAuthority",
   "openKeyPair",
+  "parseArtifactJson",
   "publicKeyId",
   "replayKey",
   "revokeTrustAnchor",

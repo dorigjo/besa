@@ -44,7 +44,8 @@ stores and sinks are trusted components; isolate them from the agent.
 | Key rotation | Existing rotation/trust lifecycle is reused. Retired keys fail new execution/admission; supported historical receipts can be audited before retirement. Revoked keys are rejected, including during audit. |
 | Downgrade | Strong runtime requires the new request/receipt and enforced replay. Unknown mechanism/schema/policy versions fail; it never falls back to a legacy capability, identity-only flag or verification-only replay store. |
 | Fail-open network behavior | Admission-resolution rejection, malformed replies, invalid signatures and unavailable/malformed replay responses block invocation. No network error is converted to ALLOW; no automatic tool retry occurs. Hanging transport blocks execution and needs an application-owned timeout/cancellation policy. |
-| Canonicalization ambiguity | Accessors/non-JSON/oversized input and extension fields fail. Schema constraints require own data fields, not inherited properties. The frozen canonicalization is JavaScript JSON, including integer-index key order and negative-zero normalization; cross-language implementations must match SPEC, not assume JCS. Raw transport parsers must reject duplicate JSON keys before passing objects to the SDK. |
+| Canonicalization ambiguity | Accessors/non-JSON/oversized input and extension fields fail. Schema constraints require own data fields, not inherited properties. The frozen canonicalization is JavaScript JSON, including integer-index key order and negative-zero normalization; cross-language implementations must match SPEC, not assume JCS. Built-in raw JSON boundaries share parseArtifactJson; custom SDK transports must use it before producing objects. |
+| Parser disagreement | Duplicate decoded keys at all depths, including escaped duplicates, fail before verification. Malformed UTF-8, unpaired surrogates, leading BOM, lossy decimal tokens and raw depth/node/byte overflow fail closed. Distinct Unicode scalar sequences remain distinct; no confusable-key or NFC normalization silently merges arbitrary parameters. Already externally parsed objects have lost duplicate/rounding provenance and cannot establish raw-input safety. |
 | Authority representation confusion | ExternalAuthority is a signed normalizer attestation of safe claims/digests, not an IdP bearer token. EMA uses the exchanged access token. Workload mapping pins exact SPIFFE subject plus issuer/audience and explicit grants. |
 | Credentials in evidence | Strict authority and receipt schemas omit raw bearer tokens/private keys; only assertion/authority digests are recorded. Applications must still avoid secrets in action identifiers/constraints and keep assertion verification input private. |
 | Receipt storage unavailable | Rejected pre-execution append blocks the tool. Sink operators must ensure that append completion means the required retention/durability; an in-memory sink is not durable proof. Post-execution evidence append failure cannot undo the side effect. |
@@ -173,10 +174,15 @@ capabilities until consumers revoke or replace its key.
 ### Input and parsing attacks
 
 The protocol rejects non-finite values, non-canonical text, accessors, invalid
-base64/key material, excessive canonical JSON, unknown fields, malformed JSON,
-and bounded-but-invalid artifacts. Tests cover canonicalization, Unicode,
-accessors, oversized input, nested input, key lifecycle, server request bounds,
-and v1.1 conformance mutations.
+base64/key material, excessive canonical JSON, unknown fields and invalid
+artifacts. Built-in JSON transport decoding additionally rejects duplicate keys,
+escape-equivalent keys, invalid UTF-8/surrogates and number tokens that lose
+decimal meaning. Raw limits bound work before native grammar parsing. HTTP,
+CLI, file-loader, offline-verification and deterministic fuzz tests exercise
+this boundary; published decoder vectors support independent implementations.
+There is no new outbound request, database or parser fallback. Object-based
+historical verification and frozen signature bytes remain unchanged; it is the
+custom transport integrator's responsibility not to erase ambiguity first.
 
 ## Security reporting
 

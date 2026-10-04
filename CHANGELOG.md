@@ -6,6 +6,39 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-04
+
+Security-boundary hardening with one additive SDK decoder. Existing v1.0,
+v1.1 and v1.2 signed schemas, canonical bytes, hash/signature domains and
+object-based verification APIs remain unchanged. No artifact migration is
+required. Custom raw JSON transports must decode before object verification.
+
+### Added
+
+* `parseArtifactJson(textOrUtf8Bytes)`, shared by SDK/offline integrations,
+  JSON file loaders, CLI reads and the self-hosted verifier.
+* Frozen positive/negative JSON-boundary conformance vectors, deterministic
+  parser fuzz cases and actual CLI/HTTP/file/offline regression tests.
+* Frozen-admission substitution checks proving zero executor invocations for
+  changed identities, authority, action, parameters, policy, context or validity.
+* Vendor-neutral trust-contract audit: existing artifacts cover the admission
+  primitive; runtime enforcement and signed authorization proof remain separate.
+
+### Security
+
+* Reject duplicate decoded keys at every depth, including escaped spellings
+  and identical values, rather than accepting the final member silently.
+* Reject malformed UTF-8/JSON, leading BOM, unpaired Unicode surrogates, lossy
+  decimal tokens and excessive raw/canonical input limits before verification.
+  Arbitrary Unicode is not silently normalized; finite binary64 canonical
+  output and existing NFC identity-schema rules remain supported.
+* Object APIs cannot recover ambiguity already erased by an external parser.
+  No permissive-parser fallback is allowed at a protected execution boundary.
+
+No OpenShell adapter, NVIDIA dependency, new runtime artifact, sandbox,
+gateway, credential broker, hosted requirement, database or telemetry is added.
+External integration remains an adoption gate, not a claim from local tests.
+
 ## [1.2.0] - 2026-10-03
 
 Additive authority, admission-receipt and executor APIs. Existing v1.0/v1.1
