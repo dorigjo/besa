@@ -128,3 +128,17 @@ ships the self-hosted implementation, not a Besa-operated public service.
 - Legacy artifacts retain their domains and bytes. The stronger wrapper
   accepts only the new admission schema; legacy verification is not a fallback
   authorization path. See [migration](docs/RUNTIME_ADMISSION.md#migration).
+
+## Runtime enforcement boundary
+
+Besa is not a sandbox, credential broker, egress-policy engine, or general-purpose
+agent runtime. Those controls belong to runtimes and enforcement systems.
+
+Besa's boundary is cryptographic admission and portable execution evidence:
+identity and delegation are bound to an exact requested action, a policy decision,
+and independently verifiable signed evidence.
+
+Runtime integrations should compose with Besa rather than move runtime-specific
+enforcement into Besa core.
+
+See [OpenShell boundary audit](docs/research/OPENSHELL_BOUNDARY_AUDIT.md).
