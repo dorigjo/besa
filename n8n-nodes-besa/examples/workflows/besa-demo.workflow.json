@@ -1,0 +1,125 @@
+{
+  "name": "Besa Demo: verify -> admit -> receipt -> verify-receipt",
+  "nodes": [
+    {
+      "id": "n1-trigger",
+      "name": "When clicking \"Execute workflow\"",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [-400, 0],
+      "parameters": {}
+    },
+    {
+      "id": "n2-set-demo-data",
+      "name": "Set Signed Manifest",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-160, 0],
+      "notes": "Paste the contents of your examples/manifest.signed.json (from `besa sign`) into signedManifest below.",
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "signedManifest",
+              "type": "object",
+              "value": "={{ {\"REPLACE_ME\": \"paste your examples/manifest.signed.json contents here\"} }}"
+            },
+            {
+              "id": "a2",
+              "name": "demoRequest",
+              "type": "object",
+              "value": "={{ {\"tool\": \"demo.echo\", \"args\": {\"input\": \"hello from n8n\"}} }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "n3-verify-manifest",
+      "name": "Besa: Verify Signed Manifest",
+      "type": "n8n-nodes-besa.besa",
+      "typeVersion": 1,
+      "position": [80, 0],
+      "parameters": {
+        "operation": "verifySignedManifest",
+        "signedManifest": "={{ $json.signedManifest }}",
+        "trustStore": ""
+      }
+    },
+    {
+      "id": "n4-check-admission",
+      "name": "Besa: Check Admission",
+      "type": "n8n-nodes-besa.besa",
+      "typeVersion": 1,
+      "position": [320, 0],
+      "parameters": {
+        "operation": "checkAdmission",
+        "manifest": "={{ $('Set Signed Manifest').item.json.signedManifest }}",
+        "toolName": "demo.echo",
+        "callCount": 0,
+        "denyDestructiveHighRisk": true
+      }
+    },
+    {
+      "id": "n5-create-receipt",
+      "name": "Besa: Create Receipt",
+      "type": "n8n-nodes-besa.besa",
+      "typeVersion": 1,
+      "position": [560, 0],
+      "parameters": {
+        "operation": "createReceipt",
+        "signedManifestForReceipt": "={{ $('Set Signed Manifest').item.json.signedManifest }}",
+        "toolNameForReceipt": "={{ $json.toolName }}",
+        "decision": "={{ $json.decision }}",
+        "reasonCode": "={{ $json.reasonCode }}",
+        "request": "={{ $('Set Signed Manifest').item.json.demoRequest }}",
+        "agentId": "",
+        "grantReasonCode": ""
+      },
+      "credentials": {
+        "besaSigningKeyApi": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL_ID",
+          "name": "Besa Signing Key"
+        }
+      }
+    },
+    {
+      "id": "n6-verify-receipt",
+      "name": "Besa: Verify Receipt",
+      "type": "n8n-nodes-besa.besa",
+      "typeVersion": 1,
+      "position": [800, 0],
+      "parameters": {
+        "operation": "verifyReceipt",
+        "signedManifest": "={{ $('Set Signed Manifest').item.json.signedManifest }}",
+        "receipt": "={{ $json }}",
+        "trustStore": "",
+        "requestToRebind": "={{ $('Set Signed Manifest').item.json.demoRequest }}"
+      }
+    }
+  ],
+  "connections": {
+    "When clicking \"Execute workflow\"": {
+      "main": [[{ "node": "Set Signed Manifest", "type": "main", "index": 0 }]]
+    },
+    "Set Signed Manifest": {
+      "main": [[{ "node": "Besa: Verify Signed Manifest", "type": "main", "index": 0 }]]
+    },
+    "Besa: Verify Signed Manifest": {
+      "main": [[{ "node": "Besa: Check Admission", "type": "main", "index": 0 }]]
+    },
+    "Besa: Check Admission": {
+      "main": [[{ "node": "Besa: Create Receipt", "type": "main", "index": 0 }]]
+    },
+    "Besa: Create Receipt": {
+      "main": [[{ "node": "Besa: Verify Receipt", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "besa-demo-workflow"
+  }
+}
