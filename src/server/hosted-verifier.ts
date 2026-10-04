@@ -3,7 +3,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { TextDecoder } from "node:util";
+import { parseArtifactJson } from "../json.js";
 import {
   validateSignedManifest,
   verifySignedManifest,
@@ -92,7 +92,6 @@ function readPackageVersion(): string {
 }
 
 const VERSION = readPackageVersion();
-const UTF8_DECODER = new TextDecoder("utf-8", { fatal: true });
 
 function readBody(
   req: http.IncomingMessage,
@@ -133,7 +132,7 @@ function readBody(
 
 function parseJsonBody(raw: Buffer): { ok: true; value: unknown } | { ok: false } {
   try {
-    return { ok: true, value: JSON.parse(UTF8_DECODER.decode(raw)) as unknown };
+    return { ok: true, value: parseArtifactJson(raw) };
   } catch {
     return { ok: false };
   }

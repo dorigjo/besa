@@ -26,6 +26,18 @@ authenticated caller / verified external assertion
 does not authorize an arbitrary operation. External grants and Besa policy
 must both allow the concrete action before the executor can be called.
 
+At custom HTTP/MCP/file transports, decode untrusted raw JSON with the SDK's
+`parseArtifactJson(textOrUtf8Bytes)` before passing objects to admission or
+verification. It rejects duplicate decoded keys, malformed Unicode and lossy
+number tokens with bounded processing. Object APIs cannot recover ambiguity
+discarded by an earlier parser. Schema/signature verification is still required;
+successful decoding is never admission. See [SPEC](../SPEC.md#raw-json-boundary).
+
+For OpenShell and other external enforcers, see the
+[vendor-neutral trust contract](TRUST_CONTRACT.md). Runtime identity and policy
+observations can use the existing hashed context/result; unsigned runtime logs
+must never replace verified Besa admission. No vendor adapter is implied.
+
 ### Request and receipt
 
 `PreExecutionAdmissionInput` contains `request`, `authority`, and an optional

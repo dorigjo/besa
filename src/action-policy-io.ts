@@ -1,6 +1,7 @@
 import { extname } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { readUtf8File } from "./io.js";
+import { parseArtifactJson } from "./json.js";
 import { validateActionPolicy, type ActionPolicyV1 } from "./action-policy.js";
 
 export function loadActionPolicy(path: string): ActionPolicyV1 {
@@ -9,7 +10,7 @@ export function loadActionPolicy(path: string): ActionPolicyV1 {
   let value: unknown;
 
   if (extension === ".json") {
-    value = JSON.parse(source) as unknown;
+    value = parseArtifactJson(source);
   } else if (extension === ".yaml" || extension === ".yml") {
     value = parseYaml(source, {
       maxAliasCount: 50,

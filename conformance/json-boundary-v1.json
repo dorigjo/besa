@@ -1,0 +1,24 @@
+{
+  "boundaryVersion": 1,
+  "vectors": [
+    { "name": "ordinary-object", "input": "{\"b\":2,\"a\":1}", "canonical": "{\"a\":1,\"b\":2}" },
+    { "name": "integer-key-order", "input": "{\"10\":10,\"2\":2}", "canonical": "{\"2\":2,\"10\":10}" },
+    { "name": "equivalent-decimal", "input": "[1.00,1e1,-0,0.1,5e-324]", "canonical": "[1,10,0,0.1,5e-324]" },
+    { "name": "unicode-exact-not-normalized", "input": "[\"\u00e9\",\"e\u0301\"]", "canonical": "[\"\u00e9\",\"e\u0301\"]" },
+    { "name": "lookalike-keys-are-distinct", "input": "{\"a\":1,\"\u0430\":2}", "canonical": "{\"a\":1,\"\u0430\":2}" },
+    { "name": "duplicate-root", "input": "{\"decision\":\"allow\",\"decision\":\"deny\"}", "reject": true },
+    { "name": "duplicate-nested", "input": "{\"parameters\":{\"amount\":100,\"amount\":10000}}", "reject": true },
+    { "name": "duplicate-escaped-key", "input": "{\"decision\":\"allow\",\"\\u0064ecision\":\"deny\"}", "reject": true },
+    { "name": "duplicate-identical-value", "input": "{\"a\":1,\"a\":1}", "reject": true },
+    { "name": "unpaired-high-surrogate", "input": "\"\\ud800\"", "reject": true },
+    { "name": "unpaired-low-surrogate-key", "input": "{\"\\udc00\":0}", "reject": true },
+    { "name": "rounded-integer", "input": "9007199254740993", "reject": true },
+    { "name": "rounded-decimal", "input": "1.0000000000000001", "reject": true },
+    { "name": "overflow", "input": "1e309", "reject": true },
+    { "name": "underflow", "input": "1e-999", "reject": true },
+    { "name": "non-json-number", "input": "NaN", "reject": true },
+    { "name": "truncated", "input": "{\"a\":", "reject": true },
+    { "name": "trailing-data", "input": "{}{}", "reject": true },
+    { "name": "trailing-comma", "input": "{\"a\":1,}", "reject": true }
+  ]
+}

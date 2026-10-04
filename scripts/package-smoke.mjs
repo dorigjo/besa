@@ -139,9 +139,12 @@ try {
         "typeof b.FileReplayStore !== 'function' || " +
         "typeof b.admitPreExecution !== 'function' || " +
         "typeof b.verifyPreExecutionAdmission !== 'function' || " +
+        "typeof b.parseArtifactJson !== 'function' || " +
         "typeof b.normalizeAccessTokenAuthority !== 'function' || " +
         "typeof b.normalizeWorkloadAuthority !== 'function' || " +
-        "typeof b.verifyActionCapability !== 'function') process.exit(1);",
+        "typeof b.verifyActionCapability !== 'function') process.exit(1); " +
+        "let rejected=false; try { b.parseArtifactJson('{\"a\":1,\"a\":2}'); } " +
+        "catch { rejected=true; } if (!rejected) process.exit(1);",
     ],
     installRoot,
   );
@@ -208,6 +211,10 @@ try {
     "conformance/consequential-action-v1.json",
     "conformance/consequential-action-negative-v1.json",
     "conformance/pre-execution-v1.json",
+    "conformance/json-boundary-v1.json",
+    "docs/TRUST_CONTRACT.md",
+    "dist/json.js",
+    "dist/json.d.ts",
   ]) {
     if (!existsSync(join(installedPackage, relativePath))) {
       throw new Error(`installed package is missing ${relativePath}`);

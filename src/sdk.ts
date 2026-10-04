@@ -1,4 +1,5 @@
 export * from "./types.js";
+export { parseArtifactJson } from "./json.js";
 // Explicit re-export, not `export *`: crypto.ts contains internal primitives
 // that must stay importable within src/ but were never deliberately decided
 // as public SDK surface. `KeyProvider`/`LocalKeyProvider` got a written

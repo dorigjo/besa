@@ -2,7 +2,7 @@
 
 ## Supported release
 
-The supported source line is `1.2.x`; v1.1 artifact verification remains supported.
+The supported source line is `1.3.x`; v1.2/v1.1 artifact verification remains supported.
 Check the npm registry for publication status rather than inferring it from source.
 
 Besa v1.1 is additive. The frozen v1.0 signed formats (`SignedManifest`,
@@ -33,6 +33,22 @@ It does not provide secrecy, agent identity, upstream authentication, payment
 settlement, tool sandboxing, real-world execution observation, compliance
 certification, or distributed replay prevention without a customer-controlled
 atomic replay store. See `docs/THREAT_MODEL.md` for the complete boundary.
+
+## Unambiguous JSON input
+
+JSON file loaders, CLI artifact reads and HTTP verification share
+`parseArtifactJson`. It rejects duplicate decoded keys (including escaped/nested
+duplicates), malformed UTF-8/JSON, unpaired surrogates, lossy decimal number
+tokens, excessive depth/nodes and oversized input before artifact verification.
+Arbitrary Unicode text is not silently normalized; identity schemas separately
+require their existing NFC and exact-match rules. See `SPEC.md` for the limits.
+
+Use the same SDK decoder at any custom raw JSON boundary. Object-based APIs
+cannot detect duplicates or precision loss already erased by another parser.
+Do not treat successful verification of an externally parsed object as proof
+that its original raw input was unambiguous. No permissive-parser fallback is
+safe for protected execution. The frozen canonicalizer and signature formats
+are unchanged; decoder rejection does not establish a cryptographic forgery.
 
 ## Key and secret handling
 

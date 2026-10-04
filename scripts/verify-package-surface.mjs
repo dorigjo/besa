@@ -22,6 +22,8 @@ const REQUIRED_PATHS = [
   "dist/index.js",
   "dist/sdk.js",
   "dist/sdk.d.ts",
+  "dist/json.js",
+  "dist/json.d.ts",
   "dist/external-authority.js",
   "dist/external-authority.d.ts",
   "dist/authority-adapters.js",
@@ -50,6 +52,7 @@ const REQUIRED_PATHS = [
   "docs/RUNTIME_ADMISSION.md",
   "docs/SECURITY_CREDIBILITY.md",
   "docs/THREAT_MODEL.md",
+  "docs/TRUST_CONTRACT.md",
   "docs/V1_1_SECURITY_REVIEW.md",
   "docs/adoption/DISCOVERY_AUDIT.md",
   "docs/adoption/DISTRIBUTION_PLAN.md",
@@ -73,6 +76,7 @@ const REQUIRED_PATHS = [
   "conformance/consequential-action-v1.json",
   "conformance/consequential-action-negative-v1.json",
   "conformance/pre-execution-v1.json",
+  "conformance/json-boundary-v1.json",
 ];
 
 // Windows needs cmd.exe for the npm.cmd shim. Invoke it explicitly rather than

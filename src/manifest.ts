@@ -3,6 +3,7 @@ import { parse as parseYaml } from "yaml";
 import type { CapabilityType, Manifest, RiskLevel } from "./types.js";
 import { canonicalize } from "./crypto.js";
 import { readUtf8File } from "./io.js";
+import { parseArtifactJson } from "./json.js";
 
 const CAPABILITIES: CapabilityType[] = ["read", "write", "destructive"];
 const RISKS: RiskLevel[] = ["low", "medium", "high"];
@@ -200,7 +201,7 @@ export function loadManifest(path: string): Manifest {
   let raw: unknown;
 
   if (extension === ".json") {
-    raw = JSON.parse(source) as unknown;
+    raw = parseArtifactJson(source);
   } else if (extension === ".yaml" || extension === ".yml") {
     raw = parseYaml(source, {
       maxAliasCount: 50,
