@@ -30,7 +30,7 @@
               "id": "a2",
               "name": "demoRequest",
               "type": "object",
-              "value": "={{ {\"tool\": \"demo.echo\", \"args\": {\"input\": \"hello from n8n\"}} }}"
+              "value": "={{ {\"tool\": \"crm.lookup\", \"args\": {\"query\": \"alice@example.com\"}} }}"
             }
           ]
         },
@@ -58,7 +58,7 @@
       "parameters": {
         "operation": "checkAdmission",
         "manifest": "={{ $('Set Signed Manifest').item.json.signedManifest }}",
-        "toolName": "demo.echo",
+        "toolName": "crm.lookup",
         "callCount": 0,
         "denyDestructiveHighRisk": true
       }

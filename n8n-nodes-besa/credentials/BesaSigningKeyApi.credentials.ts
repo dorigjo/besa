@@ -20,7 +20,7 @@ export class BesaSigningKeyApi implements ICredentialType {
 			default: '',
 			required: true,
 			description:
-				'The full JSON contents of the encrypted key file produced by "besa keygen" (normally .besa/key.json). This is the AES-256-GCM/scrypt-sealed key, never a raw private key.',
+				'The full JSON contents of the encrypted key file created or loaded by "besa keys" (normally .besa/key.json). This is the AES-256-GCM/scrypt-sealed key, never a raw private key.',
 		},
 		{
 			displayName: 'Passphrase',
@@ -32,7 +32,7 @@ export class BesaSigningKeyApi implements ICredentialType {
 			default: '',
 			required: true,
 			description:
-				'The passphrase used to seal the key pair. Only used in-memory to decrypt the key for the duration of a single node execution; never stored or logged by this node.',
+				'The passphrase used to seal the key pair. Only used in-memory to decrypt the key during a single Create Receipt execution; never stored or logged by this node.',
 		},
 	];
 }
