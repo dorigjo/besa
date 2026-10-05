@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-besa",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Verify signed BESA manifests, gate tool calls through BESA admission policy, and issue signed BESA execution receipts from an n8n workflow.",
   "license": "MIT",
   "homepage": "https://github.com/dorigjo/besa/tree/main/n8n-nodes-besa#readme",

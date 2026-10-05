@@ -30,20 +30,46 @@ npm install n8n-nodes-besa
 
 ## 5-minute example
 
-You need a Besa manifest and a signing key. If you don't have the `besa` CLI yet:
+In a fresh local directory, install the public CLI and copy its shipped example
+manifest. No Besa source build is needed:
 
 ```bash
-npm install -g @dorigjo/besa
-besa keygen                      # writes .besa/key.json (encrypted, passphrase-protected)
-besa sign examples/manifest.yaml # writes examples/manifest.signed.json
+mkdir besa-n8n-demo
+cd besa-n8n-demo
+npm init -y
+npm install @dorigjo/besa@1.3.0
+node -e "const fs=require('node:fs');fs.mkdirSync('examples',{recursive:true});fs.copyFileSync('node_modules/@dorigjo/besa/examples/manifest.yaml','examples/manifest.yaml');"
 ```
 
+Set a fresh private passphrase of at least 16 UTF-8 bytes. On macOS/Linux:
+
+```bash
+export BESA_KEY_PASSPHRASE='REPLACE_WITH_A_FRESH_PRIVATE_PASSPHRASE'
+```
+
+On PowerShell instead:
+
+```powershell
+$env:BESA_KEY_PASSPHRASE = 'REPLACE_WITH_A_FRESH_PRIVATE_PASSPHRASE'
+```
+
+Then run the installed CLI:
+
+```bash
+npx besa keys                      # creates/loads encrypted .besa/key.json
+npx besa sign examples/manifest.yaml # writes examples/manifest.signed.json
+```
+
+The CLI does not prompt for a passphrase. Alternatively, pass
+`--passphrase-file /secure/path/passphrase.txt` to both commands. Never use the
+placeholder passphrase in production.
+
 1. Import [`examples/workflows/besa-demo.workflow.json`](examples/workflows/besa-demo.workflow.json) from this package into n8n (**Workflows > Import from File**).
-2. Open the **Besa Signing Key** credential the workflow creates a placeholder for, and paste in:
+2. In **Besa: Create Receipt**, create and select a **Besa Signing Key API** credential; the imported credential ID is only a placeholder. Paste in:
    - **Stored Key Pair**: the full contents of your `.besa/key.json`
-   - **Passphrase**: the passphrase you used with `besa keygen`
-3. In the **Set Signed Manifest** node, paste the contents of your `examples/manifest.signed.json`.
-4. Run the workflow. It will: verify the manifest's signature, check admission for a demo tool call, branch on allow/deny, and (on allow) create and then verify a signed receipt -- all without ever calling a real destructive tool.
+   - **Passphrase**: the same private passphrase used with `besa keys`
+3. In **Set Signed Manifest**, keep `signedManifest` as type **Object**, switch its value to **Fixed**, and replace the placeholder with the full JSON from `examples/manifest.signed.json`. Leave `demoRequest` unchanged.
+4. Run the workflow. Expected: manifest verification succeeds, admission returns **allow / ALLOWED** for **crm.lookup**, receipt creation succeeds, and receipt verification returns **valid / OK**. The minimal demo makes no real tool/API call and has no IF branch. See [TESTER.md](TESTER.md) for the short checklist.
 
 ## Workflow diagram
 
@@ -59,7 +85,7 @@ Set Signed Manifest  (paste your signed manifest + a demo request)
 Besa: Verify Signed Manifest
       |
       v
-Besa: Check Admission        (tool = "demo.echo")
+Besa: Check Admission        (tool = "crm.lookup")
       |
       v
 Besa: Create Receipt         (decision/reasonCode taken from Check Admission)
@@ -68,7 +94,26 @@ Besa: Create Receipt         (decision/reasonCode taken from Check Admission)
 Besa: Verify Receipt
 ```
 
-For real tool-gating, put your actual tool call (an HTTP Request node, another service call, etc.) behind an IF node keyed on `{{$json.decision === "allow"}}` between **Check Admission** and **Create Receipt** -- the example keeps that out to stay a pure, harmless demo of the Besa chain itself.
+### Optional real-tool-call extension
+
+For a real API call, extend only the allow path:
+
+```
+Check Admission -> IF decision == allow -> HTTP Request -> Create Receipt -> Verify Receipt
+```
+
+The false branch must not call the API. After **HTTP Request**, `$json` is the
+HTTP response, not the admission decision. In **Create Receipt**, use:
+
+| Field | Expression |
+|---|---|
+| Tool Name | `={{ $('Besa: Check Admission').item.json.toolName }}` |
+| Decision | `={{ $('Besa: Check Admission').item.json.decision }}` |
+| Reason Code | `={{ $('Besa: Check Admission').item.json.reasonCode }}` |
+
+Keep the manifest and request references to **Set Signed Manifest**. This is a
+manifest-policy gate, not an atomic side-effect or replay/idempotency guarantee.
+The shipped minimal demo deliberately omits IF/HTTP and never calls a real API.
 
 ## Operations
 
@@ -87,6 +132,7 @@ Only **Create Receipt** touches the private key. The other three operations are 
 - The passphrase is only used in-memory, for the duration of a single **Create Receipt** execution, to decrypt the key via Besa's own `openKeyPair()`. It is never logged, persisted, or included in any node output.
 - A wrong passphrase produces a fixed, generic error (`key file authentication failed`) -- never the passphrase, the ciphertext, or key bytes. This is enforced by an automated test (`test/security/no-secret-leak.test.mjs`).
 - This node makes no network calls, phones home to nothing, and writes no files of its own.
+- Never commit `.besa/` or paste key contents/passphrases into GitHub issues. Use a fresh private passphrase and appropriate key management for production.
 
 ## Limitations
 
