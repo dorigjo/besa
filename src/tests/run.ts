@@ -34,3 +34,4 @@ import "./runtime.test.js";
 import "./mcp.test.js";
 import "./pre-execution.test.js";
 import "./executor.test.js";
+import "./dashboard.test.js";

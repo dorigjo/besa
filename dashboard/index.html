@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>BESA Dashboard</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="BESA Dashboard home"><span class="brand-mark" aria-hidden="true">B</span><span>BESA <span class="brand-sub">Dashboard</span></span></a>
+    <div class="topbar-state"><span class="local-dot" aria-hidden="true"></span><span>LOCAL ONLY</span><span id="service-state" class="service-state">Checking</span></div>
+  </header>
+  <div class="shell">
+    <nav class="sidebar" aria-label="Dashboard views">
+      <button class="nav-item selected" type="button" data-view="overview" aria-current="page">Overview</button>
+      <button class="nav-item" type="button" data-view="verify">Receipt verification</button>
+      <button class="nav-item" type="button" data-view="details">Admission explorer</button>
+      <button class="nav-item" type="button" data-view="trust">Trust boundaries</button>
+      <button class="nav-item" type="button" data-view="timeline">Evidence timeline</button>
+      <button class="nav-item" type="button" data-view="simulator">Action simulator</button>
+      <div class="sidebar-foot">No cloud connection<br>No telemetry<br>No persistent storage</div>
+    </nav>
+
+    <main id="main-content">
+      <section class="view" data-panel="overview" aria-labelledby="overview-title">
+        <div class="page-heading"><div><p class="eyebrow">LOCAL EVIDENCE WORKSPACE</p><h1 id="overview-title">Overview</h1></div><span id="overall-status" class="status neutral">No artifact loaded</span></div>
+        <div class="metrics" aria-label="Current session counts">
+          <div class="metric"><span>Bundles checked</span><strong id="count-loaded">0</strong></div>
+          <div class="metric"><span>Verified bundles</span><strong id="count-valid">0</strong></div>
+          <div class="metric"><span>Rejected</span><strong id="count-rejected">0</strong></div>
+          <div class="metric"><span>Issuer trust configured</span><strong id="trust-configured">No</strong></div>
+        </div>
+        <div class="section-heading"><h2>Verify an artifact bundle</h2><div class="export-actions"><button id="load-sample" class="button secondary" type="button">Load signed sample</button><button id="load-admission-sample" class="button secondary" type="button">Load admission sample</button></div></div>
+        <label class="field-label" for="bundle-input">Signed manifest, receipt, request and optional trust store</label>
+        <div class="input-toolbar"><label class="file-button button secondary" for="bundle-file">Choose JSON file</label><input id="bundle-file" class="visually-hidden" type="file" accept="application/json,.json"><button id="clear-bundle" class="button secondary" type="button">Clear</button></div>
+        <textarea id="bundle-input" class="code-input" spellcheck="false" autocapitalize="off" autocomplete="off" aria-describedby="bundle-note" placeholder="Paste a BESA bundle JSON document"></textarea>
+        <div class="form-footer"><p id="bundle-note">The bundle is processed locally and discarded when this page closes. Maximum 256 KiB.</p><button id="verify-bundle" class="button primary" type="button">Verify bundle</button></div>
+        <p id="live-message" class="live-message" role="status" aria-live="polite"></p>
+        <section id="result-summary" class="result-summary" hidden aria-labelledby="result-title">
+          <div class="section-heading"><h2 id="result-title">Verification result</h2><div class="export-actions"><button id="export-json" class="button secondary" type="button">Export report JSON</button><button id="export-text" class="button secondary" type="button">Export text report</button><button id="export-bundle" class="button secondary" type="button">Export signed bundle</button></div></div>
+          <div id="checks" class="checks" aria-label="Verification checks"></div>
+          <p id="disclaimer" class="disclaimer"></p>
+        </section>
+      </section>
+
+      <section class="view" data-panel="verify" aria-labelledby="verify-title" hidden>
+        <div class="page-heading"><div><p class="eyebrow">SDK-BACKED CHECKS</p><h1 id="verify-title">Receipt verification</h1></div><span class="status neutral">Offline-capable</span></div>
+        <div id="verification-detail" class="detail-list"><p class="empty-state">Load and verify a bundle to inspect its signature, issuer trust, request binding and decision.</p></div>
+      </section>
+
+      <section class="view" data-panel="details" aria-labelledby="details-title" hidden>
+        <div class="page-heading"><div><p class="eyebrow">BOUND ACTION</p><h1 id="details-title">Admission explorer</h1></div><span id="decision-status" class="status neutral">No decision</span></div>
+        <div id="action-detail" class="detail-list"><p class="empty-state">No verified action loaded.</p></div>
+      </section>
+
+      <section class="view" data-panel="trust" aria-labelledby="trust-title" hidden>
+        <div class="page-heading"><div><p class="eyebrow">SEPARATE TRUST DOMAINS</p><h1 id="trust-title">Trust boundaries</h1></div></div>
+        <ol class="trust-flow">
+          <li><span class="flow-index">01</span><div><strong>Identity provider</strong><p>Authenticates a principal or workload. BESA does not establish this identity.</p></div><span class="trust-owner">UPSTREAM</span></li>
+          <li><span class="flow-index">02</span><div><strong>Authority normalizer</strong><p>Verifies upstream claims and signs a bounded authority assertion.</p></div><span class="trust-owner">TRUSTED ADAPTER</span></li>
+          <li><span class="flow-index">03</span><div><strong>Admission issuer</strong><p>Binds authority, exact action, policy, audience, validity and nonce.</p></div><span class="trust-owner">SIGNING KEY</span></li>
+          <li><span class="flow-index">04</span><div><strong>Protected executor</strong><p>Independently verifies admission and consumes enforced replay state before the callback.</p></div><span class="trust-owner">SIDE-EFFECT BOUNDARY</span></li>
+          <li><span class="flow-index">05</span><div><strong>Evidence recorder</strong><p>Signs the supplied result and links it to the admitted action.</p></div><span class="trust-owner">RECORDER KEY</span></li>
+          <li><span class="flow-index">06</span><div><strong>Independent verifier</strong><p>Checks signatures and configured trust material without the issuer's private key.</p></div><span class="trust-owner">PUBLIC TRUST</span></li>
+        </ol>
+        <p class="warning-note">A valid admission receipt does not prove execution. Signed result evidence proves what a trusted recorder supplied, not that an external system performed the real-world side effect.</p>
+      </section>
+
+      <section class="view" data-panel="timeline" aria-labelledby="timeline-title" hidden>
+        <div class="page-heading"><div><p class="eyebrow">ARTIFACT DERIVED</p><h1 id="timeline-title">Evidence timeline</h1></div></div>
+        <ol id="timeline" class="timeline"><li class="empty-state">No evidence loaded.</li></ol>
+      </section>
+
+      <section class="view" data-panel="simulator" aria-labelledby="simulator-title" hidden>
+        <div class="page-heading"><div><p class="eyebrow">LOCAL SDK FLOW</p><h1 id="simulator-title">Protected action simulator</h1></div><span class="status neutral">Mock callbacks</span></div>
+        <p class="warning-note">Runs the existing BESA demo policy and executor with ephemeral test keys. It does not call a cloud, payment service, or real tool.</p>
+        <button id="run-simulator" class="button primary" type="button">Run local scenarios</button>
+        <div id="simulator-results" class="simulator-results" aria-live="polite"><p class="empty-state">No simulation run in this session.</p></div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

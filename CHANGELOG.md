@@ -4,9 +4,19 @@ All notable changes to this project are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.4.0] - Unreleased
+
+### Added
+
+* Self-hosted, loopback-only Dashboard for SDK-backed artifact and pre-execution
+  admission verification, exact action inspection, trust boundaries, reports,
+  and an in-memory DENY/ALLOW simulator. No hosted service, database or telemetry.
 
 ### Security
+
+* Dashboard bundles are size-bounded and decoded by the shared strict JSON
+  parser. Static serving is allowlisted, the local Host boundary is checked,
+  and UI strings are rendered as text.
 
 * Replaced the current Golden test endpoint with `https://golden.example.com/mcp`.
   The v1.4 conformance vector set is newly signed with a dedicated test-only

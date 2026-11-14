@@ -1,5 +1,10 @@
 # Besa Architecture
 
+The optional local BESA Dashboard is a loopback-only viewer over existing
+manifest, receipt and pre-execution admission verifiers. It is not part of the
+protected runtime path and does not issue admissions or execute actions. See
+[`docs/DASHBOARD.md`](docs/DASHBOARD.md) for data handling and trust limits.
+
 Besa is a cryptographic admission and evidence primitive for consequential
 machine actions. It consumes identity and authorization context from an
 existing system; it is not an IAM provider, tool router, payment rail, or

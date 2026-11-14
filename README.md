@@ -78,6 +78,21 @@ The demo generates Ed25519 keys in memory, signs and verifies the exact-action
 capability, blocks the denied handler, executes the allowed mock handler, and
 verifies the linked evidence. It does not contact AWS or mutate infrastructure.
 
+## Local Dashboard
+
+Install the public package, then start the local artifact verifier:
+
+```bash
+npm install @dorigjo/besa
+npx besa dashboard
+```
+
+The Dashboard binds to loopback, uses the existing SDK verifiers, accepts
+legacy receipt bundles and pre-execution admission bundles, and keeps uploaded
+data in memory only. Its local simulator uses mock callbacks and ephemeral
+keys. See [Dashboard security and usage](docs/DASHBOARD.md) for trust limits,
+export behavior and deployment restrictions.
+
 ## Why authentication is not enough
 
 Authentication can establish that an agent reached a service. Broad cloud or

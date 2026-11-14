@@ -1,6 +1,6 @@
 {
   "name": "@dorigjo/besa",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Cryptographic admission and evidence for consequential AI-agent actions.",
   "type": "module",
   "main": "./dist/sdk.js",
@@ -67,6 +67,7 @@
     "dist/keys/*.d.ts",
     "dist/server/*.js",
     "dist/server/*.d.ts",
+    "dashboard/**/*",
     "examples/manifest.yaml",
     "examples/grants.yaml",
     "examples/request.json",
@@ -88,6 +89,7 @@
     "docs/BESA_VS_MCP_AUTH.md",
     "docs/BESA_VS_OBSERVABILITY.md",
     "docs/BENCHMARKS.md",
+    "docs/DASHBOARD.md",
     "docs/EVIDENCE_ENVELOPE.md",
     "docs/HOSTED_VERIFIER.md",
     "docs/RUNTIME_ADMISSION.md",

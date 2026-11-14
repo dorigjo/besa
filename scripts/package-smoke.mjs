@@ -215,6 +215,11 @@ try {
     "docs/TRUST_CONTRACT.md",
     "dist/json.js",
     "dist/json.d.ts",
+    "dist/server/dashboard.js",
+    "dashboard/index.html",
+    "dashboard/app.js",
+    "dashboard/styles.css",
+    "docs/DASHBOARD.md",
   ]) {
     if (!existsSync(join(installedPackage, relativePath))) {
       throw new Error(`installed package is missing ${relativePath}`);
