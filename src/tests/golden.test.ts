@@ -21,10 +21,10 @@ import {
 } from "./fixtures/golden-v1.js";
 
 /**
- * The published conformance vectors. This file ships in the npm package so an
- * independent implementer can self-check without cloning the repo — which makes
- * drift between it and the frozen fixtures a real interoperability hazard, not
- * just an internal inconsistency. The test below is what makes drift impossible.
+ * The v1.4 replacement conformance vectors. This file ships in the npm package
+ * so an independent implementer can self-check without cloning the repo. The
+ * neutral-domain migration changes vector identity/signatures, not v1 artifact
+ * semantics; the previous release remains immutable in its release history.
  */
 const CONFORMANCE = JSON.parse(
   readFileSync(
@@ -32,6 +32,7 @@ const CONFORMANCE = JSON.parse(
     "utf8",
   ),
 ) as {
+  vectorSet: string;
   canonicalOrdering: { input: unknown; expected: string };
   publicKeyDer: string;
   manifestHash: string;
@@ -41,7 +42,8 @@ const CONFORMANCE = JSON.parse(
   receipt: unknown;
 };
 
-test("published conformance vectors match the frozen fixtures exactly", () => {
+test("v1.4 neutral-domain vectors match the in-repo fixtures exactly", () => {
+  assert.equal(CONFORMANCE.vectorSet, "v1.4-neutral-domain");
   assert.deepEqual(CONFORMANCE.signedManifest, GOLDEN_SIGNED_MANIFEST);
   assert.deepEqual(CONFORMANCE.receipt, GOLDEN_RECEIPT);
   assert.deepEqual(CONFORMANCE.request, GOLDEN_REQUEST);
@@ -55,7 +57,7 @@ test("published conformance vectors match the frozen fixtures exactly", () => {
   assert.equal(CONFORMANCE.canonicalOrdering.expected, GOLDEN_CANONICAL_ORDERING);
 });
 
-test("published conformance vectors verify as published", () => {
+test("replacement conformance vectors verify cryptographically", () => {
   // Verifies the exact bytes an external implementer receives, not the in-repo
   // fixture they were copied from.
   assert.equal(

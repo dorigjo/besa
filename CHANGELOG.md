@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Security
+
+* Replaced the current Golden test endpoint with `https://golden.example.com/mcp`.
+  The v1.4 conformance vector set is newly signed with a dedicated test-only
+  Ed25519 key; hashes, key ID and signatures therefore have a new vector
+  identity. Artifact version 1, canonicalization, hash domains, signature
+  algorithms and verification semantics are unchanged. The immutable v1.3
+  vector remains available for historical verification via
+  `git show v1.3.0:conformance/golden-v1.json`; prior tags and published
+  packages are not rewritten. The endpoint is test data only and is never
+  contacted by smoke tests.
+
 ## [1.3.0] - 2026-10-04
 
 Security-boundary hardening with one additive SDK decoder. Existing v1.0,
