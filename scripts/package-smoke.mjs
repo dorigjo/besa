@@ -170,6 +170,12 @@ try {
   const crossOperatorExample = join(installedExamples, "cross-operator-proof.mjs");
   if (!existsSync(crossOperatorExample)) throw new Error("installed package lacks cross-operator proof");
   run("installed cross-operator proof", process.execPath, [crossOperatorExample], installRoot);
+  const agentgatewayExample = join(installedExamples, "agentgateway-v1-7-mcp.ts");
+  if (!existsSync(agentgatewayExample)) throw new Error("installed package lacks agentgateway v1.7 example");
+  run("installed agentgateway integration types", process.execPath,
+    [join(repositoryRoot, "node_modules/typescript/bin/tsc"), "--noEmit", "--strict",
+      "--skipLibCheck", "--target", "ES2022", "--module", "NodeNext", "--moduleResolution", "NodeNext",
+      "--typeRoots", join(repositoryRoot, "node_modules/@types"), agentgatewayExample], installRoot);
   if (process.allowedNodeEnvironmentFlags.has("--experimental-strip-types")) {
     const runnableExample = join(installRoot, "pre-execution.ts");
     copyFileSync(admissionExample, runnableExample);
@@ -192,6 +198,7 @@ try {
     "AUDIT_SCOPE.md",
     "SECURITY.md",
     "docs/AGENT_GATEWAY.md",
+    "docs/AGENTGATEWAY_V1_7_E2E.md",
     "docs/BESA_VS_IAM.md",
     "docs/BESA_VS_MCP_AUTH.md",
     "docs/BESA_VS_OBSERVABILITY.md",
@@ -206,6 +213,7 @@ try {
     "docs/assets/besa-architecture.svg",
     "examples/action-policy.yaml",
     "examples/consequential-mcp-middleware.ts",
+    "examples/agentgateway-v1-7-mcp.ts",
     "examples/cross-operator-proof.mjs",
     "examples/generic-tool-wrapper.ts",
     "examples/http-middleware.ts",

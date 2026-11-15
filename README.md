@@ -248,6 +248,8 @@ signed evidence. See [Runtime Admission](docs/RUNTIME_ADMISSION.md).
 See also [Agent Gateway Integration](docs/AGENT_GATEWAY.md) for deployment
 boundaries and [Evidence Artifacts](docs/EVIDENCE_ENVELOPE.md) for independent
 verification semantics.
+For a pinned Agentgateway v1.7.0 container test, see the
+[Agentgateway E2E guide](docs/AGENTGATEWAY_V1_7_E2E.md).
 
 `InMemoryReplayStore` enforces one-time use only inside one process.
 `FileReplayStore` provides local persisted atomic claims; use a

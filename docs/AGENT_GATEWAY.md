@@ -16,6 +16,15 @@ agent request
 The gateway remains responsible for transport authentication, TLS, routing,
 timeouts, tool discovery, request cancellation, and the real side effect.
 
+Gateway-native authorization can overlap with Besa enforcement. For example,
+agentgateway documents MCP authorization over tool name and target, and
+route-level HTTP authorization that can inspect MCP tool arguments. Besa does
+not claim that exact-argument allow/deny is unique to Besa. Its distinct
+contract is a signed admission bound to the action and trusted authority,
+policy, and executor context, which can be verified offline using pinned trust
+material. This evidence does not prove that an external side effect occurred.
+See the upstream [agentgateway MCP authorization documentation](https://agentgateway.dev/docs/standalone/latest/documentation/configuration/security/mcp-authz/).
+
 ## Local enforcement
 
 Use `withBesa(config, handler)` when the application already has an exact
