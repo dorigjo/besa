@@ -509,7 +509,7 @@ export async function runAgentgatewayE2E() {
   const state = { handlerCalls: 0, toolCalls: 0, observedCallers: [], lastExecution: undefined,
     backendAuthRejected: 0, backendRequests: 0 };
   const backend = createProtectedBackend(fixture, state, backendToken);
-  backend.listen(0, "0.0.0.0");
+  backend.listen(0, "127.0.0.1");
   await once(backend, "listening");
   const backendAddress = backend.address();
   const backendPort = typeof backendAddress === "object" && backendAddress ? backendAddress.port : 0;

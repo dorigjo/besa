@@ -14,9 +14,10 @@ docker pull cr.agentgateway.dev/agentgateway@sha256:60216aafb03d37f94e952ff3d51d
 npm run test:e2e:agentgateway
 ```
 
-The runner uses `--pull=never` after the explicit image pull. It binds the
-gateway listener to loopback; the mock backend listens on the host interface so
-Docker Desktop can reach it. Run only on a trusted development machine: the
+The runner uses `--pull=never` after the explicit image pull. Both the gateway
+listener and mock backend bind to loopback; the tested Docker Desktop setup can
+reach the backend through `host.docker.internal` without exposing the mock port
+on all host interfaces. Run only on a trusted development machine: the
 short-lived test API key and backend capability are embedded in the temporary
 gateway configuration and are not suitable for production.
 
