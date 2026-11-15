@@ -78,6 +78,21 @@ The demo generates Ed25519 keys in memory, signs and verifies the exact-action
 capability, blocks the denied handler, executes the allowed mock handler, and
 verifies the linked evidence. It does not contact AWS or mutate infrastructure.
 
+## Local Dashboard
+
+Install the public package, then start the local artifact verifier:
+
+```bash
+npm install @dorigjo/besa
+npx besa dashboard
+```
+
+The Dashboard binds to loopback, uses the existing SDK verifiers, accepts
+legacy receipt bundles and pre-execution admission bundles, and keeps uploaded
+data in memory only. Its local simulator uses mock callbacks and ephemeral
+keys. See [Dashboard security and usage](docs/DASHBOARD.md) for trust limits,
+export behavior and deployment restrictions.
+
 ## Why authentication is not enough
 
 Authentication can establish that an agent reached a service. Broad cloud or
@@ -133,6 +148,22 @@ This local example explicitly selects process-crash durability. Strict productio
 replay requires file/directory fsync support, authenticated caller context and
 durable receipt storage. It is not universal exactly-once execution or evidence
 of an independently operated customer integration.
+
+### Cross-operator verification proof
+
+After `npm run build`, run:
+
+```bash
+node examples/cross-operator-proof.mjs
+```
+
+Three separate local processes issue an admission, enforce it at a temporary
+file executor, and independently verify signed admission and result evidence
+using public trust material. The proof rejects parameter mutation and replay
+with exactly one handler call. It makes no network requests and is explicitly a
+local reference flow, not evidence of third-party adoption. See the
+[cross-operator proof notes](docs/CROSS_OPERATOR_PROOF.md) for trust and replay
+limitations.
 
 Provider-neutral adapters normalize verified OAuth/EMA access-token claims,
 explicitly authorized SPIFFE workloads and existing Besa delegations. The
@@ -217,6 +248,8 @@ signed evidence. See [Runtime Admission](docs/RUNTIME_ADMISSION.md).
 See also [Agent Gateway Integration](docs/AGENT_GATEWAY.md) for deployment
 boundaries and [Evidence Artifacts](docs/EVIDENCE_ENVELOPE.md) for independent
 verification semantics.
+For a pinned Agentgateway v1.7.0 container test, see the
+[Agentgateway E2E guide](docs/AGENTGATEWAY_V1_7_E2E.md).
 
 `InMemoryReplayStore` enforces one-time use only inside one process.
 `FileReplayStore` provides local persisted atomic claims; use a

@@ -1,23 +1,16 @@
 /**
- * FROZEN v1.0 golden vectors — DO NOT REGENERATE.
- *
- * These artifacts were signed once with a throwaway Ed25519 keypair; the private
- * key was discarded and never stored. Only public material (public key,
- * signatures, hashes) is frozen here.
- *
- * The contract: any change to canonical serialization, domain separation, field
- * order, or hashing rules will cause these frozen artifacts to stop verifying —
- * which fails the golden tests. This is the mechanism that guarantees a receipt
- * signed today still verifies in five years. If a golden test breaks, the format
- * changed; that requires a new artifactVersion, never an edit to these vectors.
+ * Replacement v1.4 conformance vectors using the reserved neutral test domain.
+ * Signed with a dedicated throwaway Ed25519 keypair; the private key was never
+ * stored. Artifact version and signing semantics remain v1-compatible. The
+ * previously published v1.3 vectors remain immutable in their release history.
  */
 import type { Receipt, SignedManifest } from "../../sdk.js";
 
 export const GOLDEN_PUBLIC_KEY_DER =
-  "MCowBQYDK2VwAyEAU8Rd381cF98qVQPwpA3v/aQJajeqGMh06YavYFmcLJM=";
+  "MCowBQYDK2VwAyEA3SYqrtd0l8qbQf3EpgUYU4Fbwm1YHgrWXirOaeXfQpE=";
 
 export const GOLDEN_MANIFEST_HASH =
-  "8cc3e32f13dd1b0d4f5979b9510b368f18ff525cf5281be5fff469ac40984504";
+  "4c52ba59ecd6c6ee6f865c5c727ce3cb52a2392388068c9f3209f4c25d1eaf29";
 
 export const GOLDEN_REQUEST_HASH =
   "47791d544a584573594feaaefae1ef98c5a5b8859eca280281e8b7ed13ea576e";
@@ -34,7 +27,7 @@ export const GOLDEN_SIGNED_MANIFEST: SignedManifest = {
   manifest: {
     serverName: "besa-golden",
     serverVersion: "1.0.0",
-    serverUrl: "https://golden.besa.dev/mcp",
+    serverUrl: "https://golden.example.com/mcp",
     createdAt: "2026-01-01T00:00:00.000Z",
     tools: [
       {
@@ -53,30 +46,30 @@ export const GOLDEN_SIGNED_MANIFEST: SignedManifest = {
     ],
   },
   manifestHash:
-    "8cc3e32f13dd1b0d4f5979b9510b368f18ff525cf5281be5fff469ac40984504",
+    "4c52ba59ecd6c6ee6f865c5c727ce3cb52a2392388068c9f3209f4c25d1eaf29",
   algorithm: "ed25519",
-  publicKey: "MCowBQYDK2VwAyEAU8Rd381cF98qVQPwpA3v/aQJajeqGMh06YavYFmcLJM=",
+  publicKey: "MCowBQYDK2VwAyEA3SYqrtd0l8qbQf3EpgUYU4Fbwm1YHgrWXirOaeXfQpE=",
   publicKeyId:
-    "0bccb1c411d1f3962902a629a4da9e9ed6a5aecd830af2f7f54c0d709c10c1ee",
-  signedAt: "2026-07-11T21:39:12.664Z",
+    "5c76b07f364ed26b90eb557cb3b223d1bf72bf2d9bc44f896108eaaf2e1b508b",
+  signedAt: "2026-11-14T22:32:10.411Z",
   signature:
-    "SVmi+lwcAQUyRduQc+Y6Jf6dyOIe19z7qqYIxIzZzcR4bU7w4cKTxi5qiHRE6lsfChLkGdDUO7EG6Ogk+yzqCA==",
+    "7WgjFEyL61SusqkNerwy8PJrG7N/g6dRMRRNEae8IjjPfyo4vYww49ygffYK60YGr5G/y1z9k3/KwLTd6qEiCQ==",
 };
 
 export const GOLDEN_RECEIPT: Receipt = {
   artifactVersion: 1,
-  receiptId: "rcpt_b4e65921-85cc-4d8d-b152-d120f46a02fc",
+  receiptId: "rcpt_791934b0-c0dc-4ec3-b1cf-55c20dedcf43",
   manifestHash:
-    "8cc3e32f13dd1b0d4f5979b9510b368f18ff525cf5281be5fff469ac40984504",
+    "4c52ba59ecd6c6ee6f865c5c727ce3cb52a2392388068c9f3209f4c25d1eaf29",
   toolName: "crm.lookup",
   decision: "allow",
   reasonCode: "ALLOWED",
-  timestamp: "2026-07-11T21:39:12.670Z",
+  timestamp: "2026-11-14T22:32:10.415Z",
   requestHash:
     "47791d544a584573594feaaefae1ef98c5a5b8859eca280281e8b7ed13ea576e",
   publicKeyId:
-    "0bccb1c411d1f3962902a629a4da9e9ed6a5aecd830af2f7f54c0d709c10c1ee",
+    "5c76b07f364ed26b90eb557cb3b223d1bf72bf2d9bc44f896108eaaf2e1b508b",
   algorithm: "ed25519",
   signature:
-    "y8tnGrdDq16Z5Or0IVC13140c9QVkqFhIkH3J1vPcHIvQW9jXZpKk+GeNpK/vKwcgFc0d8h7LNXw+9AlIKssDg==",
+    "OcOupWQFRlTmHS0M4TNlxm+b8neNcpJPoZnBELkDi1tvhkhC97jc2Uj89ayRPzlua2DWxiafTS7Nuc1+ECZLDA==",
 };

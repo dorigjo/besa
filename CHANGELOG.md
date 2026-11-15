@@ -4,7 +4,32 @@ All notable changes to this project are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.4.0] - Unreleased
+
+### Added
+
+* Self-hosted, loopback-only Dashboard for SDK-backed artifact and pre-execution
+  admission verification, exact action inspection, trust boundaries, reports,
+  and an in-memory DENY/ALLOW simulator. No hosted service, database or telemetry.
+* A three-process local proof that transfers a signed admission artifact to a
+  protected executor and verifies linked result evidence in a separate process;
+  parameter substitution and replay are rejected without extra handler calls.
+
+### Security
+
+* Dashboard bundles are size-bounded and decoded by the shared strict JSON
+  parser. Static serving is allowlisted, the local Host boundary is checked,
+  and UI strings are rendered as text.
+
+* Replaced the current Golden test endpoint with `https://golden.example.com/mcp`.
+  The v1.4 conformance vector set is newly signed with a dedicated test-only
+  Ed25519 key; hashes, key ID and signatures therefore have a new vector
+  identity. Artifact version 1, canonicalization, hash domains, signature
+  algorithms and verification semantics are unchanged. The immutable v1.3
+  vector remains available for historical verification via
+  `git show v1.3.0:conformance/golden-v1.json`; prior tags and published
+  packages are not rewritten. The endpoint is test data only and is never
+  contacted by smoke tests.
 
 ## [1.3.0] - 2026-10-04
 

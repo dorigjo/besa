@@ -31,6 +31,7 @@ import {
   type HostedVerifierAdmissionOptions,
   type HostedVerifierRateLimitOptions,
 } from "./server/hosted-verifier.js";
+import { createDashboardServer } from "./server/dashboard.js";
 import { loadActionPolicy } from "./action-policy-io.js";
 import {
   createReceipt,
@@ -125,6 +126,7 @@ const COMMAND_FLAGS: Record<string, ReadonlySet<string>> = {
     "--action-policy",
     "--action-trust",
   ]),
+  dashboard: new Set(["--port"]),
 };
 
 function readJson<T>(path: string): T {
@@ -648,6 +650,26 @@ function cmdVerify(file: string): void {
 
 const DEFAULT_SERVE_PORT = 8787;
 const DEFAULT_SERVE_HOST = "127.0.0.1";
+const DEFAULT_DASHBOARD_PORT = 8790;
+
+function cmdDashboard(): void {
+  const portFlag = flagValue("--port");
+  const port = portFlag !== undefined ? Number(portFlag) : DEFAULT_DASHBOARD_PORT;
+  if (!Number.isSafeInteger(port) || port < 0 || port > 65535) {
+    throw new Error(`--port must be an integer between 0 and 65535, got '${portFlag ?? ""}'`);
+  }
+
+  const server = createDashboardServer();
+  server.listen(port, DEFAULT_SERVE_HOST, () => {
+    const address = server.address();
+    const boundPort = typeof address === "object" && address !== null ? address.port : port;
+    console.log(`BESA Dashboard listening on http://127.0.0.1:${String(boundPort)}`);
+    console.log("Local-only verification; no signing keys, persistence, or telemetry.");
+  });
+  const shutdown = () => server.close(() => process.exit(0));
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
+}
 
 function cmdServe(): void {
   const portFlag = flagValue("--port");
@@ -1130,6 +1152,7 @@ function usage(): void {
       "                       evidence envelope (see docs/EVIDENCE_ENVELOPE.md)",
       "  serve                Run the hosted verifier (signature checks only by default;",
       "                       pass --trust to also enable POST /v1/admit)",
+      "  dashboard            Run the local-only BESA Dashboard",
       "",
       "Options:",
       "  --trust <file>       Trust store path (default: .besa/trust.json)",
@@ -1144,6 +1167,7 @@ function usage(): void {
       "                       if <file> is '-' (keys, sign, receipt); falls back",
       "                       to BESA_KEY_PASSPHRASE if omitted",
       "  --port <n>           Port for the hosted verifier (default: 8787) (serve)",
+      "                       Dashboard default: 8790 (dashboard)",
       "  --host <addr>        Bind address for the hosted verifier (default: 127.0.0.1,",
       "                       loopback-only; serve)",
       "  --meter <file>       Meter state path for admission checks (serve; default: .besa/meter.json)",
@@ -1174,6 +1198,7 @@ function usage(): void {
       "  besa serve --port 8787 --trust .besa/trust.json",
       "  besa serve --port 8787 --action-trust verifier-trust.json",
       "  besa serve --port 8787 --rate-limit 60",
+      "  besa dashboard --port 8790",
       "",
       "Security:",
       "  Private keys are encrypted at rest (AES-256-GCM + scrypt).",
@@ -1261,6 +1286,11 @@ async function main(argv: string[]): Promise<void> {
       case "serve":
         requireArgs(args, 0, command, 0);
         cmdServe();
+        break;
+
+      case "dashboard":
+        requireArgs(args, 0, command, 0);
+        cmdDashboard();
         break;
 
       case "version":

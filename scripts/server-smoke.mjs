@@ -51,12 +51,13 @@ async function expectStatus(label, path, init, expectedStatus) {
   return body;
 }
 
+// v1.4 neutral-domain fixture. Smoke requests below target only BASE_URL on loopback.
 const GOLDEN_SIGNED_MANIFEST = {
   artifactVersion: 1,
   manifest: {
     serverName: "besa-golden",
     serverVersion: "1.0.0",
-    serverUrl: "https://golden.besa.dev/mcp",
+    serverUrl: "https://golden.example.com/mcp",
     createdAt: "2026-01-01T00:00:00.000Z",
     tools: [
       {
@@ -75,14 +76,14 @@ const GOLDEN_SIGNED_MANIFEST = {
     ],
   },
   manifestHash:
-    "8cc3e32f13dd1b0d4f5979b9510b368f18ff525cf5281be5fff469ac40984504",
+    "4c52ba59ecd6c6ee6f865c5c727ce3cb52a2392388068c9f3209f4c25d1eaf29",
   algorithm: "ed25519",
-  publicKey: "MCowBQYDK2VwAyEAU8Rd381cF98qVQPwpA3v/aQJajeqGMh06YavYFmcLJM=",
+  publicKey: "MCowBQYDK2VwAyEA3SYqrtd0l8qbQf3EpgUYU4Fbwm1YHgrWXirOaeXfQpE=",
   publicKeyId:
-    "0bccb1c411d1f3962902a629a4da9e9ed6a5aecd830af2f7f54c0d709c10c1ee",
-  signedAt: "2026-07-11T21:39:12.664Z",
+    "5c76b07f364ed26b90eb557cb3b223d1bf72bf2d9bc44f896108eaaf2e1b508b",
+  signedAt: "2026-11-14T22:32:10.411Z",
   signature:
-    "SVmi+lwcAQUyRduQc+Y6Jf6dyOIe19z7qqYIxIzZzcR4bU7w4cKTxi5qiHRE6lsfChLkGdDUO7EG6Ogk+yzqCA==",
+    "7WgjFEyL61SusqkNerwy8PJrG7N/g6dRMRRNEae8IjjPfyo4vYww49ygffYK60YGr5G/y1z9k3/KwLTd6qEiCQ==",
 };
 
 try {

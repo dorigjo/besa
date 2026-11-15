@@ -59,6 +59,12 @@ jobs:
       - name: Run consequential-action demos
         run: npm run demo
 
+      - name: Run pinned agentgateway v1.7 MCP E2E
+        if: matrix.node-version == 24
+        run: |
+          docker pull cr.agentgateway.dev/agentgateway@sha256:60216aafb03d37f94e952ff3d51d2f630a65b10ecaebdc0a864882f92610c45b
+          npm run test:e2e:agentgateway
+
       - name: Smoke test CLI
         run: npm run smoke
 

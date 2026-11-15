@@ -1,5 +1,16 @@
 # Besa v1.2 Threat Model
 
+## Local Dashboard
+
+The optional Dashboard is an operator-local verification surface, not an
+authorization endpoint. It binds to loopback, validates the Host header,
+serves fixed assets, limits request bodies, rejects ambiguous JSON through the
+shared parser, and uses text-only DOM rendering. It has no authentication or
+tenant isolation and must not be exposed to a network. Imported trust stores
+are untrusted input until checked against operator-configured roots. A valid
+admission receipt is not proof that a side effect occurred. See
+[`DASHBOARD.md`](DASHBOARD.md).
+
 ## Pre-execution admission boundary
 
 BESA decides whether a protected agent action may execute and produces

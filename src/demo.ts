@@ -184,11 +184,7 @@ function printOutcome(outcome: DemoOutcome): void {
   console.log("");
 }
 
-export async function runDemo(): Promise<void> {
-  console.log("BESA EXACT-ACTION DEMO");
-  console.log("AUTHENTICATED != AUTHORIZED FOR THIS EXACT ACTION");
-  console.log("Besa starts after upstream identity and immediately before execution.\n");
-
+export async function simulateDemo(): Promise<Array<{ action: ActionEnvelopeV1; outcome: DemoOutcome }>> {
   const deployAllowed = action({
     principalId: "principal:platform",
     agentId: "agent:deploy-agent",
@@ -214,15 +210,20 @@ export async function runDemo(): Promise<void> {
     nonce: "demo_delete_deny_0123456789",
   });
 
-  printAction(deleteProduction, "deploy commit abc123 to environment:staging");
-  printOutcome(
-    await runAction(deleteProduction, deployPolicy, async () => ({ deleted: true })),
-  );
+  return [
+    { action: deleteProduction, outcome: await runAction(deleteProduction, deployPolicy, async () => ({ deleted: true })) },
+    { action: deployAllowed, outcome: await runAction(deployAllowed, deployPolicy, async () => ({ deploymentId: "deploy-abc123" })) },
+  ];
+}
 
-  printAction(deployAllowed, "deploy commit abc123 to environment:staging");
-  printOutcome(
-    await runAction(deployAllowed, deployPolicy, async () => ({ deploymentId: "deploy-abc123" })),
-  );
+export async function runDemo(): Promise<void> {
+  console.log("BESA EXACT-ACTION DEMO");
+  console.log("AUTHENTICATED != AUTHORIZED FOR THIS EXACT ACTION");
+  console.log("Besa starts after upstream identity and immediately before execution.\n");
+  for (const { action: requested, outcome } of await simulateDemo()) {
+    printAction(requested, "deploy commit abc123 to environment:staging");
+    printOutcome(outcome);
+  }
 }
 
 const entryPath = process.argv[1];
