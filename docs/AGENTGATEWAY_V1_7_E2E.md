@@ -55,11 +55,11 @@ and verified without trusting gateway logs.
   through the wrapper.
 - Signed execution evidence authenticates the recorder's supplied result; it
   does not independently prove that an external system performed the action.
-- The pinned gateway currently returns a malformed unauthenticated denial
-  response that Undici rejects as an HTTP parser error. The runner records this
-  exact transport rejection and verifies zero backend forwarding and zero
-  handler calls; it does not claim a usable HTTP 401/403 response for that
-  case.
+- The unauthenticated denial body may be plain text rather than MCP JSON-RPC;
+  some local network stacks also reject the response as malformed HTTP. The
+  runner accepts only an observed HTTP 401/403 or that specific transport
+  rejection, and verifies zero backend forwarding and zero handler calls. It
+  does not claim a valid JSON-RPC denial body.
 
 Agentgateway documents MCP authorization by tool name/target and notes that
 MCP arguments are not available to `mcpAuthorization` rules; route-level HTTP

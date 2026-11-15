@@ -368,10 +368,13 @@ async function rpc(url, apiKey, message, sessionId, extraHeaders = {}) {
     body: JSON.stringify(message),
     signal: AbortSignal.timeout(10_000),
   });
+  const body = response.status === 401 || response.status === 403
+    ? undefined
+    : await readRpcResponse(response);
   return {
     status: response.status,
     sessionId: response.headers.get("mcp-session-id") ?? sessionId,
-    body: await readRpcResponse(response),
+    body,
   };
 }
 
