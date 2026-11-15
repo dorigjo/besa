@@ -1,10 +1,27 @@
 # Cross-Operator Proof
 
-Run after `npm run build`:
+Run from the repository after `npm run build`:
 
 ```sh
 node examples/cross-operator-proof.mjs
 ```
+
+To exercise the packaged clean-room path, run `npm pack` from the repository,
+create a new consumer directory, and install the resulting tarball there:
+
+```sh
+work=$(mktemp -d)
+mkdir -p "$work/pack" "$work/consumer"
+npm pack --pack-destination "$work/pack"
+cd "$work/consumer"
+npm init -y
+npm install "$work/pack/dorigjo-besa-1.4.0.tgz"
+node node_modules/@dorigjo/besa/examples/cross-operator-proof.mjs
+```
+
+Replace the tarball path with the exact file emitted by `npm pack` on your
+platform. This flow uses the package contents rather than repository-local
+imports. The 1.4.0 tarball is a local candidate until its release is approved.
 
 The command starts three separate local Node processes and exchanges bounded
 JSON artifacts through a fresh temporary directory:
@@ -17,6 +34,9 @@ JSON artifacts through a fresh temporary directory:
    remains one.
 3. Operator C runs the BESA verifiers in a separate process using only public
    trust material, then emits a machine-readable verification report.
+
+The package smoke test runs this example from a fresh installed-package
+directory so package exports and example imports are exercised together.
 
 Pass `--keep` to retain the proof bundle path printed by the command. The bundle
 contains public trust data and signed artifacts only; it contains no private

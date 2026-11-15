@@ -167,6 +167,9 @@ try {
   }
   const admissionExample = join(installedExamples, "pre-execution.ts");
   if (!existsSync(admissionExample)) throw new Error("installed package lacks pre-execution example");
+  const crossOperatorExample = join(installedExamples, "cross-operator-proof.mjs");
+  if (!existsSync(crossOperatorExample)) throw new Error("installed package lacks cross-operator proof");
+  run("installed cross-operator proof", process.execPath, [crossOperatorExample], installRoot);
   if (process.allowedNodeEnvironmentFlags.has("--experimental-strip-types")) {
     const runnableExample = join(installRoot, "pre-execution.ts");
     copyFileSync(admissionExample, runnableExample);
@@ -203,6 +206,7 @@ try {
     "docs/assets/besa-architecture.svg",
     "examples/action-policy.yaml",
     "examples/consequential-mcp-middleware.ts",
+    "examples/cross-operator-proof.mjs",
     "examples/generic-tool-wrapper.ts",
     "examples/http-middleware.ts",
     "examples/hosted-verifier.env.example",
