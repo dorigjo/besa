@@ -28,8 +28,10 @@ backend call with spoofed identity headers is rejected, and a valid gateway
 key alone cannot authorize a tool invocation. A missing admission and changed
 refund amount are denied with zero protected-handler calls. The matching
 admission reaches the protected handler once; replay is rejected without a
-second call. The generated admission receipt and execution evidence are then
-verified offline from public trust material.
+second call. The harness sends a bounded evidence bundle containing no signing
+keys to a fresh Node.js verifier process. That process verifies the admission
+and execution evidence using public trust material, then rejects modified
+action parameters and a modified result.
 
 Agentgateway is responsible for its configured request authentication and
 routing. The application must establish trusted caller identity, map the

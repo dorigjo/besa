@@ -28,6 +28,71 @@ function expect(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+async function verifyEvidenceBundleFromStdin() {
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of process.stdin) {
+    size += chunk.length;
+    expect(size <= 1_048_576, "evidence bundle exceeds 1 MiB");
+    chunks.push(chunk);
+  }
+  const bundle = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  const config = {
+    policy: bundle.policy,
+    audience: bundle.audience,
+    trustStore: bundle.trustStore,
+    authorityTrustStore: bundle.authorityTrustStore,
+  };
+  const at = new Date(bundle.verificationTime);
+  const admission = verifyPreExecutionAdmission(bundle.receipt, bundle.input, config, at, "audit");
+  const evidenceInput = {
+    action: bundle.input.request.action,
+    capability: bundle.receipt.capability,
+    result: bundle.result,
+    trustStore: bundle.trustStore,
+    receiptHash: hashPreExecutionReceipt(bundle.receipt),
+  };
+  const evidence = verifyActionEvidence(bundle.evidence, evidenceInput, at);
+  const changedInput = copy(bundle.input);
+  changedInput.request.parameters.amountCents += 1;
+  const changedAction = verifyPreExecutionAdmission(bundle.receipt, changedInput, config, at, "audit");
+  const changedResult = verifyActionEvidence(bundle.evidence, {
+    ...evidenceInput,
+    result: { ...bundle.result, status: "forged" },
+  }, at);
+  return {
+    admissionValid: admission.valid && admission.receipt?.decision === "allow",
+    executionEvidenceValid: evidence.valid,
+    changedParametersRejected: !changedAction.valid,
+    changedResultRejected: !changedResult.valid,
+  };
+}
+
+function verifyEvidenceBundleInSeparateProcess(bundle) {
+  const encoded = JSON.stringify(bundle);
+  expect(!/privateKeyDer|privateKey|BEGIN PRIVATE KEY/i.test(encoded),
+    "verification bundle unexpectedly contains private-key material");
+  const childEnv = Object.fromEntries(
+    ["PATH", "SystemRoot", "WINDIR", "TEMP", "TMP"]
+      .filter((name) => process.env[name] !== undefined)
+      .map((name) => [name, process.env[name]]),
+  );
+  const child = spawnSync(process.execPath, [process.argv[1], "--verify-evidence-bundle"], {
+    input: encoded,
+    encoding: "utf8",
+    env: childEnv,
+    timeout: 10_000,
+    maxBuffer: 1_048_576,
+  });
+  expect(child.status === 0, `independent verifier process failed: ${child.stderr || child.error || child.stdout}`);
+  const result = JSON.parse(child.stdout);
+  expect(result.admissionValid, "separate verifier rejected the valid admission");
+  expect(result.executionEvidenceValid, "separate verifier rejected execution evidence");
+  expect(result.changedParametersRejected, "separate verifier accepted modified action parameters");
+  expect(result.changedResultRejected, "separate verifier accepted a modified execution result");
+  return result;
+}
+
 function createFixture() {
   const issuer = generateKeyPair();
   const normalizer = generateKeyPair();
@@ -590,16 +655,17 @@ export async function runAgentgatewayE2E() {
 
     const execution = state.lastExecution;
     expect(execution, "successful execution result was not recorded by the harness");
-    expect(verifyPreExecutionAdmission(
-      execution.result.receipt, execution.input, fixture.admission, NOW, "audit",
-    ).valid, "offline admission verification failed");
-    expect(verifyActionEvidence(execution.result.evidence, {
-      action: execution.input.request.action,
-      capability: execution.result.capability,
+    const independentVerification = verifyEvidenceBundleInSeparateProcess({
+      input: execution.input,
+      receipt: execution.result.receipt,
       result: execution.result.result,
+      evidence: execution.result.evidence,
+      policy: fixture.config.policy,
+      audience: fixture.config.audience,
       trustStore: fixture.config.trustStore,
-      receiptHash: hashPreExecutionReceipt(execution.result.receipt),
-    }, NOW).valid, "offline execution-evidence verification failed");
+      authorityTrustStore: fixture.config.authorityTrustStore,
+      verificationTime: NOW.toISOString(),
+    });
 
     return {
       image: IMAGE,
@@ -617,8 +683,11 @@ export async function runAgentgatewayE2E() {
       missingAdmissionBlocked: true,
       tamperedArgumentsBlocked: true,
       replayBlocked: true,
-      offlineAdmissionVerified: true,
-      offlineExecutionEvidenceVerified: true,
+      offlineAdmissionVerified: independentVerification.admissionValid,
+      offlineExecutionEvidenceVerified: independentVerification.executionEvidenceValid,
+      independentVerifierProcess: true,
+      verifierRejectedChangedParameters: independentVerification.changedParametersRejected,
+      verifierRejectedChangedResult: independentVerification.changedResultRejected,
     };
   } finally {
     spawnSync("docker", ["rm", "--force", containerName], { encoding: "utf8", timeout: 15_000 });
@@ -629,8 +698,10 @@ export async function runAgentgatewayE2E() {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const result = process.argv[2] === "--test-backend-auth"
-    ? await runBackendAuthSelfTest()
-    : await runAgentgatewayE2E();
+  const result = process.argv[2] === "--verify-evidence-bundle"
+    ? await verifyEvidenceBundleFromStdin()
+    : process.argv[2] === "--test-backend-auth"
+      ? await runBackendAuthSelfTest()
+      : await runAgentgatewayE2E();
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 }
