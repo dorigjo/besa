@@ -84,7 +84,7 @@ main { width: 100%; max-width: 1280px; margin: 0 auto; padding: 32px 36px 56px; 
 .disclaimer, .warning-note { margin: 16px 0 0; padding: 12px 14px; border-left: 3px solid #b98524; color: #59471f; background: var(--amber-soft); font-size: 13px; }
 
 .detail-list { border-top: 1px solid var(--line); }
-.detail-row { display: grid; grid-template-columns: minmax(150px, 230px) minmax(0, 1fr); gap: 16px; padding: 12px 4px; border-bottom: 1px solid var(--line); }
+.detail-row { display: grid; grid-template-columns: minmax(150px, 230px) minmax(0, 1fr); gap: 16px; margin: 0; padding: 12px 4px; border-bottom: 1px solid var(--line); }
 .detail-row dt { color: var(--muted); font-size: 13px; }
 .detail-row dd { margin: 0; overflow-wrap: anywhere; font-family: var(--mono); font-size: 13px; white-space: pre-wrap; }
 .empty-state { margin: 0; padding: 22px 4px; color: var(--muted); }

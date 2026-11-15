@@ -32,7 +32,7 @@
   }
 
   function row(parent, label, value) {
-    const container = element("div", "detail-row");
+    const container = element("dl", "detail-row");
     container.append(element("dt", "", label));
     const valueNode = element("dd", "", value === undefined || value === null ? "Not present in this artifact" :
       typeof value === "string" ? value : JSON.stringify(value, null, 2));

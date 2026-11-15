@@ -256,10 +256,15 @@ test("local Dashboard verifies bundles with the SDK and fails closed on ambiguit
       const page = await fetch(base);
       assert.equal(page.status, 200);
       assert.equal(page.headers.get("x-content-type-options"), "nosniff");
+      const html = await page.text();
+      assert.doesNotMatch(html, /class="brand"[^>]*aria-label=/);
+      assert.match(html, /class="metrics" role="group" aria-label=/);
+      assert.match(html, /id="checks" class="checks" role="group" aria-label=/);
       assert.equal(app.includes("innerHTML"), false);
       assert.equal(app.includes("localStorage"), false);
       assert.equal(app.includes("sessionStorage"), false);
       assert.equal(app.includes("PRE_EXECUTION_ADMISSION_V1"), true);
+      assert.match(app, /element\("dl", "detail-row"\)/);
       assert.equal(app.includes("/api/simulate"), true);
       assert.equal(app.includes("new Date().toISOString()"), false);
       assert.match(app, /parameters: state\.report\.action\.parameters[\s\S]*OMITTED_FROM_EXPORT/);

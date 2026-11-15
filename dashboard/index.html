@@ -11,7 +11,7 @@
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
   <header class="topbar">
-    <a class="brand" href="/" aria-label="BESA Dashboard home"><span class="brand-mark" aria-hidden="true">B</span><span>BESA <span class="brand-sub">Dashboard</span></span></a>
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">B</span><span>BESA <span class="brand-sub">Dashboard</span></span></a>
     <div class="topbar-state"><span class="local-dot" aria-hidden="true"></span><span>LOCAL ONLY</span><span id="service-state" class="service-state">Checking</span></div>
   </header>
   <div class="shell">
@@ -28,7 +28,7 @@
     <main id="main-content">
       <section class="view" data-panel="overview" aria-labelledby="overview-title">
         <div class="page-heading"><div><p class="eyebrow">LOCAL EVIDENCE WORKSPACE</p><h1 id="overview-title">Overview</h1></div><span id="overall-status" class="status neutral">No artifact loaded</span></div>
-        <div class="metrics" aria-label="Current session counts">
+        <div class="metrics" role="group" aria-label="Current session counts">
           <div class="metric"><span>Bundles checked</span><strong id="count-loaded">0</strong></div>
           <div class="metric"><span>Verified bundles</span><strong id="count-valid">0</strong></div>
           <div class="metric"><span>Rejected</span><strong id="count-rejected">0</strong></div>
@@ -42,7 +42,7 @@
         <p id="live-message" class="live-message" role="status" aria-live="polite"></p>
         <section id="result-summary" class="result-summary" hidden aria-labelledby="result-title">
           <div class="section-heading"><h2 id="result-title">Verification result</h2><div class="export-actions"><button id="export-json" class="button secondary" type="button">Export report JSON</button><button id="export-text" class="button secondary" type="button">Export text report</button><button id="export-bundle" class="button secondary" type="button">Export signed bundle</button></div></div>
-          <div id="checks" class="checks" aria-label="Verification checks"></div>
+          <div id="checks" class="checks" role="group" aria-label="Verification checks"></div>
           <p id="disclaimer" class="disclaimer"></p>
         </section>
       </section>
