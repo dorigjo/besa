@@ -14,12 +14,14 @@ docker pull cr.agentgateway.dev/agentgateway@sha256:60216aafb03d37f94e952ff3d51d
 npm run test:e2e:agentgateway
 ```
 
-The runner uses `--pull=never` after the explicit image pull. Both the gateway
-listener and mock backend bind to loopback; the tested Docker Desktop setup can
-reach the backend through `host.docker.internal` without exposing the mock port
-on all host interfaces. Run only on a trusted development machine: the
-short-lived test API key and backend capability are embedded in the temporary
-gateway configuration and are not suitable for production.
+The runner uses `--pull=never` after the explicit image pull. The gateway
+listener is published only on host loopback. On Docker Desktop, the mock
+backend binds to loopback and is reached through `host.docker.internal`; on
+Linux, it binds only to the default Docker bridge gateway address so the
+container can reach it without a wildcard/LAN bind. Run only on a trusted
+development machine: the short-lived test API key and backend capability are
+embedded in the temporary gateway configuration and are not suitable for
+production.
 
 ## What the test proves
 

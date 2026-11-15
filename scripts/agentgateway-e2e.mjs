@@ -1,6 +1,7 @@
 import { randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:http";
+import { isIP } from "node:net";
 import { once } from "node:events";
 import { pathToFileURL } from "node:url";
 import {
@@ -367,6 +368,24 @@ async function freePort() {
   return port;
 }
 
+function backendNetworkBinding() {
+  if (process.platform !== "linux") {
+    return {
+      bindAddress: "127.0.0.1",
+      directHost: "127.0.0.1",
+      containerHost: "host.docker.internal",
+    };
+  }
+
+  const result = spawnSync("docker", [
+    "network", "inspect", "bridge", "--format", "{{(index .IPAM.Config 0).Gateway}}",
+  ], { encoding: "utf8", timeout: 10_000 });
+  const gateway = result.stdout.trim();
+  expect(result.status === 0 && isIP(gateway) === 4,
+    `could not determine the IPv4 Docker bridge gateway: ${result.stderr || result.stdout}`);
+  return { bindAddress: gateway, directHost: gateway, containerHost: gateway };
+}
+
 async function waitForGateway(url, child, logs) {
   const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
@@ -508,8 +527,9 @@ export async function runAgentgatewayE2E() {
   const gatewayApiKey = randomBytes(32).toString("base64url");
   const state = { handlerCalls: 0, toolCalls: 0, observedCallers: [], lastExecution: undefined,
     backendAuthRejected: 0, backendRequests: 0 };
+  const backendBinding = backendNetworkBinding();
   const backend = createProtectedBackend(fixture, state, backendToken);
-  backend.listen(0, "127.0.0.1");
+  backend.listen(0, backendBinding.bindAddress);
   await once(backend, "listening");
   const backendAddress = backend.address();
   const backendPort = typeof backendAddress === "object" && backendAddress ? backendAddress.port : 0;
@@ -543,7 +563,7 @@ export async function runAgentgatewayE2E() {
       },
       targets: [{
         name: "besa",
-        mcp: { host: `http://host.docker.internal:${backendPort}/mcp` },
+        mcp: { host: `http://${backendBinding.containerHost}:${backendPort}/mcp` },
       }],
     },
   });
@@ -555,11 +575,12 @@ export async function runAgentgatewayE2E() {
     await new Promise((resolve) => backend.close(resolve));
     throw new Error(`agentgateway config invalid: ${validation.stderr || validation.stdout}`);
   }
-  const child = spawn("docker", [
-    "run", "--rm", "--name", containerName, "--pull=never",
-    "--add-host", "host.docker.internal:host-gateway",
-    "-p", `127.0.0.1:${gatewayPort}:3000`, IMAGE, "-c", config,
-  ], { stdio: ["ignore", "pipe", "pipe"] });
+  const dockerArgs = ["run", "--rm", "--name", containerName, "--pull=never"];
+  if (process.platform !== "linux") {
+    dockerArgs.push("--add-host", "host.docker.internal:host-gateway");
+  }
+  dockerArgs.push("-p", `127.0.0.1:${gatewayPort}:3000`, IMAGE, "-c", config);
+  const child = spawn("docker", dockerArgs, { stdio: ["ignore", "pipe", "pipe"] });
   let containerLogs = "";
   const capture = (chunk) => {
     containerLogs = `${containerLogs}${chunk.toString("utf8")}`.slice(-65_536);
@@ -568,7 +589,7 @@ export async function runAgentgatewayE2E() {
   child.stderr.on("data", capture);
   const url = `http://127.0.0.1:${gatewayPort}/mcp`;
   try {
-    const directBypass = await rpc(`http://127.0.0.1:${backendPort}/mcp`, undefined, {
+    const directBypass = await rpc(`http://${backendBinding.directHost}:${backendPort}/mcp`, undefined, {
       jsonrpc: "2.0", id: 0, method: "tools/call",
       params: { name: "refund", arguments: copy(fixture.input.request.parameters) },
     }, undefined, {
@@ -610,7 +631,11 @@ export async function runAgentgatewayE2E() {
       jsonrpc: "2.0", id: 2, method: "initialize",
       params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "besa-e2e", version: "1" } },
     });
-    expect(initialized.status === 200, `initialize failed: ${initialized.status}`);
+    const safeGatewayLogs = containerLogs
+      .replaceAll(gatewayApiKey, "[redacted]")
+      .replaceAll(backendToken, "[redacted]");
+    expect(initialized.status === 200,
+      `initialize failed: ${initialized.status}; response=${JSON.stringify(initialized.body)}; gateway=${safeGatewayLogs}`);
     const sessionId = initialized.sessionId;
     expect(typeof sessionId === "string" && sessionId.length > 0, "gateway returned no MCP session id");
     await rpc(url, gatewayApiKey, { jsonrpc: "2.0", method: "notifications/initialized" }, sessionId);
