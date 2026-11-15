@@ -149,6 +149,22 @@ replay requires file/directory fsync support, authenticated caller context and
 durable receipt storage. It is not universal exactly-once execution or evidence
 of an independently operated customer integration.
 
+### Cross-operator verification proof
+
+After `npm run build`, run:
+
+```bash
+node examples/cross-operator-proof.mjs
+```
+
+Three separate local processes issue an admission, enforce it at a temporary
+file executor, and independently verify signed admission and result evidence
+using public trust material. The proof rejects parameter mutation and replay
+with exactly one handler call. It makes no network requests and is explicitly a
+local reference flow, not evidence of third-party adoption. See the
+[cross-operator proof notes](docs/CROSS_OPERATOR_PROOF.md) for trust and replay
+limitations.
+
 Provider-neutral adapters normalize verified OAuth/EMA access-token claims,
 explicitly authorized SPIFFE workloads and existing Besa delegations. The
 application supplies its external verifier; Besa does not implement an IdP or

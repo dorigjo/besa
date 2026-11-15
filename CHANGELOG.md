@@ -11,6 +11,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 * Self-hosted, loopback-only Dashboard for SDK-backed artifact and pre-execution
   admission verification, exact action inspection, trust boundaries, reports,
   and an in-memory DENY/ALLOW simulator. No hosted service, database or telemetry.
+* A three-process local proof that transfers a signed admission artifact to a
+  protected executor and verifies linked result evidence in a separate process;
+  parameter substitution and replay are rejected without extra handler calls.
 
 ### Security
 
